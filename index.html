@@ -295,7 +295,7 @@
 
           <div class="control">
             <label for="firebaseConfigInput">Firebase config</label>
-            <textarea id="firebaseConfigInput" class="firebaseBox" placeholder='Klistra in Firebase config här, t.ex. { &quot;apiKey&quot;: &quot;...&quot;, &quot;databaseURL&quot;: &quot;...&quot;, &quot;projectId&quot;: &quot;...&quot;, &quot;appId&quot;: &quot;...&quot; }'></textarea>
+            <textarea id="firebaseConfigInput" class="firebaseBox" placeholder='Firebase-databasen är redan förifylld. Ändra bara om du byter databas.'></textarea>
           </div>
           <div class="actions" style="margin-top:0">
             <button class="secondary" id="saveFirebaseBtn" type="button">Spara Firebase</button>
@@ -2164,6 +2164,16 @@ Jolene;Dolly Parton;1973"></textarea>
     // Fyll i ditt Spotify Client ID här om du vill att sidan alltid ska ha det förifyllt.
     // Lägg INTE in Client Secret här. Client Secret ska aldrig ligga i en publik HTML-fil.
     const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
+
+    // Firebase Realtime Database för multiplayer.
+    // Det här är bara databas-URL:en, inte en hemlig nyckel.
+    const DEFAULT_FIREBASE_CONFIG = {
+      databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app'
+    };
+
+    function getDefaultFirebaseConfigText() {
+      return JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
+    }
 
     function getDefaultClientId() {
       if (!DEFAULT_CLIENT_ID) return '';
@@ -4070,7 +4080,7 @@ Jolene;Dolly Parton;1973"></textarea>
       els.multiplayerPanel?.classList.toggle('hidden', state.appMode !== 'multi');
       if (els.appModeStatus) {
         els.appModeStatus.textContent = state.appMode === 'multi'
-          ? 'Multiplayer valt. Anslut Firebase, logga in med Spotify och skapa eller gå med i ett rum.'
+          ? 'Multiplayer valt. Firebase är förifyllt. Klicka Anslut, logga in med Spotify och skapa eller gå med i ett rum.'
           : 'Single-player valt. Du kan spela som tidigare.';
       }
     }
@@ -4078,7 +4088,7 @@ Jolene;Dolly Parton;1973"></textarea>
     function loadAppMode() {
       const saved = localStorage.getItem(LS.appMode) || 'single';
       setAppMode(saved === 'multi' ? 'multi' : 'single');
-      const cfg = localStorage.getItem(LS.firebaseConfig) || '';
+      const cfg = localStorage.getItem(LS.firebaseConfig) || getDefaultFirebaseConfigText();
       if (els.firebaseConfigInput) els.firebaseConfigInput.value = cfg;
       const room = localStorage.getItem(LS.multiplayerRoom) || '';
       if (els.roomCodeInput) els.roomCodeInput.value = room;
@@ -4092,7 +4102,7 @@ Jolene;Dolly Parton;1973"></textarea>
 
     function parseFirebaseConfig() {
       const raw = String(els.firebaseConfigInput?.value || '').trim();
-      if (!raw) throw new Error('Klistra in Firebase config först.');
+      if (!raw) return { ...DEFAULT_FIREBASE_CONFIG };
       let text = raw;
       // Tillåt att användaren klistrar in "const firebaseConfig = {...};" direkt från Firebase.
       const match = text.match(/firebaseConfig\s*=\s*(\{[\s\S]*?\})\s*;?$/);
