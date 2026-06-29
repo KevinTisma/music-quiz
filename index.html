@@ -2085,6 +2085,16 @@ Jolene;Dolly Parton;1973"></textarea>
 
     const DEFAULT_PLAYLIST_ID = '6AkPSXrefOXADb7onndgvp';
 
+    // Fyll i ditt Spotify Client ID här om du vill att sidan alltid ska ha det förifyllt.
+    // Lägg INTE in Client Secret här. Client Secret ska aldrig ligga i en publik HTML-fil.
+    const DEFAULT_CLIENT_ID = 'KLISTRA_IN_DITT_SPOTIFY_CLIENT_ID_HAR';
+
+    function getDefaultClientId() {
+      if (!DEFAULT_CLIENT_ID) return '';
+      if (DEFAULT_CLIENT_ID.includes('KLISTRA_IN_')) return '';
+      return DEFAULT_CLIENT_ID.trim();
+    }
+
     const LS = {
       clientId: 'hitster_spotify_client_id_v3',
       token: 'hitster_spotify_token_v3',
@@ -3147,7 +3157,7 @@ Jolene;Dolly Parton;1973"></textarea>
     }
 
     function loadSpotifySettings() {
-      els.spotifyClientId.value = localStorage.getItem(LS.clientId) || '';
+      els.spotifyClientId.value = localStorage.getItem(LS.clientId) || getDefaultClientId() || '';
       const savedPlaylistId = localStorage.getItem(LS.playlistId) || DEFAULT_PLAYLIST_ID;
       if (els.spotifyPlaylistInput) els.spotifyPlaylistInput.value = `https://open.spotify.com/playlist/${savedPlaylistId}`;
       els.spotifyRedirectUri.textContent = getRedirectUri();
@@ -3202,7 +3212,7 @@ Jolene;Dolly Parton;1973"></textarea>
     }
 
     async function spotifyLogin() {
-      const clientId = els.spotifyClientId.value.trim();
+      const clientId = els.spotifyClientId.value.trim() || getDefaultClientId();
       if (!clientId) {
         setSpotifyStatus('Klistra in Spotify Client ID först.');
         return;
@@ -3287,7 +3297,7 @@ Jolene;Dolly Parton;1973"></textarea>
       const returnedState = params.get('state') || '';
       const savedState = oauthPayload.state || localStorage.getItem(LS.oauthState) || '';
       const redirectUri = oauthPayload.redirectUri || localStorage.getItem(LS.redirectUri) || getRedirectUri();
-      const clientId = oauthPayload.clientId || localStorage.getItem(LS.clientId) || els.spotifyClientId.value.trim();
+      const clientId = oauthPayload.clientId || localStorage.getItem(LS.clientId) || els.spotifyClientId.value.trim() || getDefaultClientId();
       const verifier = oauthPayload.verifier || localStorage.getItem(LS.verifier);
 
       if (!savedState || returnedState !== savedState) {
@@ -3341,7 +3351,7 @@ Jolene;Dolly Parton;1973"></textarea>
       let tokenData = getStoredToken();
       if (!tokenData?.access_token) throw new Error('Du är inte inloggad i Spotify.');
       if (Date.now() < tokenData.expires_at) return tokenData.access_token;
-      const clientId = localStorage.getItem(LS.clientId) || els.spotifyClientId.value.trim();
+      const clientId = localStorage.getItem(LS.clientId) || els.spotifyClientId.value.trim() || getDefaultClientId();
       if (!tokenData.refresh_token || !clientId) throw new Error('Spotify-token har gått ut. Logga in igen.');
       const body = new URLSearchParams({
         client_id: clientId,
@@ -3971,7 +3981,11 @@ Jolene;Dolly Parton;1973"></textarea>
     els.spotifyDevicesBtn.addEventListener('click', refreshSpotifyDevices);
     els.syncPlaylistBtn.addEventListener('click', fetchFullPlaylistFromSpotify);
     els.spotifyDeviceSelect.addEventListener('change', saveSelectedDevice);
-    els.spotifyClientId.addEventListener('change', () => localStorage.setItem(LS.clientId, els.spotifyClientId.value.trim()));
+    els.spotifyClientId.addEventListener('change', () => {
+      const value = els.spotifyClientId.value.trim();
+      if (value) localStorage.setItem(LS.clientId, value);
+      else localStorage.removeItem(LS.clientId);
+    });
     els.spotifyPlaylistInput.addEventListener('change', savePlaylistId);
     els.importBtn.addEventListener('click', importSongs);
     els.resetImportsBtn.addEventListener('click', resetImports);
