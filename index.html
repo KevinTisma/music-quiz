@@ -4802,5 +4802,137 @@ Jolene;Dolly Parton;1973"></textarea>
     })();
   </script>
 
+
+  <script>
+    // Multiplayer UI hardening: hides single-player controls when multiplayer is active
+    // and gives multiplayer buttons direct, visible handlers.
+    (function () {
+      function $(id) { return document.getElementById(id); }
+      function setText(id, text) { const el = $(id); if (el) el.textContent = text || ''; }
+      function closest(el, selector) { return el && el.closest ? el.closest(selector) : null; }
+      function setHidden(el, hidden) { if (el) el.classList.toggle('hidden', Boolean(hidden)); }
+      function firebaseDefaultText() {
+        return JSON.stringify({ databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' }, null, 2);
+      }
+
+      function applySingleMultiVisibility(mode) {
+        const isMulti = mode === 'multi';
+        document.body.dataset.appMode = isMulti ? 'multi' : 'single';
+        localStorage.setItem('hitster_app_mode_v1', isMulti ? 'multi' : 'single');
+
+        $('singleModeBtn')?.classList.toggle('active', !isMulti);
+        $('multiModeBtn')?.classList.toggle('active', isMulti);
+        setHidden($('multiplayerPanel'), !isMulti);
+
+        // Single-only sidebar controls.
+        setHidden(closest($('modeSelect'), '.control'), isMulti);
+        setHidden($('practiceSetControls'), isMulti);
+        setHidden(closest($('difficulty'), '.control'), false);
+        setHidden(closest($('questionCount'), '.control'), false);
+
+        // Single-only main action buttons. Spotify play/search are shared.
+        setHidden($('startBtn'), isMulti);
+        setHidden($('resumeBtn'), isMulti);
+        setHidden($('nextBtn'), isMulti);
+
+        // Single-only practice UI and import/history/local management.
+        if (isMulti) {
+          setHidden($('practicePanel'), true);
+          setHidden($('ratingRow'), true);
+          setHidden($('hintBox'), true);
+        }
+        setHidden(closest($('importBox'), '.control'), isMulti);
+        setHidden($('importBtn'), isMulti);
+        setHidden($('resetImportsBtn'), isMulti);
+        setHidden($('exportDataBtn'), isMulti);
+        setHidden($('clearLocalBtn'), isMulti);
+        setHidden($('history'), isMulti);
+
+        // Hide nearby headings for single-only blocks where possible.
+        document.querySelectorAll('aside h2').forEach(h => {
+          const t = (h.textContent || '').trim().toLowerCase();
+          if (['lokal data', 'historik'].includes(t)) setHidden(h, isMulti);
+        });
+
+        const input = $('firebaseConfigInput');
+        if (input && !input.value.trim()) input.value = firebaseDefaultText();
+
+        setText('appModeStatus', isMulti
+          ? 'Multiplayer valt. Single-player-kontroller är dolda. Anslut Firebase och skapa eller gå med i ett rum.'
+          : 'Single-player valt. Multiplayer är dolt.');
+
+        if (isMulti) {
+          if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Multiplayer-lobby';
+          if ($('songArtist')) $('songArtist').textContent = 'Anslut Firebase, hämta Spotify-profil och skapa eller gå med i ett rum.';
+        }
+      }
+
+      function getMode() {
+        return localStorage.getItem('hitster_app_mode_v1') === 'multi' ? 'multi' : 'single';
+      }
+
+      async function callMainFunction(name, label) {
+        const fn = window[name];
+        if (typeof fn !== 'function') {
+          setText('mpStatus', 'Kunde inte köra ' + label + ': funktionen saknas. Uppdatera sidan med Ctrl+F5.');
+          return;
+        }
+        try {
+          setText('mpStatus', label + '...');
+          const result = fn();
+          if (result && typeof result.then === 'function') await result;
+        } catch (err) {
+          setText('mpStatus', 'Fel vid ' + label + ': ' + (err && err.message ? err.message : String(err)));
+        }
+      }
+
+      function bindButton(id, fnName, label) {
+        const btn = $(id);
+        if (!btn || btn.dataset.mpHardBound === '1') return;
+        btn.dataset.mpHardBound = '1';
+        btn.addEventListener('click', function (event) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          applySingleMultiVisibility('multi');
+          callMainFunction(fnName, label);
+        }, true);
+      }
+
+      function bindAll() {
+        const cfg = $('firebaseConfigInput');
+        if (cfg && !cfg.value.trim()) cfg.value = localStorage.getItem('hitster_firebase_config_v1') || firebaseDefaultText();
+
+        $('singleModeBtn')?.addEventListener('click', function (event) {
+          event.preventDefault();
+          applySingleMultiVisibility('single');
+        }, true);
+        $('multiModeBtn')?.addEventListener('click', function (event) {
+          event.preventDefault();
+          applySingleMultiVisibility('multi');
+          $('multiplayerPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, true);
+
+        bindButton('saveFirebaseBtn', 'saveFirebaseConfig', 'Sparar Firebase');
+        bindButton('connectFirebaseBtn', 'connectFirebase', 'Ansluter Firebase');
+        bindButton('loadSpotifyProfileBtn', 'loadSpotifyProfile', 'Hämtar Spotify-profil');
+        bindButton('createRoomBtn', 'createRoom', 'Skapar rum');
+        bindButton('joinRoomBtn', 'joinRoom', 'Går med i rum');
+        bindButton('leaveRoomBtn', 'leaveRoom', 'Lämnar rum');
+        bindButton('mpStartBtn', 'startMultiplayerQuiz', 'Startar multiplayer');
+        bindButton('mpNextBtn', 'nextMultiplayerQuestion', 'Går till nästa fråga');
+        bindButton('mpReadyBtn', 'setMultiplayerReady', 'Markerar redo');
+
+        applySingleMultiVisibility(getMode());
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindAll);
+      } else {
+        bindAll();
+      }
+      window.addEventListener('pageshow', function () { applySingleMultiVisibility(getMode()); });
+    })();
+  </script>
+
 </body>
 </html>
