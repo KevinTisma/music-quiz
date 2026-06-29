@@ -1,0 +1,4004 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hitster årtalsquiz med Spotify</title>
+  <style>
+    :root {
+      --bg: #10131a;
+      --bgGlow1: rgba(125,211,252,.18);
+      --bgGlow2: rgba(192,132,252,.12);
+      --bgTint1: #10131a;
+      --bgTint2: #151b26;
+      --panel: #171b25;
+      --panel2: #202635;
+      --text: #f4f6fb;
+      --muted: #b6bfcd;
+      --accent: #7dd3fc;
+      --ok: #40d98b;
+      --bad: #ff6b6b;
+      --warn: #fbbf24;
+      --border: rgba(255,255,255,.12);
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+      --album-a: 125, 211, 252;
+      --album-b: 192, 132, 252;
+      --album-image: none;
+      --album-glow-opacity: .18;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, var(--bgGlow1), transparent 32rem),
+        radial-gradient(circle at bottom right, var(--bgGlow2), transparent 38rem),
+        linear-gradient(135deg, var(--bgTint1), var(--bgTint2));
+      transition: background 700ms ease;
+    }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 16px 50px; }
+    header { display: grid; gap: 12px; margin-bottom: 22px; }
+    h1 { font-size: clamp(2rem, 5vw, 4.2rem); line-height: .95; margin: 0; letter-spacing: -0.06em; }
+    h2 { font-size: 1.1rem; margin: 0 0 8px; }
+    p { color: var(--muted); line-height: 1.55; margin: 0; }
+    .grid { display: grid; grid-template-columns: 1.5fr .95fr; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.015)), var(--panel); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); }
+    .main { padding: 22px; min-height: 540px; }
+    .side { padding: 18px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0 18px; }
+    .stat { background: var(--panel2); border: 1px solid var(--border); border-radius: 16px; padding: 12px; }
+    .stat b { display:block; font-size: 1.4rem; }
+    .stat span { color: var(--muted); font-size: .85rem; }
+    .progress { height: 10px; background: var(--panel2); border-radius: 100px; overflow: hidden; border: 1px solid var(--border); }
+    .bar { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), #c084fc); transition: width .25s ease; }
+    .songBox { margin: 22px 0; padding: 24px; border-radius: 22px; background: rgba(255,255,255,.04); border: 1px solid var(--border); overflow: hidden; }
+    .songVisual { display: grid; grid-template-columns: minmax(128px, 180px) 1fr; gap: 20px; align-items: center; }
+    .coverWrap { width: 100%; aspect-ratio: 1 / 1; border-radius: 20px; overflow: hidden; background: rgba(255,255,255,.06); border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,.26); }
+    .albumCover { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .albumCover.hidden { display: none; }
+    .songText { min-width: 0; }
+    .label { color: var(--muted); font-size: .9rem; margin-bottom: 4px; }
+    .title { font-size: clamp(1.8rem, 5vw, 3.4rem); line-height: 1.03; font-weight: 800; letter-spacing: -0.04em; }
+    .artist { font-size: 1.15rem; color: var(--muted); margin-top: 10px; }
+    .trackMeta { display: none; }
+    .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    @media (max-width: 700px) { .songVisual { grid-template-columns: 1fr; } .coverWrap { max-width: 220px; } }
+    @media (max-width: 560px) { .options { grid-template-columns: 1fr; } }
+    button, input, select, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; color: var(--text); }
+    button:disabled { cursor: default; opacity: .55; }
+    .option { padding: 18px; border-radius: 18px; background: var(--panel2); border: 1px solid var(--border); font-size: 1.5rem; font-weight: 800; transition: transform .12s ease, border-color .12s ease, background .12s ease; }
+    .option:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(125,211,252,.65); }
+    .option:disabled { opacity: .9; }
+    .option.correct { background: rgba(64,217,139,.18); border-color: rgba(64,217,139,.8); }
+    .option.wrong { background: rgba(255,107,107,.18); border-color: rgba(255,107,107,.8); }
+    .actions { display:flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    .primary, .secondary, .danger { padding: 12px 16px; border-radius: 14px; border: 1px solid var(--border); font-weight: 700; }
+    .primary { background: var(--accent); color: #08111b; }
+    .secondary { background: var(--panel2); }
+    .danger { background: rgba(255,107,107,.13); }
+    .feedback { min-height: 36px; margin-top: 14px; color: var(--muted); }
+    .feedback strong.ok { color: var(--ok); }
+    .feedback strong.bad { color: var(--bad); }
+    .control { margin-bottom: 14px; }
+    .control label { display:block; color: var(--muted); font-size:.88rem; margin-bottom: 6px; }
+    input, select, textarea { width:100%; border-radius: 14px; border: 1px solid var(--border); background: var(--panel2); color: var(--text); padding: 11px; outline: none; }
+    textarea { min-height: 120px; resize: vertical; }
+    .small { font-size: .88rem; color: var(--muted); }
+    .tiny { font-size: .78rem; color: var(--muted); }
+    .history { display:grid; gap: 8px; margin-top: 10px; max-height: 260px; overflow:auto; padding-right: 3px; }
+    .histItem { padding: 10px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px solid var(--border); font-size: .92rem; }
+    .histItem b { display:block; }
+    a { color: var(--accent); }
+    code { display: inline-block; max-width: 100%; overflow-wrap: anywhere; background: rgba(255,255,255,.06); border: 1px solid var(--border); padding: 3px 6px; border-radius: 8px; color: var(--text); }
+    .spotifyStatus, .dataStatus { margin-top: 10px; min-height: 22px; }
+    .deviceRow { display:flex; gap: 8px; align-items: stretch; }
+    .deviceRow select { flex: 1; }
+    .hidden { display:none !important; }
+    .pill { display: inline-flex; gap: 6px; align-items:center; padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid var(--border); color: var(--muted); font-size: .82rem; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .check { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .9rem; }
+    .check input { width: auto; }
+    hr { border-color: var(--border); border-style: solid; border-width: 1px 0 0; margin: 16px 0; }
+
+    .modeNote { margin-top: 6px; }
+    .practicePanel { margin-top: 12px; padding: 16px; border-radius: 18px; background: rgba(255,255,255,.035); border: 1px solid var(--border); }
+    .practiceRow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: stretch; }
+    @media (max-width: 560px) { .practiceRow { grid-template-columns: 1fr; } }
+    .hintBox { margin-top: 12px; padding: 12px; border-radius: 14px; background: rgba(125,211,252,.10); border: 1px solid rgba(125,211,252,.30); color: var(--text); line-height: 1.5; }
+    .ratingRow { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .ratingRow span { color: var(--muted); font-size: .9rem; width: 100%; }
+    .ratingRow button { padding: 10px 14px; border-radius: 14px; border: 1px solid var(--border); font-weight: 800; }
+    .ratingRow button[data-rating="hard"] { background: rgba(255,107,107,.16); }
+    .ratingRow button[data-rating="ok"] { background: rgba(251,191,36,.16); }
+    .ratingRow button[data-rating="easy"] { background: rgba(64,217,139,.16); }
+    footer { margin-top: 18px; color: var(--muted); font-size: .86rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Hitster årtalsquiz</h1>
+      <p>Gissa vilket år låten kom ut. Den här versionen kan hämta hela Spotify-spellistan, spara den lokalt och spela rätt låt via Spotify Connect.</p>
+      <div class="row">
+        <span class="pill" id="sourcePill">Källa: laddar...</span>
+        <span class="pill" id="savePill">Sparas lokalt i webbläsaren</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main class="card main">
+        <div class="progress"><div class="bar" id="bar"></div></div>
+        <div class="stats">
+          <div class="stat"><b id="score">0</b><span>Poäng</span></div>
+          <div class="stat"><b id="qnum">0/0</b><span>Fråga</span></div>
+          <div class="stat"><b id="percent">0%</b><span>Rätt</span></div>
+        </div>
+
+        <section class="songBox" id="songBox">
+          <div class="songVisual">
+            <div class="coverWrap">
+              <img class="albumCover hidden" id="albumCover" alt="Albumomslag">
+            </div>
+            <div class="songText">
+              <div class="label">Vilket år kom låten ut?</div>
+              <div class="title" id="songTitle">Starta quizzet</div>
+              <div class="artist" id="songArtist">Hämta gärna spellistan från Spotify först, så spelas rätt låt.</div>
+              <div class="trackMeta" id="trackMeta"></div>
+            </div>
+          </div>
+        </section>
+
+        <div class="options" id="options"></div>
+
+        <div class="practicePanel hidden" id="practicePanel">
+          <div class="control">
+            <label for="practiceGuess">Skriv vilket år du tror låten kom ut</label>
+            <div class="practiceRow">
+              <input id="practiceGuess" inputmode="numeric" autocomplete="off" placeholder="Exempel: 1985">
+              <button class="primary" id="practiceAnswerBtn">Svara</button>
+            </div>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <button class="secondary" id="hintBtn">Visa ledtråd</button>
+            <button class="secondary" id="revealBtn">Visa svar</button>
+          </div>
+          <div class="hintBox hidden" id="hintBox"></div>
+          <div class="ratingRow hidden" id="ratingRow">
+            <span>Hur bra kunde du låten?</span>
+            <button data-rating="hard" type="button">Svår</button>
+            <button data-rating="ok" type="button">Okej</button>
+            <button data-rating="easy" type="button">Lätt</button>
+          </div>
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+
+        <div class="actions">
+          <button class="primary" id="startBtn">Starta / starta om</button>
+          <button class="secondary" id="resumeBtn">Fortsätt sparat quiz</button>
+          <button class="secondary" id="nextBtn" disabled>Nästa fråga</button>
+          <button class="secondary" id="spotifyPlayBtn" disabled>Spela i Spotify</button>
+          <button class="secondary" id="searchBtn" disabled>Öppna Spotify-sökning</button>
+        </div>
+      </main>
+
+      <aside class="card side">
+        <div class="control">
+          <label for="modeSelect">Läge</label>
+          <select id="modeSelect">
+            <option value="quiz" selected>Quizläge: 4 alternativ</option>
+            <option value="practice">Övningsläge: skriv år själv</option>
+            <option value="review">Repetitionsläge: svåra/missade låtar</option>
+          </select>
+          <p class="tiny modeNote" id="modeNote">Quizläge är som vanligt. Övningsläge lär dig årtalen. Repetitionsläge tar låtar du missat eller markerat som svåra.</p>
+        </div>
+
+        <div class="control" id="practiceSetControls">
+          <label class="check"><input type="checkbox" id="practiceSetLocked" checked> Använd samma övningsset i övningsläge</label>
+          <div class="actions" style="margin-top:8px">
+            <button class="secondary" id="newPracticeSetBtn" type="button">Skapa nytt set</button>
+            <button class="secondary" id="clearPracticeSetBtn" type="button">Rensa set</button>
+          </div>
+          <p class="small" id="practiceSetStatus">Inget övningsset sparat än.</p>
+        </div>
+
+        <div class="control">
+          <label for="questionCount">Antal frågor</label>
+          <select id="questionCount">
+            <option value="10">10 frågor</option>
+            <option value="25" selected>25 frågor</option>
+            <option value="50">50 frågor</option>
+            <option value="100">100 frågor</option>
+            <option value="all">Alla laddade låtar</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <label for="difficulty">Alternativ</label>
+          <select id="difficulty">
+            <option value="normal" selected>Normal: blandade årtal</option>
+            <option value="hard">Svår: nära rätt år</option>
+          </select>
+        </div>
+
+        <label class="check"><input type="checkbox" id="autoPlay"> Spela automatiskt när nästa fråga visas</label>
+        <p class="small" id="songCount" style="margin-top:10px"></p>
+
+        <hr>
+        <h2>Spotify</h2>
+        <div class="control">
+          <label for="spotifyClientId">Spotify Client ID</label>
+          <input id="spotifyClientId" autocomplete="off" placeholder="Klistra in Client ID här">
+        </div>
+        <div class="control">
+          <label for="spotifyPlaylistInput">Spotify-spellista URL eller ID</label>
+          <input id="spotifyPlaylistInput" autocomplete="off" placeholder="Klistra in länk till spellistan här">
+          <p class="tiny" style="margin-top:6px">Om originalspellistan nekas av Spotify: kopiera spellistan till ditt eget konto och klistra in länken till kopian här.</p>
+        </div>
+        <p class="small">Redirect URI att lägga in i Spotify-appen:</p>
+        <p class="small" style="margin:6px 0 10px"><code id="spotifyRedirectUri"></code></p>
+        <div class="actions" style="margin-top:0">
+          <button class="secondary" id="spotifyLoginBtn">Logga in</button>
+          <button class="secondary" id="spotifyLogoutBtn">Logga ut</button>
+        </div>
+        <div class="control" style="margin-top:14px">
+          <label for="spotifyDeviceSelect">Spotify-enhet</label>
+          <div class="deviceRow">
+            <select id="spotifyDeviceSelect"><option value="">Ingen enhet hämtad</option></select>
+          </div>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button class="secondary" id="spotifyDevicesBtn">Hämta enheter</button>
+          <button class="secondary" id="syncPlaylistBtn">Hämta spellistan</button>
+        </div>
+        <p class="small spotifyStatus" id="spotifyStatus"></p>
+
+        <hr>
+        <h2>Lokal data</h2>
+        <p class="small" id="dataStatus"></p>
+        <div class="actions" style="margin-top:10px">
+          <button class="secondary" id="exportDataBtn">Exportera låtdata</button>
+          <button class="danger" id="clearLocalBtn">Rensa lokal data</button>
+        </div>
+
+        <hr>
+        <div class="control">
+          <label for="importBox">Lägg till fler låtar</label>
+          <textarea id="importBox" placeholder="En låt per rad:
+Titel;Artist;År
+Valfritt: Titel;Artist;År;spotify:track:...
+Exempel:
+Jolene;Dolly Parton;1973"></textarea>
+        </div>
+        <div class="actions" style="margin-top:0">
+          <button class="secondary" id="importBtn">Importera</button>
+          <button class="secondary" id="resetImportsBtn">Rensa importerade låtar</button>
+        </div>
+        <p class="small" id="importMsg" style="margin-top:10px"></p>
+
+        <hr>
+        <h2>Historik</h2>
+        <div class="history" id="history"></div>
+      </aside>
+    </div>
+
+    <footer>
+      Lokalt sparas: Client ID, Spotify-token, vald enhet, quizinställningar, hämtad spellista, importerade låtar, historik och pågående quiz. Dela inte HTML-filen med någon om du är inloggad i den.
+    </footer>
+  </div>
+
+  <script>
+    const DEFAULT_SONGS = [
+  {
+    "nr": 1,
+    "title": "Walk Of Life",
+    "artist": "Dire Straits",
+    "year": 1985
+  },
+  {
+    "nr": 2,
+    "title": "The Way I Are",
+    "artist": "Timbaland",
+    "year": 2007
+  },
+  {
+    "nr": 3,
+    "title": "Bette Davis Eyes",
+    "artist": "Kim Carnes",
+    "year": 1981
+  },
+  {
+    "nr": 4,
+    "title": "Narcotic - Radio Edit",
+    "artist": "Liquido",
+    "year": 1998
+  },
+  {
+    "nr": 5,
+    "title": "Upside Down",
+    "artist": "Diana Ross",
+    "year": 1980
+  },
+  {
+    "nr": 6,
+    "title": "Somebody That I Used To Know",
+    "artist": "Gotye",
+    "year": 2011
+  },
+  {
+    "nr": 7,
+    "title": "I Got You (I Feel Good)",
+    "artist": "James Brown & The Famous Flames",
+    "year": 1965
+  },
+  {
+    "nr": 8,
+    "title": "Sånt är livet",
+    "artist": "Anita Lindblom",
+    "year": 1961
+  },
+  {
+    "nr": 9,
+    "title": "Jolene",
+    "artist": "Dolly Parton",
+    "year": 1973
+  },
+  {
+    "nr": 10,
+    "title": "Iris",
+    "artist": "The Goo Goo Dolls",
+    "year": 1998
+  },
+  {
+    "nr": 11,
+    "title": "Make Your Own Kind Of Music",
+    "artist": "Cass Elliot",
+    "year": 1969
+  },
+  {
+    "nr": 12,
+    "title": "You're So Vain",
+    "artist": "Carly Simon",
+    "year": 1972
+  },
+  {
+    "nr": 13,
+    "title": "I Can See Clearly Now - Edit",
+    "artist": "Johnny Nash",
+    "year": 1972
+  },
+  {
+    "nr": 14,
+    "title": "Return of the Mack",
+    "artist": "Mark Morrison",
+    "year": 1996
+  },
+  {
+    "nr": 15,
+    "title": "With A Little Help From My Friends",
+    "artist": "Joe Cocker",
+    "year": 1968
+  },
+  {
+    "nr": 16,
+    "title": "No Diggity",
+    "artist": "Blackstreet",
+    "year": 1996
+  },
+  {
+    "nr": 17,
+    "title": "She - Tous les visages de l’amour",
+    "artist": "Charles Aznavour",
+    "year": 1974
+  },
+  {
+    "nr": 18,
+    "title": "Lady - Hear Me Tonight",
+    "artist": "Modjo",
+    "year": 2000
+  },
+  {
+    "nr": 19,
+    "title": "Bara Få Va Mig Själv",
+    "artist": "Laleh",
+    "year": 2016
+  },
+  {
+    "nr": 20,
+    "title": "Ca plane pour moi",
+    "artist": "Plastic Bertrand",
+    "year": 1977
+  },
+  {
+    "nr": 21,
+    "title": "Volare (Nel Blu di Pinto di Blu)",
+    "artist": "Gipsy Kings",
+    "year": 1989
+  },
+  {
+    "nr": 22,
+    "title": "Jump Around",
+    "artist": "House Of Pain",
+    "year": 1992
+  },
+  {
+    "nr": 23,
+    "title": "We Didn't Start the Fire",
+    "artist": "Billy Joel",
+    "year": 1989
+  },
+  {
+    "nr": 24,
+    "title": "Euphoria - Single Version",
+    "artist": "Loreen",
+    "year": 2012
+  },
+  {
+    "nr": 25,
+    "title": "The Locomotion",
+    "artist": "Little Eva",
+    "year": 1962
+  },
+  {
+    "nr": 26,
+    "title": "Nah Neh Nah",
+    "artist": "Vaya Con Dios",
+    "year": 1990
+  },
+  {
+    "nr": 27,
+    "title": "Il Ragazzo Della Via Gluck",
+    "artist": "Adriano Celentano",
+    "year": 1966
+  },
+  {
+    "nr": 28,
+    "title": "Use Somebody",
+    "artist": "Kings of Leon",
+    "year": 2008
+  },
+  {
+    "nr": 29,
+    "title": "En sån karl",
+    "artist": "Lill Lindfors",
+    "year": 1967
+  },
+  {
+    "nr": 30,
+    "title": "Heaven",
+    "artist": "Bryan Adams",
+    "year": 1983
+  },
+  {
+    "nr": 31,
+    "title": "Don't Leave Me This Way",
+    "artist": "Thelma Houston",
+    "year": 1976
+  },
+  {
+    "nr": 32,
+    "title": "A Thousand Miles - Single Version",
+    "artist": "Vanessa Carlton",
+    "year": 2002
+  },
+  {
+    "nr": 33,
+    "title": "Everybody Hurts",
+    "artist": "R.E.M.",
+    "year": 1992
+  },
+  {
+    "nr": 34,
+    "title": "More Than a Feeling",
+    "artist": "Boston",
+    "year": 1976
+  },
+  {
+    "nr": 35,
+    "title": "Sing For The Moment",
+    "artist": "Eminem",
+    "year": 2002
+  },
+  {
+    "nr": 36,
+    "title": "Shallow - Radio Edit",
+    "artist": "Lady Gaga",
+    "year": 2018
+  },
+  {
+    "nr": 37,
+    "title": "Everything Is Everything",
+    "artist": "Ms. Lauryn Hill",
+    "year": 1998
+  },
+  {
+    "nr": 38,
+    "title": "Old Town Road",
+    "artist": "Lil Nas X",
+    "year": 2018
+  },
+  {
+    "nr": 39,
+    "title": "Manic Monday",
+    "artist": "The Bangles",
+    "year": 1986
+  },
+  {
+    "nr": 40,
+    "title": "Easy",
+    "artist": "Commodores",
+    "year": 1977
+  },
+  {
+    "nr": 41,
+    "title": "Happy Together",
+    "artist": "The Turtles",
+    "year": 1967
+  },
+  {
+    "nr": 42,
+    "title": "7 Years",
+    "artist": "Lukas Graham",
+    "year": 2015
+  },
+  {
+    "nr": 43,
+    "title": "Heartbeats",
+    "artist": "The Knife",
+    "year": 2003
+  },
+  {
+    "nr": 44,
+    "title": "Never Ending Story",
+    "artist": "Limahl",
+    "year": 1984
+  },
+  {
+    "nr": 45,
+    "title": "Sweet Child O' Mine",
+    "artist": "Guns N' Roses",
+    "year": 1987
+  },
+  {
+    "nr": 46,
+    "title": "Più bella cosa",
+    "artist": "Eros Ramazzotti",
+    "year": 1996
+  },
+  {
+    "nr": 47,
+    "title": "Learn to Fly",
+    "artist": "Foo Fighters",
+    "year": 1999
+  },
+  {
+    "nr": 48,
+    "title": "Waiting On the World to Change",
+    "artist": "John Mayer",
+    "year": 2006
+  },
+  {
+    "nr": 49,
+    "title": "Happy - From \"Despicable Me 2\"",
+    "artist": "Pharrell Williams",
+    "year": 2013
+  },
+  {
+    "nr": 50,
+    "title": "Baby, I Love Your Way/Freebird",
+    "artist": "Will To Power",
+    "year": 1988
+  },
+  {
+    "nr": 51,
+    "title": "Grain De Sable",
+    "artist": "David-Alexandre Winter",
+    "year": 1969
+  },
+  {
+    "nr": 52,
+    "title": "The Letter",
+    "artist": "The Box Tops",
+    "year": 1967
+  },
+  {
+    "nr": 53,
+    "title": "I'm a Believer",
+    "artist": "The Monkees",
+    "year": 1966
+  },
+  {
+    "nr": 54,
+    "title": "Purple Rain",
+    "artist": "Prince",
+    "year": 1984
+  },
+  {
+    "nr": 55,
+    "title": "One More Time - Radio Edit",
+    "artist": "Daft Punk",
+    "year": 2000
+  },
+  {
+    "nr": 56,
+    "title": "Jailhouse Rock",
+    "artist": "Elvis Presley",
+    "year": 1957
+  },
+  {
+    "nr": 57,
+    "title": "Where Is The Love?",
+    "artist": "Black Eyed Peas",
+    "year": 2003
+  },
+  {
+    "nr": 58,
+    "title": "It's a Heartache",
+    "artist": "Bonnie Tyler",
+    "year": 1977
+  },
+  {
+    "nr": 59,
+    "title": "Got My Mind Set on You",
+    "artist": "George Harrison",
+    "year": 1987
+  },
+  {
+    "nr": 60,
+    "title": "Pop Corn",
+    "artist": "Gershon Kingsley",
+    "year": 1969
+  },
+  {
+    "nr": 61,
+    "title": "Toosie Slide",
+    "artist": "Drake",
+    "year": 2020
+  },
+  {
+    "nr": 62,
+    "title": "Dancing in the Moonlight",
+    "artist": "Toploader",
+    "year": 1999
+  },
+  {
+    "nr": 63,
+    "title": "Murder On The Dancefloor",
+    "artist": "Sophie Ellis-Bextor",
+    "year": 2001
+  },
+  {
+    "nr": 64,
+    "title": "Från och med Du",
+    "artist": "Oskar Linnros",
+    "year": 2010
+  },
+  {
+    "nr": 65,
+    "title": "Itsy Bitsy Teenie Weenie Yellow Polka Dot Bikini",
+    "artist": "Brian Hyland",
+    "year": 1960
+  },
+  {
+    "nr": 66,
+    "title": "Under the Bridge",
+    "artist": "Red Hot Chili Peppers",
+    "year": 1991
+  },
+  {
+    "nr": 67,
+    "title": "Summertime Blues",
+    "artist": "Eddie Cochran",
+    "year": 1958
+  },
+  {
+    "nr": 68,
+    "title": "Budapest",
+    "artist": "George Ezra",
+    "year": 2013
+  },
+  {
+    "nr": 69,
+    "title": "Ring of Fire",
+    "artist": "Johnny Cash",
+    "year": 1963
+  },
+  {
+    "nr": 70,
+    "title": "The Sign",
+    "artist": "Ace of Base",
+    "year": 1993
+  },
+  {
+    "nr": 71,
+    "title": "Right Here Waiting",
+    "artist": "Richard Marx",
+    "year": 1989
+  },
+  {
+    "nr": 72,
+    "title": "Fly Away",
+    "artist": "Lenny Kravitz",
+    "year": 1998
+  },
+  {
+    "nr": 73,
+    "title": "A Little Respect",
+    "artist": "Erasure",
+    "year": 1988
+  },
+  {
+    "nr": 74,
+    "title": "You Make My Dreams (Come True)",
+    "artist": "Daryl Hall & John Oates",
+    "year": 1980
+  },
+  {
+    "nr": 75,
+    "title": "Rise",
+    "artist": "GABRIELLE",
+    "year": 2000
+  },
+  {
+    "nr": 76,
+    "title": "Señorita",
+    "artist": "Shawn Mendes",
+    "year": 2019
+  },
+  {
+    "nr": 77,
+    "title": "Thunder",
+    "artist": "Imagine Dragons",
+    "year": 2017
+  },
+  {
+    "nr": 78,
+    "title": "Smalltown Boy",
+    "artist": "Bronski Beat",
+    "year": 1984
+  },
+  {
+    "nr": 79,
+    "title": "Over My Shoulder",
+    "artist": "Mike + The Mechanics",
+    "year": 1995
+  },
+  {
+    "nr": 80,
+    "title": "See You Later, Alligator",
+    "artist": "Bill Haley & His Comets",
+    "year": 1956
+  },
+  {
+    "nr": 81,
+    "title": "Baby Can I Hold You",
+    "artist": "Tracy Chapman",
+    "year": 1988
+  },
+  {
+    "nr": 82,
+    "title": "Let Me Entertain You",
+    "artist": "Robbie Williams",
+    "year": 1998
+  },
+  {
+    "nr": 83,
+    "title": "My Boy Lollipop",
+    "artist": "Millie Small",
+    "year": 1964
+  },
+  {
+    "nr": 84,
+    "title": "Brother Louie",
+    "artist": "Modern Talking",
+    "year": 1986
+  },
+  {
+    "nr": 85,
+    "title": "Hey Ya!",
+    "artist": "Outkast",
+    "year": 2003
+  },
+  {
+    "nr": 86,
+    "title": "Girlfriend - Radio Edit",
+    "artist": "Avril Lavigne",
+    "year": 2007
+  },
+  {
+    "nr": 87,
+    "title": "Mercy",
+    "artist": "Duffy",
+    "year": 2008
+  },
+  {
+    "nr": 88,
+    "title": "Only Time",
+    "artist": "Enya",
+    "year": 2000
+  },
+  {
+    "nr": 89,
+    "title": "Dear Jessie",
+    "artist": "Madonna",
+    "year": 1989
+  },
+  {
+    "nr": 90,
+    "title": "Somewhere Only We Know",
+    "artist": "Keane",
+    "year": 2004
+  },
+  {
+    "nr": 91,
+    "title": "Knock on Wood",
+    "artist": "Eddie Floyd",
+    "year": 1966
+  },
+  {
+    "nr": 92,
+    "title": "Put Your Records On",
+    "artist": "Corinne Bailey Rae",
+    "year": 2006
+  },
+  {
+    "nr": 93,
+    "title": "The Hustle",
+    "artist": "Van McCoy",
+    "year": 1975
+  },
+  {
+    "nr": 94,
+    "title": "If You Leave Me Now",
+    "artist": "Chicago",
+    "year": 1976
+  },
+  {
+    "nr": 95,
+    "title": "Because the Night",
+    "artist": "Patti Smith",
+    "year": 1978
+  },
+  {
+    "nr": 96,
+    "title": "Ghetto Supastar",
+    "artist": "Pras",
+    "year": 1998
+  },
+  {
+    "nr": 97,
+    "title": "Call on Me - Radio Mix",
+    "artist": "Eric Prydz",
+    "year": 2004
+  },
+  {
+    "nr": 98,
+    "title": "Oh, Pretty Woman",
+    "artist": "Roy Orbison",
+    "year": 1964
+  },
+  {
+    "nr": 99,
+    "title": "San Francisco",
+    "artist": "Scott McKenzie",
+    "year": 1967
+  },
+  {
+    "nr": 100,
+    "title": "She Drives Me Crazy",
+    "artist": "Fine Young Cannibals",
+    "year": 1988
+  },
+  {
+    "nr": 101,
+    "title": "Changes",
+    "artist": "2Pac",
+    "year": 1998
+  },
+  {
+    "nr": 102,
+    "title": "No More \"I Love You's\"",
+    "artist": "Annie Lennox",
+    "year": 1995
+  },
+  {
+    "nr": 103,
+    "title": "Raise Your Glass",
+    "artist": "P!nk",
+    "year": 2010
+  },
+  {
+    "nr": 104,
+    "title": "The Actor",
+    "artist": "Michael Learns To Rock",
+    "year": 1991
+  },
+  {
+    "nr": 105,
+    "title": "Regulate",
+    "artist": "Warren G",
+    "year": 1994
+  },
+  {
+    "nr": 106,
+    "title": "Up Around The Bend",
+    "artist": "Creedence Clearwater Revival",
+    "year": 1970
+  },
+  {
+    "nr": 107,
+    "title": "Do Wah Diddy Diddy",
+    "artist": "Manfred Mann",
+    "year": 1964
+  },
+  {
+    "nr": 108,
+    "title": "Wrecking Ball",
+    "artist": "Miley Cyrus",
+    "year": 2013
+  },
+  {
+    "nr": 109,
+    "title": "Fireflies",
+    "artist": "Owl City",
+    "year": 2009
+  },
+  {
+    "nr": 110,
+    "title": "All of Me",
+    "artist": "John Legend",
+    "year": 2013
+  },
+  {
+    "nr": 111,
+    "title": "You Get What You Give",
+    "artist": "New Radicals",
+    "year": 1998
+  },
+  {
+    "nr": 112,
+    "title": "Set Fire to the Rain",
+    "artist": "Adele",
+    "year": 2011
+  },
+  {
+    "nr": 113,
+    "title": "Can't Hold Us",
+    "artist": "Macklemore",
+    "year": 2011
+  },
+  {
+    "nr": 114,
+    "title": "Habits (Stay High)",
+    "artist": "Tove Lo",
+    "year": 2013
+  },
+  {
+    "nr": 115,
+    "title": "Tainted Love",
+    "artist": "Gloria Jones",
+    "year": 1965
+  },
+  {
+    "nr": 116,
+    "title": "Feel It Still",
+    "artist": "Portugal. The Man",
+    "year": 2017
+  },
+  {
+    "nr": 117,
+    "title": "Alive",
+    "artist": "Pearl Jam",
+    "year": 1991
+  },
+  {
+    "nr": 118,
+    "title": "Rescue Me",
+    "artist": "Fontella Bass",
+    "year": 1965
+  },
+  {
+    "nr": 119,
+    "title": "Come As You Are",
+    "artist": "Nirvana",
+    "year": 1991
+  },
+  {
+    "nr": 120,
+    "title": "Gimme! Gimme! Gimme! (A Man After Midnight)",
+    "artist": "ABBA",
+    "year": 1979
+  },
+  {
+    "nr": 121,
+    "title": "Escape",
+    "artist": "Enrique Iglesias",
+    "year": 2001
+  },
+  {
+    "nr": 122,
+    "title": "FourFiveSeconds",
+    "artist": "Rihanna",
+    "year": 2015
+  },
+  {
+    "nr": 123,
+    "title": "Ready or Not",
+    "artist": "Fugees",
+    "year": 1996
+  },
+  {
+    "nr": 124,
+    "title": "I've Got a Woman",
+    "artist": "Ray Charles",
+    "year": 1954
+  },
+  {
+    "nr": 125,
+    "title": "Dancing On The Ceiling",
+    "artist": "Lionel Richie",
+    "year": 1986
+  },
+  {
+    "nr": 126,
+    "title": "La Bamba",
+    "artist": "Ritchie Valens",
+    "year": 1958
+  },
+  {
+    "nr": 127,
+    "title": "December, 1963 (Oh What a Night!)",
+    "artist": "The Four Seasons",
+    "year": 1975
+  },
+  {
+    "nr": 128,
+    "title": "Sweet Dreams (Are Made of This)",
+    "artist": "Eurythmics",
+    "year": 1983
+  },
+  {
+    "nr": 129,
+    "title": "Still D.R.E.",
+    "artist": "Dr. Dre",
+    "year": 1999
+  },
+  {
+    "nr": 130,
+    "title": "Karma Chameleon",
+    "artist": "Culture Club",
+    "year": 1983
+  },
+  {
+    "nr": 131,
+    "title": "It's My Party",
+    "artist": "Lesley Gore",
+    "year": 1963
+  },
+  {
+    "nr": 132,
+    "title": "Informer",
+    "artist": "Snow",
+    "year": 1992
+  },
+  {
+    "nr": 133,
+    "title": "Turn Me On",
+    "artist": "Norah Jones",
+    "year": 2002
+  },
+  {
+    "nr": 134,
+    "title": "Det bästa kanske inte hänt än",
+    "artist": "Molly Sandén",
+    "year": 2019
+  },
+  {
+    "nr": 135,
+    "title": "World Hold on",
+    "artist": "Bob Sinclar",
+    "year": 2006
+  },
+  {
+    "nr": 136,
+    "title": "Geronimo",
+    "artist": "Sheppard",
+    "year": 2014
+  },
+  {
+    "nr": 137,
+    "title": "Forever Young",
+    "artist": "Alphaville",
+    "year": 1984
+  },
+  {
+    "nr": 138,
+    "title": "Life Is A Rollercoaster",
+    "artist": "Ronan Keating",
+    "year": 2000
+  },
+  {
+    "nr": 139,
+    "title": "Everyday",
+    "artist": "Buddy Holly",
+    "year": 1957
+  },
+  {
+    "nr": 140,
+    "title": "I Won't Back Down",
+    "artist": "Tom Petty",
+    "year": 1989
+  },
+  {
+    "nr": 141,
+    "title": "Dancing In the Dark",
+    "artist": "Bruce Springsteen",
+    "year": 1984
+  },
+  {
+    "nr": 142,
+    "title": "Ain't That A Shame",
+    "artist": "Fats Domino",
+    "year": 1955
+  },
+  {
+    "nr": 143,
+    "title": "I Got You Babe",
+    "artist": "Sonny & Cher",
+    "year": 1965
+  },
+  {
+    "nr": 144,
+    "title": "Family Affair",
+    "artist": "Mary J. Blige",
+    "year": 2001
+  },
+  {
+    "nr": 145,
+    "title": "Johnny B. Goode",
+    "artist": "Chuck Berry",
+    "year": 1958
+  },
+  {
+    "nr": 146,
+    "title": "Vem vet?",
+    "artist": "Lisa Ekdahl",
+    "year": 1994
+  },
+  {
+    "nr": 147,
+    "title": "Move on Up",
+    "artist": "Curtis Mayfield",
+    "year": 1970
+  },
+  {
+    "nr": 148,
+    "title": "Mr. Jones",
+    "artist": "Counting Crows",
+    "year": 1993
+  },
+  {
+    "nr": 149,
+    "title": "You Sexy Thing",
+    "artist": "Hot Chocolate",
+    "year": 1975
+  },
+  {
+    "nr": 150,
+    "title": "Guajira Guantanamera",
+    "artist": "Joseito Fernández",
+    "year": 1929
+  },
+  {
+    "nr": 151,
+    "title": "Holding Back the Years",
+    "artist": "Simply Red",
+    "year": 1985
+  },
+  {
+    "nr": 152,
+    "title": "I Don't Feel Like Dancin'",
+    "artist": "Scissor Sisters",
+    "year": 2006
+  },
+  {
+    "nr": 153,
+    "title": "The Twist",
+    "artist": "Chubby Checker",
+    "year": 1960
+  },
+  {
+    "nr": 154,
+    "title": "Under Pressure",
+    "artist": "Queen",
+    "year": 1981
+  },
+  {
+    "nr": 155,
+    "title": "Royals",
+    "artist": "Lorde",
+    "year": 2013
+  },
+  {
+    "nr": 156,
+    "title": "You Make Me Feel Like Dancing",
+    "artist": "Leo Sayer",
+    "year": 1976
+  },
+  {
+    "nr": 157,
+    "title": "Don't You Want Me",
+    "artist": "The Human League",
+    "year": 1981
+  },
+  {
+    "nr": 158,
+    "title": "The botten is nådd",
+    "artist": "Timbuktu",
+    "year": 2003
+  },
+  {
+    "nr": 159,
+    "title": "Waiting for a Star to Fall",
+    "artist": "Boy Meets Girl",
+    "year": 1988
+  },
+  {
+    "nr": 160,
+    "title": "Walkin' My Baby Back Home",
+    "artist": "Jo Stafford",
+    "year": 1952
+  },
+  {
+    "nr": 161,
+    "title": "Stupidisco",
+    "artist": "Junior Jack",
+    "year": 2004
+  },
+  {
+    "nr": 162,
+    "title": "Chandelier",
+    "artist": "Sia",
+    "year": 2014
+  },
+  {
+    "nr": 163,
+    "title": "In Da Club",
+    "artist": "50 Cent",
+    "year": 2003
+  },
+  {
+    "nr": 164,
+    "title": "Start Me Up",
+    "artist": "The Rolling Stones",
+    "year": 1981
+  },
+  {
+    "nr": 165,
+    "title": "You Can Get It If You Really Want",
+    "artist": "Jimmy Cliff",
+    "year": 1970
+  },
+  {
+    "nr": 166,
+    "title": "Dream Lover",
+    "artist": "Bobby Darin",
+    "year": 1959
+  },
+  {
+    "nr": 167,
+    "title": "The Shoop Shoop Song (It's in His Kiss)",
+    "artist": "Betty Everett",
+    "year": 1964
+  },
+  {
+    "nr": 168,
+    "title": "Wonderwall",
+    "artist": "Oasis",
+    "year": 1995
+  },
+  {
+    "nr": 169,
+    "title": "Born To Be Wild",
+    "artist": "Steppenwolf",
+    "year": 1968
+  },
+  {
+    "nr": 170,
+    "title": "I Love It",
+    "artist": "Icona Pop",
+    "year": 2012
+  },
+  {
+    "nr": 171,
+    "title": "Only You",
+    "artist": "Yazoo",
+    "year": 1982
+  },
+  {
+    "nr": 172,
+    "title": "The Lazy Song",
+    "artist": "Bruno Mars",
+    "year": 2011
+  },
+  {
+    "nr": 173,
+    "title": "Can't Keep It In",
+    "artist": "Yusuf / Cat Stevens",
+    "year": 1972
+  },
+  {
+    "nr": 174,
+    "title": "Sweet Home Alabama",
+    "artist": "Lynyrd Skynyrd",
+    "year": 1974
+  },
+  {
+    "nr": 175,
+    "title": "Sadie The Cleaning Lady",
+    "artist": "John Farnham",
+    "year": 1967
+  },
+  {
+    "nr": 176,
+    "title": "Signed, Sealed, Delivered (I'm Yours)",
+    "artist": "Stevie Wonder",
+    "year": 1970
+  },
+  {
+    "nr": 177,
+    "title": "You Make Me Feel (Mighty Real)",
+    "artist": "Sylvester",
+    "year": 1978
+  },
+  {
+    "nr": 178,
+    "title": "Pata Pata",
+    "artist": "Miriam Makeba",
+    "year": 1967
+  },
+  {
+    "nr": 179,
+    "title": "Rock Around The Clock",
+    "artist": "Bill Haley & His Comets",
+    "year": 1954
+  },
+  {
+    "nr": 180,
+    "title": "Basket Case",
+    "artist": "Green Day",
+    "year": 1994
+  },
+  {
+    "nr": 181,
+    "title": "Luka",
+    "artist": "Suzanne Vega",
+    "year": 1987
+  },
+  {
+    "nr": 182,
+    "title": "Walking in Memphis",
+    "artist": "Marc Cohn",
+    "year": 1991
+  },
+  {
+    "nr": 183,
+    "title": "Friday I'm In Love",
+    "artist": "The Cure",
+    "year": 1992
+  },
+  {
+    "nr": 184,
+    "title": "La Donna E' Mobile",
+    "artist": "Enrico Caruso",
+    "year": 1902
+  },
+  {
+    "nr": 185,
+    "title": "Auld Lang Syne",
+    "artist": "Frank C. Stanley",
+    "year": 1910
+  },
+  {
+    "nr": 186,
+    "title": "Jag kommer",
+    "artist": "Veronica Maggio",
+    "year": 2011
+  },
+  {
+    "nr": 187,
+    "title": "I Wanna Dance with Somebody",
+    "artist": "Whitney Houston",
+    "year": 1987
+  },
+  {
+    "nr": 188,
+    "title": "Levels",
+    "artist": "Avicii",
+    "year": 2011
+  },
+  {
+    "nr": 189,
+    "title": "You Can Call Me Al",
+    "artist": "Paul Simon",
+    "year": 1986
+  },
+  {
+    "nr": 190,
+    "title": "Oops!...I Did It Again",
+    "artist": "Britney Spears",
+    "year": 2000
+  },
+  {
+    "nr": 191,
+    "title": "Believe",
+    "artist": "Cher",
+    "year": 1998
+  },
+  {
+    "nr": 192,
+    "title": "Respect",
+    "artist": "Aretha Franklin",
+    "year": 1967
+  },
+  {
+    "nr": 193,
+    "title": "Waterfalls",
+    "artist": "TLC",
+    "year": 1994
+  },
+  {
+    "nr": 194,
+    "title": "Crazy In Love",
+    "artist": "Beyoncé",
+    "year": 2003
+  },
+  {
+    "nr": 195,
+    "title": "I Try",
+    "artist": "Macy Gray",
+    "year": 1999
+  },
+  {
+    "nr": 196,
+    "title": "Flashdance...What a Feeling",
+    "artist": "Irene Cara",
+    "year": 1983
+  },
+  {
+    "nr": 197,
+    "title": "Say It Right",
+    "artist": "Nelly Furtado",
+    "year": 2006
+  },
+  {
+    "nr": 198,
+    "title": "Together Again",
+    "artist": "Janet Jackson",
+    "year": 1997
+  },
+  {
+    "nr": 199,
+    "title": "The Rhythm of the Night",
+    "artist": "Corona",
+    "year": 1993
+  },
+  {
+    "nr": 200,
+    "title": "Piece of My Heart",
+    "artist": "Erma Franklin",
+    "year": 1967
+  },
+  {
+    "nr": 201,
+    "title": "Torn",
+    "artist": "Natalie Imbruglia",
+    "year": 1997
+  },
+  {
+    "nr": 202,
+    "title": "Kom igen Lena!",
+    "artist": "Håkan Hellström",
+    "year": 2002
+  },
+  {
+    "nr": 203,
+    "title": "Surfin' U.S.A.",
+    "artist": "The Beach Boys",
+    "year": 1963
+  },
+  {
+    "nr": 204,
+    "title": "Lovefool",
+    "artist": "The Cardigans",
+    "year": 1996
+  },
+  {
+    "nr": 205,
+    "title": "In the Mood",
+    "artist": "Glenn Miller",
+    "year": 1939
+  },
+  {
+    "nr": 206,
+    "title": "That's Amore",
+    "artist": "Dean Martin",
+    "year": 1953
+  },
+  {
+    "nr": 207,
+    "title": "Be-Bop-A-Lula",
+    "artist": "Gene Vincent & His Blue Caps",
+    "year": 1956
+  },
+  {
+    "nr": 208,
+    "title": "Tequila",
+    "artist": "The Champs",
+    "year": 1958
+  },
+  {
+    "nr": 209,
+    "title": "Good Golly Miss Molly",
+    "artist": "Little Richard",
+    "year": 1958
+  },
+  {
+    "nr": 210,
+    "title": "The Wanderer",
+    "artist": "Dion",
+    "year": 1961
+  },
+  {
+    "nr": 211,
+    "title": "Surfin' Bird",
+    "artist": "The Trashmen",
+    "year": 1963
+  },
+  {
+    "nr": 212,
+    "title": "I Can't Help Myself (Sugar Pie, Honey Bunch)",
+    "artist": "Four Tops",
+    "year": 1965
+  },
+  {
+    "nr": 213,
+    "title": "When a Man Loves a Woman",
+    "artist": "Percy Sledge",
+    "year": 1966
+  },
+  {
+    "nr": 214,
+    "title": "Girl, You'll Be A Woman Soon",
+    "artist": "Neil Diamond",
+    "year": 1967
+  },
+  {
+    "nr": 215,
+    "title": "Build Me Up Buttercup",
+    "artist": "The Foundations",
+    "year": 1968
+  },
+  {
+    "nr": 216,
+    "title": "Come Together",
+    "artist": "The Beatles",
+    "year": 1969
+  },
+  {
+    "nr": 217,
+    "title": "Sugar Sugar",
+    "artist": "The Archies",
+    "year": 1969
+  },
+  {
+    "nr": 218,
+    "title": "Your Song",
+    "artist": "Elton John",
+    "year": 1970
+  },
+  {
+    "nr": 219,
+    "title": "In the Summertime",
+    "artist": "Mungo Jerry",
+    "year": 1970
+  },
+  {
+    "nr": 220,
+    "title": "Life on Mars?",
+    "artist": "David Bowie",
+    "year": 1971
+  },
+  {
+    "nr": 221,
+    "title": "Live And Let Die",
+    "artist": "Wings",
+    "year": 1973
+  },
+  {
+    "nr": 222,
+    "title": "You're The First, The Last, My Everything",
+    "artist": "Barry White",
+    "year": 1974
+  },
+  {
+    "nr": 223,
+    "title": "I Love Rock N Roll",
+    "artist": "The Arrows",
+    "year": 1975
+  },
+  {
+    "nr": 224,
+    "title": "Let's Stick Together",
+    "artist": "Bryan Ferry",
+    "year": 1976
+  },
+  {
+    "nr": 225,
+    "title": "Disco Inferno",
+    "artist": "The Trammps",
+    "year": 1976
+  },
+  {
+    "nr": 226,
+    "title": "Born to Be Alive",
+    "artist": "Patrick Hernandez",
+    "year": 1978
+  },
+  {
+    "nr": 227,
+    "title": "Le Freak",
+    "artist": "CHIC",
+    "year": 1978
+  },
+  {
+    "nr": 228,
+    "title": "Escape (The Pina Colada Song)",
+    "artist": "Rupert Holmes",
+    "year": 1979
+  },
+  {
+    "nr": 229,
+    "title": "Cruel to Be Kind",
+    "artist": "Nick Lowe",
+    "year": 1979
+  },
+  {
+    "nr": 230,
+    "title": "Celebration",
+    "artist": "Kool & The Gang",
+    "year": 1980
+  },
+  {
+    "nr": 231,
+    "title": "Super Freak",
+    "artist": "Rick James",
+    "year": 1981
+  },
+  {
+    "nr": 232,
+    "title": "White Wedding",
+    "artist": "Billy Idol",
+    "year": 1982
+  },
+  {
+    "nr": 233,
+    "title": "Gloria",
+    "artist": "Laura Branigan",
+    "year": 1982
+  },
+  {
+    "nr": 234,
+    "title": "Give It Up",
+    "artist": "KC & The Sunshine Band",
+    "year": 1982
+  },
+  {
+    "nr": 235,
+    "title": "Every Breath You Take",
+    "artist": "The Police",
+    "year": 1983
+  },
+  {
+    "nr": 236,
+    "title": "Higher Love",
+    "artist": "Steve Winwood",
+    "year": 1986
+  },
+  {
+    "nr": 237,
+    "title": "Hungry Eyes",
+    "artist": "Eric Carmen",
+    "year": 1987
+  },
+  {
+    "nr": 238,
+    "title": "Sweetest Thing",
+    "artist": "U2",
+    "year": 1987
+  },
+  {
+    "nr": 239,
+    "title": "Lambada",
+    "artist": "Kaoma",
+    "year": 1989
+  },
+  {
+    "nr": 240,
+    "title": "I Drove All Night",
+    "artist": "Cyndi Lauper",
+    "year": 1989
+  },
+  {
+    "nr": 241,
+    "title": "The Best",
+    "artist": "Tina Turner",
+    "year": 1989
+  },
+  {
+    "nr": 242,
+    "title": "Iron Lion Zion",
+    "artist": "Bob Marley & The Wailers",
+    "year": 1992
+  },
+  {
+    "nr": 243,
+    "title": "Sing Hallelujah!",
+    "artist": "Dr. Alban",
+    "year": 1992
+  },
+  {
+    "nr": 244,
+    "title": "Mr. Vain",
+    "artist": "Culture Beat",
+    "year": 1993
+  },
+  {
+    "nr": 245,
+    "title": "I'd Do Anything For Love (But I Won't Do That)",
+    "artist": "Meat Loaf",
+    "year": 1993
+  },
+  {
+    "nr": 246,
+    "title": "Self Esteem",
+    "artist": "The Offspring",
+    "year": 1994
+  },
+  {
+    "nr": 247,
+    "title": "Hand in My Pocket",
+    "artist": "Alanis Morissette",
+    "year": 1995
+  },
+  {
+    "nr": 248,
+    "title": "Mysterious Girl",
+    "artist": "Peter Andre",
+    "year": 1995
+  },
+  {
+    "nr": 249,
+    "title": "Dance into the Light",
+    "artist": "Phil Collins",
+    "year": 1996
+  },
+  {
+    "nr": 250,
+    "title": "Bitter Sweet Symphony",
+    "artist": "The Verve",
+    "year": 1997
+  },
+  {
+    "nr": 251,
+    "title": "Praise You",
+    "artist": "Fatboy Slim",
+    "year": 1998
+  },
+  {
+    "nr": 252,
+    "title": "911",
+    "artist": "Wyclef Jean",
+    "year": 2000
+  },
+  {
+    "nr": 253,
+    "title": "Seven Nation Army",
+    "artist": "The White Stripes",
+    "year": 2003
+  },
+  {
+    "nr": 254,
+    "title": "Numb / Encore",
+    "artist": "JAY-Z",
+    "year": 2004
+  },
+  {
+    "nr": 255,
+    "title": "Talk",
+    "artist": "Coldplay",
+    "year": 2005
+  },
+  {
+    "nr": 256,
+    "title": "Gold Digger",
+    "artist": "Kanye West",
+    "year": 2005
+  },
+  {
+    "nr": 257,
+    "title": "Crazy",
+    "artist": "Gnarls Barkley",
+    "year": 2006
+  },
+  {
+    "nr": 258,
+    "title": "Human",
+    "artist": "The Killers",
+    "year": 2008
+  },
+  {
+    "nr": 259,
+    "title": "Poker Face",
+    "artist": "Lady Gaga",
+    "year": 2008
+  },
+  {
+    "nr": 260,
+    "title": "Sweet About Me",
+    "artist": "Gabriella Cilmi",
+    "year": 2008
+  },
+  {
+    "nr": 261,
+    "title": "You've Got The Love",
+    "artist": "Florence + The Machine",
+    "year": 2009
+  },
+  {
+    "nr": 262,
+    "title": "Whatcha Say",
+    "artist": "Jason Derulo",
+    "year": 2009
+  },
+  {
+    "nr": 263,
+    "title": "Dancing On My Own",
+    "artist": "Robyn",
+    "year": 2010
+  },
+  {
+    "nr": 264,
+    "title": "Price Tag",
+    "artist": "Jessie J",
+    "year": 2011
+  },
+  {
+    "nr": 265,
+    "title": "Moves Like Jagger",
+    "artist": "Maroon 5",
+    "year": 2011
+  },
+  {
+    "nr": 266,
+    "title": "Riptide",
+    "artist": "Vance Joy",
+    "year": 2013
+  },
+  {
+    "nr": 267,
+    "title": "All About That Bass",
+    "artist": "Meghan Trainor",
+    "year": 2014
+  },
+  {
+    "nr": 268,
+    "title": "Shut Up and Dance",
+    "artist": "WALK THE MOON",
+    "year": 2014
+  },
+  {
+    "nr": 269,
+    "title": "Lush Life",
+    "artist": "Zara Larsson",
+    "year": 2015
+  },
+  {
+    "nr": 270,
+    "title": "Don't Call Me Up",
+    "artist": "Mabel",
+    "year": 2019
+  },
+  {
+    "nr": 271,
+    "title": "Everywhere",
+    "artist": "Fleetwood Mac",
+    "year": 1987
+  },
+  {
+    "nr": 272,
+    "title": "(What A) Wonderful World",
+    "artist": "Sam Cooke",
+    "year": 1960
+  },
+  {
+    "nr": 273,
+    "title": "The Whole of the Moon",
+    "artist": "The Waterboys",
+    "year": 1985
+  },
+  {
+    "nr": 274,
+    "title": "Dance Monkey",
+    "artist": "Tones And I",
+    "year": 2019
+  },
+  {
+    "nr": 275,
+    "title": "Ain't Nobody",
+    "artist": "Rufus",
+    "year": 1983
+  },
+  {
+    "nr": 276,
+    "title": "You Can't Hurry Love",
+    "artist": "The Supremes",
+    "year": 1966
+  },
+  {
+    "nr": 277,
+    "title": "Buffalo Stance",
+    "artist": "Neneh Cherry",
+    "year": 1988
+  },
+  {
+    "nr": 278,
+    "title": "Jump (For My Love)",
+    "artist": "The Pointer Sisters",
+    "year": 1983
+  },
+  {
+    "nr": 279,
+    "title": "Love Shine a Light",
+    "artist": "Katrina & The Waves",
+    "year": 1997
+  },
+  {
+    "nr": 280,
+    "title": "Pretty Belinda",
+    "artist": "Chris Andrews",
+    "year": 1969
+  },
+  {
+    "nr": 281,
+    "title": "Ma Baker",
+    "artist": "Boney M.",
+    "year": 1977
+  },
+  {
+    "nr": 282,
+    "title": "Dreams",
+    "artist": "The Cranberries",
+    "year": 1992
+  },
+  {
+    "nr": 283,
+    "title": "The Look",
+    "artist": "Roxette",
+    "year": 1988
+  },
+  {
+    "nr": 284,
+    "title": "Waka Waka (This Time for Africa)",
+    "artist": "Shakira",
+    "year": 2010
+  },
+  {
+    "nr": 285,
+    "title": "Don't Stop Believin'",
+    "artist": "Journey",
+    "year": 1981
+  },
+  {
+    "nr": 286,
+    "title": "Africa",
+    "artist": "TOTO",
+    "year": 1982
+  },
+  {
+    "nr": 287,
+    "title": "She's so High",
+    "artist": "Tal Bachman",
+    "year": 1999
+  },
+  {
+    "nr": 288,
+    "title": "Dilemma",
+    "artist": "Nelly",
+    "year": 2002
+  },
+  {
+    "nr": 289,
+    "title": "Say You Won't Let Go",
+    "artist": "James Arthur",
+    "year": 2016
+  },
+  {
+    "nr": 290,
+    "title": "These Boots Are Made For Walkin'",
+    "artist": "Nancy Sinatra",
+    "year": 1966
+  },
+  {
+    "nr": 291,
+    "title": "Downtown",
+    "artist": "Petula Clark",
+    "year": 1964
+  },
+  {
+    "nr": 292,
+    "title": "Tubthumping",
+    "artist": "Chumbawamba",
+    "year": 1997
+  },
+  {
+    "nr": 293,
+    "title": "Me Gustas Tu",
+    "artist": "Manu Chao",
+    "year": 2001
+  },
+  {
+    "nr": 294,
+    "title": "Peaches",
+    "artist": "Justin Bieber",
+    "year": 2021
+  },
+  {
+    "nr": 295,
+    "title": "Bleeding Love",
+    "artist": "Leona Lewis",
+    "year": 2007
+  },
+  {
+    "nr": 296,
+    "title": "Gasoline",
+    "artist": "The Weeknd",
+    "year": 2022
+  },
+  {
+    "nr": 297,
+    "title": "Feeling Good",
+    "artist": "Nina Simone",
+    "year": 1965
+  },
+  {
+    "nr": 298,
+    "title": "Flickor bak i bilen",
+    "artist": "Siw Malmkvist",
+    "year": 1959
+  }
+];
+
+    const DEFAULT_PLAYLIST_ID = '6AkPSXrefOXADb7onndgvp';
+
+    const LS = {
+      clientId: 'hitster_spotify_client_id_v3',
+      token: 'hitster_spotify_token_v3',
+      verifier: 'hitster_spotify_pkce_verifier_v3',
+      oauthState: 'hitster_spotify_oauth_state_v3',
+      oauthPayload: 'hitster_spotify_oauth_payload_v4',
+      redirectUri: 'hitster_spotify_redirect_uri_v4',
+      deviceId: 'hitster_spotify_device_id_v3',
+      deviceName: 'hitster_spotify_device_name_v3',
+      settings: 'hitster_settings_v3',
+      playlistCache: 'hitster_playlist_cache_v3',
+      imports: 'hitster_imports_v3',
+      history: 'hitster_history_v3',
+      session: 'hitster_quiz_session_v3',
+      playlistId: 'hitster_spotify_playlist_id_v5',
+      paletteCache: 'hitster_palette_cache_v1',
+      learningStats: 'hitster_learning_stats_v1',
+      practiceSet: 'hitster_practice_set_v1'
+    };
+
+    const els = {
+      sourcePill: document.getElementById('sourcePill'),
+      songBox: document.getElementById('songBox'),
+      albumCover: document.getElementById('albumCover'),
+      score: document.getElementById('score'),
+      qnum: document.getElementById('qnum'),
+      percent: document.getElementById('percent'),
+      bar: document.getElementById('bar'),
+      songBox: document.getElementById('songBox'),
+      albumCover: document.getElementById('albumCover'),
+      songTitle: document.getElementById('songTitle'),
+      songArtist: document.getElementById('songArtist'),
+      trackMeta: document.getElementById('trackMeta'),
+      options: document.getElementById('options'),
+      practicePanel: document.getElementById('practicePanel'),
+      practiceGuess: document.getElementById('practiceGuess'),
+      practiceAnswerBtn: document.getElementById('practiceAnswerBtn'),
+      hintBtn: document.getElementById('hintBtn'),
+      revealBtn: document.getElementById('revealBtn'),
+      hintBox: document.getElementById('hintBox'),
+      ratingRow: document.getElementById('ratingRow'),
+      feedback: document.getElementById('feedback'),
+      startBtn: document.getElementById('startBtn'),
+      resumeBtn: document.getElementById('resumeBtn'),
+      nextBtn: document.getElementById('nextBtn'),
+      searchBtn: document.getElementById('searchBtn'),
+      spotifyPlayBtn: document.getElementById('spotifyPlayBtn'),
+      modeSelect: document.getElementById('modeSelect'),
+      modeNote: document.getElementById('modeNote'),
+      practiceSetLocked: document.getElementById('practiceSetLocked'),
+      newPracticeSetBtn: document.getElementById('newPracticeSetBtn'),
+      clearPracticeSetBtn: document.getElementById('clearPracticeSetBtn'),
+      practiceSetStatus: document.getElementById('practiceSetStatus'),
+      questionCount: document.getElementById('questionCount'),
+      difficulty: document.getElementById('difficulty'),
+      autoPlay: document.getElementById('autoPlay'),
+      songCount: document.getElementById('songCount'),
+      spotifyClientId: document.getElementById('spotifyClientId'),
+      spotifyPlaylistInput: document.getElementById('spotifyPlaylistInput'),
+      spotifyRedirectUri: document.getElementById('spotifyRedirectUri'),
+      spotifyLoginBtn: document.getElementById('spotifyLoginBtn'),
+      spotifyLogoutBtn: document.getElementById('spotifyLogoutBtn'),
+      spotifyDevicesBtn: document.getElementById('spotifyDevicesBtn'),
+      spotifyDeviceSelect: document.getElementById('spotifyDeviceSelect'),
+      spotifyStatus: document.getElementById('spotifyStatus'),
+      syncPlaylistBtn: document.getElementById('syncPlaylistBtn'),
+      dataStatus: document.getElementById('dataStatus'),
+      exportDataBtn: document.getElementById('exportDataBtn'),
+      clearLocalBtn: document.getElementById('clearLocalBtn'),
+      importBox: document.getElementById('importBox'),
+      importBtn: document.getElementById('importBtn'),
+      resetImportsBtn: document.getElementById('resetImportsBtn'),
+      importMsg: document.getElementById('importMsg'),
+      history: document.getElementById('history')
+    };
+
+    const state = {
+      songs: [],
+      source: 'fallback',
+      quiz: [],
+      currentIndex: -1,
+      score: 0,
+      answered: false,
+      selectedYear: null,
+      options: [],
+      mode: 'quiz',
+      hintVisible: false
+    };
+
+    function safeJsonParse(value, fallback) {
+      try { return JSON.parse(value); } catch { return fallback; }
+    }
+
+    function readLocal(key, fallback) {
+      const value = localStorage.getItem(key);
+      if (value === null || value === undefined || value === '') return fallback;
+      const parsed = safeJsonParse(value, fallback);
+      if (parsed === null && fallback !== null) return fallback;
+      return parsed;
+    }
+
+    function writeLocal(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function normalizeText(str) {
+      return String(str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s*[-–—]\s*(radio edit|single version|remastered.*|remaster.*|edit|album version|original version)\s*$/i, '')
+        .replace(/\s*\([^)]*(radio edit|single version|remastered|remaster|edit|album version|original version)[^)]*\)\s*/gi, ' ')
+        .replace(/[^a-z0-9åäö]+/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function songKey(song) {
+      const uri = normalizeSpotifyTrackUri(song.spotifyUri || song.uri || '');
+      if (uri && uri.startsWith('spotify:track:')) return `uri:${uri}`;
+      return `text:${normalizeText(song.title)}|${normalizeText(song.artist)}`;
+    }
+
+    function defaultYearIndex() {
+      const exact = new Map();
+      const titleOnly = new Map();
+      for (const song of DEFAULT_SONGS) {
+        exact.set(`${normalizeText(song.title)}|${normalizeText(song.artist)}`, song.year);
+        const t = normalizeText(song.title);
+        if (!titleOnly.has(t)) titleOnly.set(t, []);
+        titleOnly.get(t).push(song.year);
+      }
+      return { exact, titleOnly };
+    }
+
+    function cleanSong(raw) {
+      if (!raw) return null;
+      const title = String(raw.title || raw.name || '').trim();
+      const artist = String(raw.artist || '').trim();
+      const year = Number.parseInt(raw.year, 10);
+      if (!title || !artist || !Number.isInteger(year)) return null;
+      const song = {
+        nr: Number.isInteger(Number(raw.nr)) ? Number(raw.nr) : undefined,
+        title,
+        artist,
+        year
+      };
+      const uri = normalizeSpotifyTrackUri(raw.spotifyUri || raw.uri || '');
+      if (uri) song.spotifyUri = uri;
+      if (raw.spotifyUrl) song.spotifyUrl = String(raw.spotifyUrl);
+      const albumImage = pickAlbumImage(raw.albumImages || raw.images) || raw.albumImage || raw.coverUrl || raw.imageUrl || '';
+      if (albumImage) {
+        song.albumImage = String(albumImage);
+        if (!song.albumImageUrl) song.albumImageUrl = String(albumImage);
+      }
+      if (raw.releaseDate) song.releaseDate = String(raw.releaseDate);
+      if (raw.yearSource) song.yearSource = String(raw.yearSource);
+      if (raw.albumImageUrl) song.albumImageUrl = String(raw.albumImageUrl);
+      return song;
+    }
+
+    function mergeSongs(...lists) {
+      const out = [];
+      const seen = new Map();
+      for (const list of lists) {
+        for (const raw of (list || [])) {
+          const s = cleanSong(raw);
+          if (!s) continue;
+          const key = songKey(s);
+          if (seen.has(key)) {
+            Object.assign(seen.get(key), s);
+          } else {
+            seen.set(key, s);
+            out.push(s);
+          }
+        }
+      }
+      return out;
+    }
+
+    function getPlaylistCache() {
+      const cache = readLocal(LS.playlistCache, null);
+      if (!cache || !Array.isArray(cache.songs) || !cache.songs.length) return null;
+      const expectedId = getConfiguredPlaylistId(false);
+      if (cache.playlistId && expectedId && cache.playlistId !== expectedId) return null;
+      return cache;
+    }
+
+    function getImportedSongs() {
+      const imports = readLocal(LS.imports, []);
+      return Array.isArray(imports) ? imports : [];
+    }
+
+    function loadSongs() {
+      const cache = getPlaylistCache();
+      const imports = getImportedSongs();
+      if (cache) {
+        state.songs = mergeSongs(cache.songs, imports);
+        state.source = 'spotify';
+      } else {
+        state.songs = mergeSongs(DEFAULT_SONGS, imports);
+        state.source = 'fallback';
+      }
+      updateSongCount();
+      updatePracticeSetStatus();
+      updateDataStatus();
+    }
+
+    function updateSongCount() {
+      const cache = getPlaylistCache();
+      const imports = getImportedSongs();
+      const sourceText = cache
+        ? `Källa: Spotify-cache (${cache.songs.length} låtar)`
+        : `Källa: inbyggd fallback (${DEFAULT_SONGS.length} låtar)`;
+      els.sourcePill.textContent = sourceText;
+      els.songCount.textContent = `${state.songs.length} låtar är laddade. Importerade låtar: ${imports.length}.`;
+    }
+
+    function updateDataStatus() {
+      const cache = getPlaylistCache();
+      const parts = [];
+      if (cache) {
+        const date = new Date(cache.fetchedAt || Date.now()).toLocaleString('sv-SE');
+        parts.push(`Spotify-spellistan är sparad lokalt: ${cache.songs.length}/${cache.totalFromSpotify || '?'} låtar, hämtad ${date}.`);
+      } else {
+        parts.push('Ingen Spotify-spellista sparad än. Just nu används inbyggd fallback-data.');
+      }
+      const token = getStoredToken();
+      if (token?.access_token) {
+        const expires = token.expires_at ? new Date(token.expires_at).toLocaleTimeString('sv-SE') : 'okänt';
+        parts.push(`Spotify-inloggningen är sparad lokalt. Access-token gäller ungefär till ${expires}.`);
+      }
+      const stats = getLearningStats();
+      const statsCount = Object.keys(stats).length;
+      if (statsCount) parts.push(`Övningsdata finns för ${statsCount} låtar.`);
+      const practiceSet = getPracticeSet();
+      if (practiceSet?.songKeys?.length) parts.push(`Låst övningsset finns: ${practiceSet.songKeys.length} låtar.`);
+      const savedSession = readLocal(LS.session, null);
+      if (savedSession?.quiz?.length) parts.push('Ett pågående quiz finns sparat.');
+      els.dataStatus.textContent = parts.join(' ');
+    }
+
+    function saveSettings() {
+      writeLocal(LS.settings, {
+        mode: els.modeSelect.value,
+        questionCount: els.questionCount.value,
+        difficulty: els.difficulty.value,
+        autoPlay: els.autoPlay.checked,
+        practiceSetLocked: els.practiceSetLocked ? els.practiceSetLocked.checked : true
+      });
+    }
+
+    function loadSettings() {
+      const settings = readLocal(LS.settings, {});
+      if (settings.mode) els.modeSelect.value = settings.mode;
+      if (settings.questionCount) els.questionCount.value = settings.questionCount;
+      if (settings.difficulty) els.difficulty.value = settings.difficulty;
+      els.autoPlay.checked = Boolean(settings.autoPlay);
+      if (els.practiceSetLocked) els.practiceSetLocked.checked = settings.practiceSetLocked !== false;
+    }
+
+    function shuffle(list) {
+      const arr = [...list];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function clamp(num, min, max) {
+      return Math.max(min, Math.min(max, num));
+    }
+
+    function rgbCss(rgb, alpha = 1) {
+      const [r, g, b] = rgb.map(v => clamp(Math.round(v), 0, 255));
+      return alpha >= 1 ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    function mixRgb(a, b, t = 0.5) {
+      return [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * t));
+    }
+
+    function adjustRgb(rgb, amount) {
+      return rgb.map(v => clamp(v + amount, 0, 255));
+    }
+
+    function fallbackPaletteForSong(song) {
+      const key = `${song?.title || ''}|${song?.artist || ''}`;
+      let seed = 0;
+      for (const ch of key) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+      const base = [
+        70 + (seed % 90),
+        90 + ((seed >> 7) % 80),
+        130 + ((seed >> 13) % 70)
+      ];
+      const accent = [
+        110 + ((seed >> 3) % 120),
+        70 + ((seed >> 11) % 110),
+        130 + ((seed >> 17) % 110)
+      ];
+      return { avg: base, accent };
+    }
+
+    function readPaletteCache() {
+      const raw = readLocal(LS.paletteCache, {});
+      return raw && typeof raw === 'object' ? raw : {};
+    }
+
+    function writePaletteCacheEntry(url, palette) {
+      if (!url || !palette) return;
+      const cache = readPaletteCache();
+      cache[url] = palette;
+      writeLocal(LS.paletteCache, cache);
+    }
+
+    function getCachedPalette(url) {
+      if (!url) return null;
+      const palette = readPaletteCache()[url];
+      if (!palette?.avg || !palette?.accent) return null;
+      return palette;
+    }
+
+    async function paletteFromImage(url, song) {
+      const cached = getCachedPalette(url);
+      if (cached) return cached;
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+
+      const loaded = new Promise((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Kunde inte läsa albumomslaget.'));
+      });
+      img.src = url;
+      await loaded;
+
+      const canvas = document.createElement('canvas');
+      const size = 28;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0, size, size);
+      const { data } = ctx.getImageData(0, 0, size, size);
+
+      let r = 0, g = 0, b = 0, weight = 0;
+      let bestAccent = null;
+      let bestScore = -1;
+
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3] / 255;
+        if (alpha < 0.2) continue;
+        const pr = data[i];
+        const pg = data[i + 1];
+        const pb = data[i + 2];
+        const brightness = (pr * 299 + pg * 587 + pb * 114) / 1000;
+        const max = Math.max(pr, pg, pb);
+        const min = Math.min(pr, pg, pb);
+        const saturation = max ? (max - min) / max : 0;
+        const w = 0.3 + alpha;
+        r += pr * w;
+        g += pg * w;
+        b += pb * w;
+        weight += w;
+
+        const accentScore = saturation * (brightness > 35 && brightness < 235 ? 1.25 : 0.65) * (0.5 + alpha);
+        if (accentScore > bestScore) {
+          bestScore = accentScore;
+          bestAccent = [pr, pg, pb];
+        }
+      }
+
+      const avg = weight ? [r / weight, g / weight, b / weight] : [70, 100, 145];
+      const accent = bestAccent || adjustRgb(avg, 18);
+      const palette = { avg, accent };
+      writePaletteCacheEntry(url, palette);
+      return palette;
+    }
+
+    function applyBackgroundPalette(palette) {
+      const avg = palette?.avg || [16, 19, 26];
+      const accent = palette?.accent || [125, 211, 252];
+      const tint1 = mixRgb(adjustRgb(avg, -110), adjustRgb(accent, -90), 0.35);
+      const tint2 = mixRgb(adjustRgb(accent, -125), [16, 19, 26], 0.55);
+      const root = document.documentElement;
+      root.style.setProperty('--bgGlow1', rgbCss(accent, 0.34));
+      root.style.setProperty('--bgGlow2', rgbCss(avg, 0.24));
+      root.style.setProperty('--bgTint1', rgbCss(tint1));
+      root.style.setProperty('--bgTint2', rgbCss(tint2));
+    }
+
+    function resetSongVisual() {
+      document.documentElement.style.setProperty('--bgGlow1', 'rgba(125,211,252,.18)');
+      document.documentElement.style.setProperty('--bgGlow2', 'rgba(192,132,252,.12)');
+      document.documentElement.style.setProperty('--bgTint1', '#10131a');
+      document.documentElement.style.setProperty('--bgTint2', '#151b26');
+      els.albumCover.classList.add('hidden');
+      els.albumCover.removeAttribute('src');
+    }
+
+    let songVisualRequest = 0;
+
+    async function updateSongVisual(song) {
+      const requestId = ++songVisualRequest;
+      if (!song) {
+        resetSongVisual();
+        return;
+      }
+
+      const coverUrl = song.albumImageUrl || song.albumImage || song.coverUrl || song.imageUrl || '';
+      if (coverUrl) {
+        els.albumCover.src = coverUrl;
+        els.albumCover.alt = `Albumomslag för ${song.title}`;
+        els.albumCover.classList.remove('hidden');
+      } else {
+        els.albumCover.classList.add('hidden');
+        els.albumCover.removeAttribute('src');
+      }
+
+      try {
+        const palette = coverUrl ? await paletteFromImage(coverUrl, song) : fallbackPaletteForSong(song);
+        if (requestId !== songVisualRequest) return;
+        applyBackgroundPalette(palette);
+      } catch {
+        if (requestId !== songVisualRequest) return;
+        applyBackgroundPalette(fallbackPaletteForSong(song));
+      }
+    }
+
+    function getLearningStats() {
+      const stats = readLocal(LS.learningStats, {});
+      return stats && typeof stats === 'object' && !Array.isArray(stats) ? stats : {};
+    }
+
+    function writeLearningStats(stats) {
+      writeLocal(LS.learningStats, stats || {});
+    }
+
+    function getLearningKey(song) {
+      return songKey(song);
+    }
+
+    function updateLearning(song, update = {}) {
+      if (!song) return;
+      const stats = getLearningStats();
+      const key = getLearningKey(song);
+      const prev = stats[key] || {
+        title: song.title,
+        artist: song.artist,
+        year: song.year,
+        attempts: 0,
+        correct: 0,
+        misses: 0,
+        reveals: 0,
+        lastDelta: null,
+        lastGuess: null,
+        rating: '',
+        lastPracticed: 0
+      };
+      prev.title = song.title;
+      prev.artist = song.artist;
+      prev.year = song.year;
+      if (update.countAttempt) {
+        prev.attempts = Number(prev.attempts || 0) + 1;
+        if (update.revealed) prev.reveals = Number(prev.reveals || 0) + 1;
+        if (update.ok) prev.correct = Number(prev.correct || 0) + 1;
+        else prev.misses = Number(prev.misses || 0) + 1;
+      }
+      if (Number.isFinite(update.delta)) prev.lastDelta = update.delta;
+      if (Number.isFinite(update.guess)) prev.lastGuess = update.guess;
+      if (update.rating) prev.rating = update.rating;
+      prev.lastPracticed = Date.now();
+      stats[key] = prev;
+      writeLearningStats(stats);
+    }
+
+    function reviewScoreForSong(song, stats) {
+      const st = stats[getLearningKey(song)];
+      if (!st) return 0;
+      let score = 0;
+      score += Number(st.misses || 0) * 6;
+      score += Number(st.reveals || 0) * 5;
+      score += Math.min(Math.abs(Number(st.lastDelta || 0)), 20);
+      if (st.rating === 'hard') score += 20;
+      if (st.rating === 'ok') score += 7;
+      if (st.rating === 'easy') score -= 8;
+      if (Number(st.attempts || 0) === 1 && !st.correct) score += 5;
+      return score;
+    }
+
+    function getReviewSongPool() {
+      const stats = getLearningStats();
+      const scored = state.songs
+        .map(song => ({ song, score: reviewScoreForSong(song, stats) }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+      return scored.map(item => item.song);
+    }
+
+    function getPracticeSet() {
+      const set = readLocal(LS.practiceSet, null);
+      if (!set || !Array.isArray(set.songKeys) || !set.songKeys.length) return null;
+      return set;
+    }
+
+    function desiredCountForPool(pool) {
+      const countSetting = els.questionCount.value;
+      if (countSetting === 'all') return pool.length;
+      return Math.min(Number(countSetting) || 10, pool.length);
+    }
+
+    function resolvePracticeSetSongs(set, pool) {
+      if (!set?.songKeys?.length || !Array.isArray(pool) || !pool.length) return [];
+      const byKey = new Map(pool.map(song => [songKey(song), song]));
+      const resolved = [];
+      const used = new Set();
+      for (const key of set.songKeys) {
+        const song = byKey.get(key);
+        if (song && !used.has(key)) {
+          resolved.push(song);
+          used.add(key);
+        }
+      }
+      return resolved;
+    }
+
+    function createPracticeSetFromPool(pool, countSetting = els.questionCount.value) {
+      const count = desiredCountForPool(pool);
+      const songs = shuffle(pool).slice(0, count);
+      const set = {
+        songKeys: songs.map(songKey),
+        countSetting,
+        count: songs.length,
+        source: state.source || 'unknown',
+        createdAt: Date.now()
+      };
+      writeLocal(LS.practiceSet, set);
+      updatePracticeSetStatus();
+      updateDataStatus();
+      return songs;
+    }
+
+    function getPracticeQuizSongs(pool) {
+      const countSetting = els.questionCount.value;
+      const wanted = desiredCountForPool(pool);
+      const existing = getPracticeSet();
+      const resolved = resolvePracticeSetSongs(existing, pool);
+      if (els.practiceSetLocked?.checked && existing && resolved.length && existing.countSetting === countSetting && resolved.length === Math.min(Number(existing.count) || resolved.length, pool.length)) {
+        return resolved;
+      }
+      if (els.practiceSetLocked?.checked) {
+        return createPracticeSetFromPool(pool, countSetting);
+      }
+      return shuffle(pool).slice(0, wanted);
+    }
+
+    function forceNewPracticeSet() {
+      if (!state.songs.length) return;
+      saveSettings();
+      localStorage.removeItem(LS.session);
+      els.resumeBtn.disabled = true;
+      const songs = createPracticeSetFromPool(state.songs, els.questionCount.value);
+      els.feedback.textContent = `Nytt övningsset skapat med ${songs.length} låtar. Starta övningsläge för att repetera exakt detta set.`;
+    }
+
+    function clearPracticeSet() {
+      localStorage.removeItem(LS.practiceSet);
+      updatePracticeSetStatus();
+      updateDataStatus();
+      els.feedback.textContent = 'Övningssetet är rensat. Nästa gång du startar övningsläge skapas ett nytt set.';
+    }
+
+    function updatePracticeSetStatus() {
+      if (!els.practiceSetStatus) return;
+      const set = getPracticeSet();
+      if (!set) {
+        els.practiceSetStatus.textContent = 'Inget övningsset sparat än. Första starten i övningsläge skapar ett set.';
+        return;
+      }
+      const resolved = resolvePracticeSetSongs(set, state.songs || []);
+      const date = new Date(set.createdAt || Date.now()).toLocaleString('sv-SE');
+      const countText = set.countSetting === 'all' ? 'alla laddade låtar' : `${set.countSetting} frågor`;
+      els.practiceSetStatus.textContent = `Sparat övningsset: ${resolved.length}/${set.songKeys.length} låtar, ${countText}, skapat ${date}.`;
+    }
+
+    function startQuiz() {
+      if (!state.songs.length) return;
+      saveSettings();
+      state.mode = els.modeSelect.value || 'quiz';
+      const countSetting = els.questionCount.value;
+      let pool = state.songs;
+      if (state.mode === 'review') {
+        pool = getReviewSongPool();
+        if (!pool.length) {
+          els.feedback.textContent = 'Det finns inga svåra eller missade låtar sparade än. Kör övningsläge eller quizläge först.';
+          return;
+        }
+      }
+      const count = countSetting === 'all' ? pool.length : Math.min(Number(countSetting), pool.length);
+      state.quiz = state.mode === 'practice' ? getPracticeQuizSongs(pool) : shuffle(pool).slice(0, count);
+      state.currentIndex = 0;
+      state.score = 0;
+      state.answered = false;
+      state.selectedYear = null;
+      state.hintVisible = false;
+      buildQuestion();
+      renderQuestion();
+      saveSession();
+      maybeAutoPlayCurrent();
+    }
+
+    function buildQuestion() {
+      if (state.currentIndex < 0 || state.currentIndex >= state.quiz.length) return;
+      const song = state.quiz[state.currentIndex];
+      state.mode = els.modeSelect.value || state.mode || 'quiz';
+      state.options = state.mode === 'quiz' ? generateOptions(song.year) : [];
+      state.answered = false;
+      state.selectedYear = null;
+      state.hintVisible = false;
+      if (els.practiceGuess) els.practiceGuess.value = '';
+    }
+
+    function generateOptions(correctYear) {
+      const years = [...new Set(state.songs.map(s => s.year).filter(Number.isInteger))].sort((a,b) => a-b);
+      const options = new Set([correctYear]);
+      if (els.difficulty.value === 'hard') {
+        const near = years
+          .filter(y => y !== correctYear)
+          .sort((a,b) => Math.abs(a-correctYear) - Math.abs(b-correctYear) || a-b);
+        for (const y of near) {
+          if (options.size >= 4) break;
+          options.add(y);
+        }
+      } else {
+        let guard = 0;
+        while (options.size < 4 && years.length && guard < 200) {
+          options.add(years[Math.floor(Math.random() * years.length)]);
+          guard++;
+        }
+      }
+      while (options.size < 4) {
+        options.add(correctYear + Math.floor(Math.random() * 15) - 7);
+      }
+      return shuffle([...options]);
+    }
+
+    function renderQuestion() {
+      updateStats();
+      els.options.innerHTML = '';
+      els.feedback.textContent = '';
+      els.nextBtn.disabled = true;
+      els.practicePanel.classList.add('hidden');
+      els.hintBox.classList.add('hidden');
+      els.hintBox.textContent = '';
+      els.ratingRow.classList.add('hidden');
+
+      if (state.currentIndex < 0 || state.currentIndex >= state.quiz.length) {
+        els.songTitle.textContent = 'Starta quizzet';
+        els.songArtist.textContent = 'Välj läge, antal frågor och tryck på start.';
+        els.trackMeta.textContent = '';
+        updateAlbumVisuals(null);
+        els.spotifyPlayBtn.disabled = true;
+        els.searchBtn.disabled = true;
+        updateSongVisual(null);
+        return;
+      }
+
+      const song = state.quiz[state.currentIndex];
+      const mode = state.mode || els.modeSelect.value || 'quiz';
+      els.songTitle.textContent = song.title;
+      els.songArtist.textContent = song.artist;
+      els.trackMeta.textContent = '';
+      els.spotifyPlayBtn.disabled = !song.spotifyUri;
+      els.searchBtn.disabled = false;
+      updateSongVisual(song);
+
+      if (mode === 'quiz') {
+        renderQuizOptions(song);
+      } else {
+        renderPracticeQuestion(song, mode);
+      }
+    }
+
+    function renderQuizOptions(song) {
+      els.practicePanel.classList.add('hidden');
+      for (const year of state.options) {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.textContent = year;
+        btn.disabled = state.answered;
+        btn.addEventListener('click', () => answer(year));
+        if (state.answered) {
+          if (year === song.year) btn.classList.add('correct');
+          if (year === state.selectedYear && year !== song.year) btn.classList.add('wrong');
+        }
+        els.options.appendChild(btn);
+      }
+
+      if (state.answered) {
+        const wasRight = state.selectedYear === song.year;
+        const tip = memoryTip(song, state.selectedYear);
+        els.feedback.innerHTML = wasRight
+          ? `<strong class="ok">Rätt.</strong> ${escapeHtml(song.title)} kom ut ${song.year}. <span class="small">${escapeHtml(tip)}</span>`
+          : `<strong class="bad">Fel.</strong> Rätt svar är ${song.year}. <span class="small">${escapeHtml(tip)}</span>`;
+        els.nextBtn.disabled = false;
+      }
+    }
+
+    function renderPracticeQuestion(song, mode) {
+      els.options.innerHTML = '';
+      els.practicePanel.classList.remove('hidden');
+      els.practiceGuess.disabled = state.answered;
+      els.practiceAnswerBtn.disabled = state.answered;
+      els.revealBtn.disabled = state.answered;
+      els.hintBtn.disabled = false;
+      if (mode === 'review') {
+        const stats = getLearningStats()[getLearningKey(song)];
+        if (stats?.rating || stats?.lastDelta !== null) {
+          const bits = [];
+          if (stats.rating) bits.push(`senast markerad: ${ratingName(stats.rating)}`);
+          if (Number.isFinite(stats.lastDelta)) bits.push(`senast ${Math.abs(stats.lastDelta)} år fel`);
+          els.trackMeta.textContent = bits.join(' · ');
+        }
+      }
+      if (state.hintVisible) {
+        els.hintBox.textContent = hintText(song);
+        els.hintBox.classList.remove('hidden');
+      }
+      if (state.answered) {
+        const guess = Number(state.selectedYear);
+        const hadGuess = Number.isFinite(guess);
+        const delta = hadGuess ? Math.abs(guess - song.year) : null;
+        const ok = hadGuess && guess === song.year;
+        const close = hadGuess && !ok && delta <= 2;
+        let intro = '';
+        if (!hadGuess) intro = `<strong class="bad">Svar visat.</strong>`;
+        else if (ok) intro = `<strong class="ok">Rätt.</strong>`;
+        else if (close) intro = `<strong class="bad">Nära.</strong> Du var ${delta} år fel.`;
+        else intro = `<strong class="bad">Fel.</strong> Du var ${delta} år fel.`;
+        els.feedback.innerHTML = `${intro} Rätt år är ${song.year}. <span class="small">${escapeHtml(memoryTip(song, guess))}</span>`;
+        els.ratingRow.classList.remove('hidden');
+        els.nextBtn.disabled = false;
+      } else {
+        els.feedback.textContent = mode === 'review'
+          ? 'Repetitionsläge prioriterar låtar du missat, visat svar på eller markerat som svåra.'
+          : 'Skriv året själv. Det är svårare än fyra alternativ, men bättre för memorering.';
+      }
+    }
+
+    function trackMetaText(song) {
+      return '';
+    }
+
+    function yearPeriod(year) {
+      const decade = Math.floor(year / 10) * 10;
+      const pos = year - decade;
+      const part = pos <= 2 ? 'början av' : pos <= 6 ? 'mitten av' : 'slutet av';
+      return `${part} ${decade}-talet`;
+    }
+
+    function decadeFeel(year) {
+      if (year < 1960) return 'tänk äldre schlager/rock’n’roll-känsla, före popens stora 60-talsboom.';
+      if (year < 1970) return 'tänk 60-tal: soul, beat-pop och mer organiskt sound.';
+      if (year < 1980) return 'tänk 70-tal: disco, klassisk rock, singer-songwriter och ABBA-eran.';
+      if (year < 1990) return 'tänk 80-tal: synthar, stora trummor och MTV-känsla.';
+      if (year < 2000) return 'tänk 90-tal: eurodance, R&B, grunge, britpop och boyband-eran.';
+      if (year < 2010) return 'tänk 00-tal: radio-pop, R&B, tidig klubbpop och mp3-eran.';
+      if (year < 2020) return 'tänk 10-tal: streaming-pop, EDM och modern radioproduktion.';
+      return 'tänk 20-tal: TikTok/streaming-eran och väldigt modern produktion.';
+    }
+
+    function yearAnchor(year) {
+      const anchors = {
+        1959: 'precis före 60-talet börjar.',
+        1961: 'tidigt 60-tal, innan Beatles slog igenom globalt.',
+        1965: 'mitten av 60-talet, soul/beat-eran.',
+        1969: 'samma år som månlandningen.',
+        1973: 'tidigt 70-tal, före disco-toppen.',
+        1977: 'Star Wars-året och stark disco/rock-period.',
+        1981: 'tidigt 80-tal, före Thriller.',
+        1982: 'Thriller-eran: väldigt tidigt 80-tal.',
+        1985: 'mitt i 80-talet, Live Aid-året.',
+        1989: 'sista 80-talsåret, Berlinmuren faller.',
+        1991: 'tidigt 90-tal, grunge-eran börjar slå igenom.',
+        1996: 'mitt/sent 90-tal, före millennieskiftet.',
+        1998: 'sent 90-tal, precis före 2000.',
+        1999: 'sista året innan 2000-talet.',
+        2000: 'millennieskiftet.',
+        2007: 'sent 00-tal, iPhone-året.',
+        2008: 'sent 00-tal, finanskrisåret.',
+        2011: 'tidigt 10-tal, precis innan EDM-boomen peakar.',
+        2012: 'Euphoria/Gangnam Style-året och stark EDM-era.',
+        2016: 'mitten av 10-talet, streaming-pop är standard.'
+      };
+      return anchors[year] || `${year} ligger i ${yearPeriod(year)}.`;
+    }
+
+    function artistEraHint(song) {
+      const a = normalizeText(song.artist);
+      if (a.includes('abba')) return 'Artistkoppling: ABBA är oftast 70-tal eller väldigt tidigt 80-tal.';
+      if (a.includes('britney')) return 'Artistkoppling: Britney Spears pekar ofta mot sent 90-tal eller tidigt 00-tal.';
+      if (a.includes('avicii')) return 'Artistkoppling: Avicii är tydligt 10-tal och EDM-era.';
+      if (a.includes('loreen')) return 'Artistkoppling: Loreen/Euphoria hör hemma i tidigt 10-tal.';
+      if (a.includes('madonna')) return 'Artistkoppling: Madonna kan vara 80-tal, 90-tal eller 00-tal – lyssna på produktionen.';
+      if (a.includes('dire straits')) return 'Artistkoppling: Dire Straits peakar starkt under 80-talet.';
+      if (a.includes('timbaland')) return 'Artistkoppling: Timbaland-soundet pekar ofta mot mitten/sent 00-tal.';
+      return '';
+    }
+
+    function hintText(song) {
+      const artistHint = artistEraHint(song);
+      return `Ledtråd: ${yearPeriod(song.year)}. ${decadeFeel(song.year)}${artistHint ? ' ' + artistHint : ''}`;
+    }
+
+    function memoryTip(song, guessedYear) {
+      const base = `${song.year}: ${yearAnchor(song.year)} ${decadeFeel(song.year)}`;
+      const artistHint = artistEraHint(song);
+      const guess = Number(guessedYear);
+      if (Number.isFinite(guess) && guess !== song.year) {
+        const direction = guess < song.year ? 'senare' : 'tidigare';
+        return `Minnesregel: tänk ${direction} än din gissning. ${base}${artistHint ? ' ' + artistHint : ''}`;
+      }
+      return `Minnesregel: ${base}${artistHint ? ' ' + artistHint : ''}`;
+    }
+
+    function answer(year) {
+      if (state.answered || state.currentIndex < 0) return;
+      const song = state.quiz[state.currentIndex];
+      state.answered = true;
+      state.selectedYear = year;
+      const ok = year === song.year;
+      if (ok) state.score++;
+      updateLearning(song, { countAttempt: true, ok, guess: year, delta: Math.abs(year - song.year), mode: state.mode });
+      addHistory(song, year, ok);
+      renderQuestion();
+      saveSession();
+    }
+
+    function answerPractice() {
+      if (state.answered || state.currentIndex < 0) return;
+      const raw = String(els.practiceGuess.value || '').trim();
+      const guess = Number.parseInt(raw, 10);
+      if (!Number.isInteger(guess) || guess < 1900 || guess > 2100) {
+        els.feedback.textContent = 'Skriv ett giltigt årtal, till exempel 1985.';
+        return;
+      }
+      answer(guess);
+    }
+
+    function showHint() {
+      if (state.currentIndex < 0 || state.currentIndex >= state.quiz.length) return;
+      state.hintVisible = true;
+      const song = state.quiz[state.currentIndex];
+      els.hintBox.textContent = hintText(song);
+      els.hintBox.classList.remove('hidden');
+      saveSession();
+    }
+
+    function revealPracticeAnswer() {
+      if (state.answered || state.currentIndex < 0) return;
+      const song = state.quiz[state.currentIndex];
+      state.answered = true;
+      state.selectedYear = null;
+      updateLearning(song, { countAttempt: true, ok: false, revealed: true, mode: state.mode });
+      addHistory(song, null, false, true);
+      renderQuestion();
+      saveSession();
+    }
+
+    function ratingName(rating) {
+      return rating === 'hard' ? 'Svår' : rating === 'easy' ? 'Lätt' : 'Okej';
+    }
+
+    function rateCurrentSong(rating) {
+      if (state.currentIndex < 0 || state.currentIndex >= state.quiz.length) return;
+      const song = state.quiz[state.currentIndex];
+      updateLearning(song, { rating });
+      els.feedback.innerHTML += ` <span class="small">Sparat som ${ratingName(rating).toLowerCase()}.</span>`;
+      updateDataStatus();
+    }
+
+    function nextQuestion() {
+      if (state.currentIndex < 0) return;
+      if (state.currentIndex >= state.quiz.length - 1) {
+        finishQuiz();
+        return;
+      }
+      state.currentIndex++;
+      buildQuestion();
+      renderQuestion();
+      saveSession();
+      maybeAutoPlayCurrent();
+    }
+
+    function finishQuiz() {
+      const total = state.quiz.length;
+      const pct = total ? Math.round((state.score / total) * 100) : 0;
+      const modeLabel = state.mode === 'practice' ? 'Övning klar' : state.mode === 'review' ? 'Repetition klar' : 'Quiz klart';
+      els.songTitle.textContent = modeLabel;
+      els.songArtist.textContent = `Du fick ${state.score} av ${total} exakt rätt (${pct}%).`;
+      els.trackMeta.textContent = '';
+      updateAlbumVisuals(null);
+      els.options.innerHTML = '';
+      els.practicePanel.classList.add('hidden');
+      els.feedback.textContent = 'Starta om för en ny runda.';
+      els.nextBtn.disabled = true;
+      els.spotifyPlayBtn.disabled = true;
+      els.searchBtn.disabled = true;
+      updateSongVisual(null);
+      localStorage.removeItem(LS.session);
+      updateStats();
+      updateDataStatus();
+    }
+
+    function updateStats() {
+      const total = state.quiz.length || 0;
+      const shownIndex = total && state.currentIndex >= 0 ? Math.min(state.currentIndex + 1, total) : 0;
+      els.score.textContent = state.score;
+      els.qnum.textContent = `${shownIndex}/${total}`;
+      const answeredCount = state.currentIndex >= 0 ? (state.answered ? state.currentIndex + 1 : state.currentIndex) : 0;
+      const pct = answeredCount ? Math.round((state.score / answeredCount) * 100) : 0;
+      els.percent.textContent = `${pct}%`;
+      els.bar.style.width = total ? `${(shownIndex / total) * 100}%` : '0%';
+    }
+
+    function saveSession() {
+      if (!state.quiz.length || state.currentIndex < 0) return;
+      writeLocal(LS.session, {
+        quiz: state.quiz,
+        mode: state.mode,
+        currentIndex: state.currentIndex,
+        score: state.score,
+        answered: state.answered,
+        selectedYear: state.selectedYear,
+        options: state.options,
+        hintVisible: state.hintVisible,
+        savedAt: Date.now()
+      });
+      updateDataStatus();
+    }
+
+    function resumeSession() {
+      const saved = readLocal(LS.session, null);
+      if (!saved?.quiz?.length) {
+        els.feedback.textContent = 'Det finns inget sparat quiz att fortsätta.';
+        return;
+      }
+      state.quiz = saved.quiz.map(cleanSong).filter(Boolean);
+      state.mode = saved.mode || 'quiz';
+      els.modeSelect.value = state.mode;
+      state.currentIndex = Number(saved.currentIndex) || 0;
+      state.score = Number(saved.score) || 0;
+      state.answered = Boolean(saved.answered);
+      state.selectedYear = saved.selectedYear;
+      state.hintVisible = Boolean(saved.hintVisible);
+      state.options = Array.isArray(saved.options) && saved.options.length ? saved.options : (state.mode === 'quiz' ? generateOptions(state.quiz[state.currentIndex]?.year || 2000) : []);
+      renderQuestion();
+    }
+
+    function addHistory(song, chosenYear, ok, revealed = false) {
+      const history = readLocal(LS.history, []);
+      history.unshift({
+        title: song.title,
+        artist: song.artist,
+        year: song.year,
+        chosenYear,
+        ok,
+        revealed,
+        delta: Number.isFinite(Number(chosenYear)) ? Math.abs(Number(chosenYear) - song.year) : null,
+        mode: state.mode || 'quiz',
+        at: Date.now()
+      });
+      writeLocal(LS.history, history.slice(0, 120));
+      updateHistory();
+    }
+
+    function updateHistory() {
+      const history = readLocal(LS.history, []);
+      els.history.innerHTML = '';
+      if (!history.length) {
+        els.history.innerHTML = '<p class="small">Ingen historik ännu.</p>';
+        return;
+      }
+      for (const item of history.slice(0, 30)) {
+        const div = document.createElement('div');
+        div.className = 'histItem';
+        const chosen = item.revealed || item.chosenYear === null || item.chosenYear === undefined ? 'visade svar' : `du valde ${item.chosenYear}`;
+        const delta = Number.isFinite(item.delta) ? ` (${item.delta} år fel)` : '';
+        div.innerHTML = `<b>${escapeHtml(item.title)} - ${escapeHtml(item.artist)}</b><span>${item.ok ? 'Rätt' : 'Fel'}: ${chosen}, rätt år ${item.year}${item.ok ? '' : delta}</span>`;
+        els.history.appendChild(div);
+      }
+    }
+
+    function openSpotifySearch() {
+      if (state.currentIndex < 0 || !state.quiz[state.currentIndex]) return;
+      const song = state.quiz[state.currentIndex];
+      if (song.spotifyUrl) {
+        window.open(song.spotifyUrl, '_blank', 'noopener');
+        return;
+      }
+      const q = encodeURIComponent(`${song.title} ${song.artist}`);
+      window.open(`https://open.spotify.com/search/${q}`, '_blank', 'noopener');
+    }
+
+    function normalizeSpotifyTrackUri(text) {
+      text = String(text || '').trim();
+      if (!text) return '';
+      if (text.startsWith('spotify:track:')) return text;
+      const match = text.match(/open\.spotify\.com\/track\/([A-Za-z0-9]+)/);
+      return match ? `spotify:track:${match[1]}` : '';
+    }
+
+    function extractSpotifyPlaylistId(value) {
+      const text = String(value || '').trim();
+      if (!text) return '';
+      const urlMatch = text.match(/open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/);
+      if (urlMatch) return urlMatch[1];
+      const uriMatch = text.match(/spotify:playlist:([A-Za-z0-9]+)/);
+      if (uriMatch) return uriMatch[1];
+      const plain = text.match(/^[A-Za-z0-9]{16,}$/);
+      return plain ? text : '';
+    }
+
+    function getConfiguredPlaylistId(showError = true) {
+      const raw = els.spotifyPlaylistInput?.value || localStorage.getItem(LS.playlistId) || DEFAULT_PLAYLIST_ID;
+      const id = extractSpotifyPlaylistId(raw) || extractSpotifyPlaylistId(DEFAULT_PLAYLIST_ID);
+      if (!id && showError) setSpotifyStatus('Kunde inte läsa Spotify-spellistans ID. Klistra in en Spotify playlist-länk eller ett playlist-ID.');
+      return id;
+    }
+
+    function savePlaylistId() {
+      const id = getConfiguredPlaylistId(false);
+      if (!id) return;
+      localStorage.setItem(LS.playlistId, id);
+      if (els.spotifyPlaylistInput) els.spotifyPlaylistInput.value = `https://open.spotify.com/playlist/${id}`;
+      loadSongs();
+    }
+
+    function escapeHtml(text) {
+      return String(text).replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;' }[ch]));
+    }
+
+    function getRedirectUri() {
+      return `${window.location.origin}${window.location.pathname}`;
+    }
+
+    function isSafeLoopbackHost() {
+      return window.location.protocol === 'https:' || window.location.hostname === '127.0.0.1' || window.location.hostname === '[::1]';
+    }
+
+    function describeCurrentAddress() {
+      return `${window.location.protocol}//${window.location.host}${window.location.pathname}`;
+    }
+
+    function setSpotifyStatus(message) {
+      els.spotifyStatus.textContent = message || '';
+      updateDataStatus();
+    }
+
+    function loadSpotifySettings() {
+      els.spotifyClientId.value = localStorage.getItem(LS.clientId) || '';
+      const savedPlaylistId = localStorage.getItem(LS.playlistId) || DEFAULT_PLAYLIST_ID;
+      if (els.spotifyPlaylistInput) els.spotifyPlaylistInput.value = `https://open.spotify.com/playlist/${savedPlaylistId}`;
+      els.spotifyRedirectUri.textContent = getRedirectUri();
+      const savedDevice = localStorage.getItem(LS.deviceId) || '';
+      const savedDeviceName = localStorage.getItem(LS.deviceName) || '';
+      if (savedDevice) {
+        els.spotifyDeviceSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = savedDevice;
+        opt.textContent = savedDeviceName ? `${savedDeviceName} (sparad)` : 'Sparad Spotify-enhet';
+        els.spotifyDeviceSelect.appendChild(opt);
+        els.spotifyDeviceSelect.value = savedDevice;
+      }
+      if (window.location.hostname === 'localhost') {
+        setSpotifyStatus('Öppna sidan med 127.0.0.1 i stället för localhost. Spotify godkänner loopback-IP, och login-data sparas per adress.');
+      } else if (getStoredToken()?.access_token) {
+        setSpotifyStatus('Spotify-login finns sparad lokalt. Hämta enheter eller uppdatera spellistan.');
+      }
+    }
+
+    function getStoredToken() {
+      return readLocal(LS.token, null);
+    }
+
+    function saveToken(tokenResponse) {
+      const old = getStoredToken() || {};
+      const tokenData = {
+        access_token: tokenResponse.access_token,
+        refresh_token: tokenResponse.refresh_token || old.refresh_token || '',
+        expires_at: Date.now() + Math.max(0, (Number(tokenResponse.expires_in) || 3600) - 60) * 1000
+      };
+      writeLocal(LS.token, tokenData);
+      return tokenData;
+    }
+
+    async function sha256(plain) {
+      const data = new TextEncoder().encode(plain);
+      return crypto.subtle.digest('SHA-256', data);
+    }
+
+    function base64UrlEncode(buffer) {
+      return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    }
+
+    function randomString(length) {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+      const values = crypto.getRandomValues(new Uint8Array(length));
+      return [...values].map(v => chars[v % chars.length]).join('');
+    }
+
+    async function spotifyLogin() {
+      const clientId = els.spotifyClientId.value.trim();
+      if (!clientId) {
+        setSpotifyStatus('Klistra in Spotify Client ID först.');
+        return;
+      }
+      if (window.location.protocol === 'file:') {
+        setSpotifyStatus('Öppna sidan via http://127.0.0.1 först. Spotify OAuth accepterar inte file:// som redirect.');
+        return;
+      }
+      if (!isSafeLoopbackHost()) {
+        setSpotifyStatus('Använd http://127.0.0.1, inte localhost. Stoppar login för att undvika att callback kommer tillbaka till en annan adress och tappar inloggningsdatan.');
+        return;
+      }
+      localStorage.setItem(LS.clientId, clientId);
+      const redirectUri = getRedirectUri();
+      const verifier = randomString(96);
+      const challenge = base64UrlEncode(await sha256(verifier));
+      const stateValue = randomString(32);
+      const oauthPayload = {
+        clientId,
+        verifier,
+        state: stateValue,
+        redirectUri,
+        startedAt: Date.now(),
+        startedFrom: describeCurrentAddress()
+      };
+      localStorage.setItem(LS.verifier, verifier);
+      localStorage.setItem(LS.oauthState, stateValue);
+      localStorage.setItem(LS.redirectUri, redirectUri);
+      localStorage.setItem(LS.oauthPayload, JSON.stringify(oauthPayload));
+      sessionStorage.setItem(LS.oauthPayload, JSON.stringify(oauthPayload));
+
+      const scope = 'user-read-private user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative';
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        scope,
+        redirect_uri: redirectUri,
+        code_challenge_method: 'S256',
+        code_challenge: challenge,
+        state: stateValue,
+        show_dialog: 'true'
+      });
+      setSpotifyStatus(`Skickar till Spotify. Callback ska tillbaka till: ${redirectUri}`);
+      window.location.href = `https://accounts.spotify.com/authorize?${params.toString()}`;
+    }
+
+    function readOAuthPayload() {
+      const fromLocal = safeJsonParse(localStorage.getItem(LS.oauthPayload), null);
+      const fromSession = safeJsonParse(sessionStorage.getItem(LS.oauthPayload), null);
+      return fromLocal || fromSession || {};
+    }
+
+    function clearOAuthPayload() {
+      localStorage.removeItem(LS.verifier);
+      localStorage.removeItem(LS.oauthState);
+      localStorage.removeItem(LS.oauthPayload);
+      localStorage.removeItem(LS.redirectUri);
+      sessionStorage.removeItem(LS.oauthPayload);
+      localStorage.removeItem(LS.oauthPayload);
+      sessionStorage.removeItem(LS.oauthPayload);
+    }
+
+    function getCallbackParams() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has('code') || params.has('error')) return params;
+      const hash = window.location.hash ? window.location.hash.slice(1) : '';
+      return new URLSearchParams(hash);
+    }
+
+    async function handleSpotifyCallback() {
+      const params = getCallbackParams();
+      const code = params.get('code');
+      const error = params.get('error');
+      if (error) {
+        setSpotifyStatus(`Spotify-login avbröts: ${error}`);
+        window.history.replaceState({}, document.title, getRedirectUri());
+        return;
+      }
+      if (!code) return;
+
+      const oauthPayload = readOAuthPayload();
+      const returnedState = params.get('state') || '';
+      const savedState = oauthPayload.state || localStorage.getItem(LS.oauthState) || '';
+      const redirectUri = oauthPayload.redirectUri || localStorage.getItem(LS.redirectUri) || getRedirectUri();
+      const clientId = oauthPayload.clientId || localStorage.getItem(LS.clientId) || els.spotifyClientId.value.trim();
+      const verifier = oauthPayload.verifier || localStorage.getItem(LS.verifier);
+
+      if (!savedState || returnedState !== savedState) {
+        setSpotifyStatus(
+          'Spotify skickade tillbaka dig, men sidan hittade inte rätt OAuth-state. Vanligaste orsaken är att du startade från localhost men kom tillbaka till 127.0.0.1, eller tvärtom. Öppna exakt http://127.0.0.1:5500/hitster-spotify-quiz.html och logga in igen.'
+        );
+        window.history.replaceState({}, document.title, getRedirectUri());
+        return;
+      }
+      if (!clientId || !verifier) {
+        setSpotifyStatus(
+          `Saknar Client ID eller PKCE-verifier efter callback. Nuvarande adress: ${describeCurrentAddress()}. Öppna sidan via 127.0.0.1, inte file:// eller localhost, och logga in igen.`
+        );
+        window.history.replaceState({}, document.title, getRedirectUri());
+        return;
+      }
+
+      try {
+        setSpotifyStatus('Spotify skickade tillbaka en kod. Byter kod mot access-token...');
+        const body = new URLSearchParams({
+          client_id: clientId,
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: redirectUri,
+          code_verifier: verifier
+        });
+        const res = await fetch('https://accounts.spotify.com/api/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body
+        });
+        if (!res.ok) {
+          let details = await res.text();
+          try {
+            const parsed = JSON.parse(details);
+            details = parsed.error_description || parsed.error || details;
+          } catch {}
+          throw new Error(details);
+        }
+        const token = saveToken(await res.json());
+        clearOAuthPayload();
+        window.history.replaceState({}, document.title, getRedirectUri());
+        const expires = token.expires_at ? new Date(token.expires_at).toLocaleTimeString('sv-SE') : '';
+        setSpotifyStatus(`Inloggad mot Spotify. Token sparad lokalt${expires ? ` till ungefär ${expires}` : ''}. Hämta enheter och hämta spellistan.`);
+      } catch (err) {
+        setSpotifyStatus(`Kunde inte logga in: ${err.message}. Kontrollera att Redirect URI i Spotify Dashboard är exakt: ${redirectUri}`);
+      }
+    }
+
+    async function getAccessToken() {
+      let tokenData = getStoredToken();
+      if (!tokenData?.access_token) throw new Error('Du är inte inloggad i Spotify.');
+      if (Date.now() < tokenData.expires_at) return tokenData.access_token;
+      const clientId = localStorage.getItem(LS.clientId) || els.spotifyClientId.value.trim();
+      if (!tokenData.refresh_token || !clientId) throw new Error('Spotify-token har gått ut. Logga in igen.');
+      const body = new URLSearchParams({
+        client_id: clientId,
+        grant_type: 'refresh_token',
+        refresh_token: tokenData.refresh_token
+      });
+      const res = await fetch('https://accounts.spotify.com/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body
+      });
+      if (!res.ok) throw new Error(await res.text());
+      tokenData = saveToken(await res.json());
+      return tokenData.access_token;
+    }
+
+    class SpotifyApiError extends Error {
+      constructor(message, status, path, rawBody, retryAfter = 0) {
+        super(message);
+        this.name = 'SpotifyApiError';
+        this.status = status;
+        this.path = path;
+        this.rawBody = rawBody;
+        this.retryAfter = retryAfter;
+      }
+    }
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function parseSpotifyErrorBody(text) {
+      if (!text) return '';
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed?.error?.message) return parsed.error.message;
+        if (parsed?.error_description) return parsed.error_description;
+        if (typeof parsed?.error === 'string') return parsed.error;
+      } catch {}
+      return text;
+    }
+
+    function spotifyErrorMessage(status, path, text) {
+      const details = parseSpotifyErrorBody(text);
+      if (status === 401) return 'Spotify-login är inte giltig längre. Logga in igen.';
+      if (status === 403 && path.includes('/playlists/')) {
+        return 'Spotify returnerade 403 för spellistan. Det händer ofta när appen inte får läsa just den spellistan, till exempel om den inte ägs av dig eller du inte är collaborator. Jag kan i stället söka fram låt-URI:er från quizlistan.';
+      }
+      if (status === 403 && path.includes('/me/player/play')) {
+        return 'Spotify nekade uppspelning. Kontrollera att kontot har Premium och att vald enhet kan styras via Spotify Connect.';
+      }
+      if (status === 403) return `Spotify nekade åtgärden. ${details || 'Kontrollera behörigheter i appen.'}`;
+      if (status === 404 && path.includes('/me/player/play')) return 'Ingen aktiv Spotify-enhet hittades. Öppna Spotify-appen, starta/pausa en låt och hämta enheter igen.';
+      if (status === 404) return `Spotify hittade inte resursen. ${details || ''}`.trim();
+      if (status === 429) return 'Spotify rate limit. Vänta en stund och försök igen.';
+      return `Spotify API-fel ${status}: ${details || 'okänt fel'}`;
+    }
+
+    async function spotifyFetch(path, options = {}) {
+      const token = await getAccessToken();
+      const res = await fetch(`https://api.spotify.com/v1${path}`, {
+        ...options,
+        headers: {
+          ...(options.headers || {}),
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        const retryAfter = Number.parseInt(res.headers.get('Retry-After') || '0', 10) || 0;
+        throw new SpotifyApiError(spotifyErrorMessage(res.status, path, text), res.status, path, text, retryAfter);
+      }
+      if (res.status === 204) return null;
+      return res.json();
+    }
+
+    async function refreshSpotifyDevices() {
+      try {
+        const data = await spotifyFetch('/me/player/devices');
+        const devices = data.devices || [];
+        els.spotifyDeviceSelect.innerHTML = '';
+        if (!devices.length) {
+          els.spotifyDeviceSelect.innerHTML = '<option value="">Ingen enhet hittades</option>';
+          setSpotifyStatus('Ingen enhet hittades. Öppna Spotify-appen på datorn och försök igen.');
+          return;
+        }
+        const saved = localStorage.getItem(LS.deviceId) || '';
+        for (const d of devices) {
+          const opt = document.createElement('option');
+          opt.value = d.id;
+          opt.textContent = `${d.name}${d.is_active ? ' (aktiv)' : ''} - ${d.type}`;
+          opt.dataset.name = d.name;
+          els.spotifyDeviceSelect.appendChild(opt);
+        }
+        if (saved && [...els.spotifyDeviceSelect.options].some(o => o.value === saved)) {
+          els.spotifyDeviceSelect.value = saved;
+        }
+        saveSelectedDevice();
+        setSpotifyStatus(`${devices.length} Spotify-enhet(er) hittades.`);
+      } catch (err) {
+        setSpotifyStatus(err.message);
+      }
+    }
+
+    function saveSelectedDevice() {
+      const opt = els.spotifyDeviceSelect.selectedOptions[0];
+      if (!els.spotifyDeviceSelect.value) return;
+      localStorage.setItem(LS.deviceId, els.spotifyDeviceSelect.value);
+      localStorage.setItem(LS.deviceName, opt?.dataset?.name || opt?.textContent || '');
+    }
+
+    function spotifySearchClean(value) {
+      return String(value || '')
+        .replace(/[“”"]/g, '')
+        .replace(/\s*[-–—]\s*(radio edit|single version|remastered.*|remaster.*|edit|album version|original version)\s*$/i, '')
+        .replace(/\s*\([^)]*(radio edit|single version|remastered|remaster|edit|album version|original version)[^)]*\)\s*/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function primaryArtistName(artist) {
+      return String(artist || '')
+        .split(',')[0]
+        .replace(/\s+(feat\.|ft\.|featuring)\s+.*$/i, '')
+        .trim();
+    }
+
+    function pickAlbumImage(images) {
+      if (!Array.isArray(images) || !images.length) return '';
+      const usable = images.filter(img => img && img.url).sort((a, b) => (b.width || 0) - (a.width || 0));
+      if (!usable.length) return '';
+      return (usable.find(img => (img.width || 0) >= 300 && (img.width || 0) <= 800) || usable[0]).url;
+    }
+
+    function cssUrl(value) {
+      const url = String(value || '').replace(/\\/g, '\\\\').replace(/"/g, '\"');
+      return url ? `url("${url}")` : 'none';
+    }
+
+    function setAlbumTheme(colorA = [125, 211, 252], colorB = [192, 132, 252], imageUrl = '') {
+      const root = document.documentElement;
+      root.style.setProperty('--album-a', colorA.join(', '));
+      root.style.setProperty('--album-b', colorB.join(', '));
+      root.style.setProperty('--album-image', cssUrl(imageUrl));
+      root.style.setProperty('--album-glow-opacity', imageUrl ? '.28' : '.18');
+    }
+
+    const albumColorCache = readLocal('hitster_album_color_cache_v1', {});
+    let activeAlbumImageUrl = '';
+
+    function colorDistance(a, b) {
+      return Math.sqrt((a[0]-b[0])**2 + (a[1]-b[1])**2 + (a[2]-b[2])**2);
+    }
+
+    function fallbackAlbumColors(url) {
+      let hash = 0;
+      for (const ch of String(url || '')) hash = ((hash << 5) - hash + ch.charCodeAt(0)) | 0;
+      const hueA = Math.abs(hash) % 360;
+      const hueB = (hueA + 55) % 360;
+      return [hslToRgb(hueA, 62, 54), hslToRgb(hueB, 62, 42)];
+    }
+
+    function hslToRgb(h, s, l) {
+      s /= 100; l /= 100;
+      const k = n => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+      return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
+    }
+
+    function extractAlbumColors(url) {
+      return new Promise(resolve => {
+        if (!url) return resolve(null);
+        if (albumColorCache[url]) return resolve(albumColorCache[url]);
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const size = 32;
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            ctx.drawImage(img, 0, 0, size, size);
+            const data = ctx.getImageData(0, 0, size, size).data;
+            const buckets = new Map();
+            for (let i = 0; i < data.length; i += 16) {
+              const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+              if (a < 180) continue;
+              const brightness = (r + g + b) / 3;
+              if (brightness < 18 || brightness > 238) continue;
+              const key = `${Math.round(r/32)*32},${Math.round(g/32)*32},${Math.round(b/32)*32}`;
+              buckets.set(key, (buckets.get(key) || 0) + 1);
+            }
+            const ranked = [...buckets.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .map(([key]) => key.split(',').map(Number).map(v => Math.max(0, Math.min(255, v))));
+            const first = ranked[0] || fallbackAlbumColors(url)[0];
+            const second = ranked.find(c => colorDistance(c, first) > 70) || ranked[1] || fallbackAlbumColors(url)[1];
+            const colors = [first, second];
+            albumColorCache[url] = colors;
+            writeLocal('hitster_album_color_cache_v1', albumColorCache);
+            resolve(colors);
+          } catch {
+            resolve(fallbackAlbumColors(url));
+          }
+        };
+        img.onerror = () => resolve(fallbackAlbumColors(url));
+        img.src = url;
+      });
+    }
+
+    function updateAlbumVisuals(song) {
+      const imageUrl = song?.albumImage || '';
+      activeAlbumImageUrl = imageUrl;
+      els.songBox.classList.toggle('hasCover', Boolean(imageUrl));
+      els.songBox.classList.toggle('noCover', !imageUrl);
+      if (!imageUrl) {
+        els.albumCover.removeAttribute('src');
+        els.albumCover.classList.remove('hasCover');
+        els.albumCover.alt = '';
+        setAlbumTheme();
+        return;
+      }
+      els.albumCover.src = imageUrl;
+      els.albumCover.alt = `Albumomslag för ${song.title}`;
+      els.albumCover.classList.add('hasCover');
+      const fallback = fallbackAlbumColors(imageUrl);
+      setAlbumTheme(fallback[0], fallback[1], imageUrl);
+      extractAlbumColors(imageUrl).then(colors => {
+        if (activeAlbumImageUrl === imageUrl && colors) setAlbumTheme(colors[0], colors[1], imageUrl);
+      });
+    }
+
+    function trackFromSpotifyObject(track, baseSong = null) {
+      if (!track || track.type !== 'track' || track.is_local) return null;
+      const artist = (track.artists || []).map(a => a.name).filter(Boolean).join(', ') || baseSong?.artist || 'Okänd artist';
+      const releaseDate = track.album?.release_date || '';
+      return {
+        title: baseSong?.title || track.name,
+        artist: baseSong?.artist || artist,
+        year: baseSong?.year || Number.parseInt(String(releaseDate).slice(0, 4), 10),
+        spotifyUri: track.uri,
+        spotifyUrl: track.external_urls?.spotify || '',
+        albumImage: pickAlbumImage(track.album?.images),
+        releaseDate,
+        yearSource: baseSong ? 'yearified_search_match' : 'spotify_album',
+        albumImageUrl: track.album?.images?.[0]?.url || ''
+      };
+    }
+
+
+    function getPlaylistItemTrack(item) {
+      // Spotify ändrade Playlist Items-svaret från track till item.
+      // Stöd båda formerna så filen fungerar med både äldre och nyare API-svar.
+      const raw = item?.item || item?.track || item;
+      if (!raw || raw.type !== 'track' || raw.is_local || !raw.uri) return null;
+      return raw;
+    }
+
+    function scoreSpotifyTrackMatch(song, track) {
+      const targetTitle = normalizeText(spotifySearchClean(song.title));
+      const fullTargetTitle = normalizeText(song.title);
+      const trackTitle = normalizeText(track?.name || '');
+      const targetArtist = normalizeText(primaryArtistName(song.artist));
+      const fullTargetArtist = normalizeText(song.artist);
+      const trackArtists = normalizeText((track?.artists || []).map(a => a.name).join(' '));
+      const releaseYear = Number.parseInt(String(track?.album?.release_date || '').slice(0, 4), 10);
+      let score = 0;
+
+      if (trackTitle === fullTargetTitle || trackTitle === targetTitle) score += 100;
+      else if (trackTitle.includes(targetTitle) || targetTitle.includes(trackTitle)) score += 60;
+
+      if (targetArtist && trackArtists.includes(targetArtist)) score += 55;
+      else if (fullTargetArtist && trackArtists.includes(fullTargetArtist)) score += 40;
+
+      if (Number.isInteger(releaseYear) && Number.isInteger(song.year)) {
+        const diff = Math.abs(releaseYear - song.year);
+        if (diff === 0) score += 20;
+        else if (diff <= 1) score += 12;
+        else if (diff <= 5) score += 4;
+      }
+
+      score += Math.min(Number(track?.popularity || 0), 100) / 100;
+      return score;
+    }
+
+    const SEARCH_REQUEST_DELAY_MS = 3500;
+    let lastSpotifySearchAt = 0;
+
+    async function throttleSpotifySearch() {
+      const elapsed = Date.now() - lastSpotifySearchAt;
+      if (elapsed < SEARCH_REQUEST_DELAY_MS) {
+        await sleep(SEARCH_REQUEST_DELAY_MS - elapsed);
+      }
+      lastSpotifySearchAt = Date.now();
+    }
+
+    async function spotifySearchTracks(query, market = 'SE') {
+      const marketPart = market ? `&market=${encodeURIComponent(market)}` : '';
+      const path = `/search?q=${encodeURIComponent(query)}&type=track&limit=10${marketPart}`;
+
+      for (let attempt = 1; attempt <= 6; attempt++) {
+        await throttleSpotifySearch();
+        try {
+          return await spotifyFetch(path);
+        } catch (err) {
+          if (err.status !== 429 || attempt === 6) throw err;
+          const waitSeconds = Math.max(err.retryAfter || 0, 20);
+          setSpotifyStatus(`Spotify rate limit. Väntar ${waitSeconds} sekunder och fortsätter automatiskt...`);
+          await sleep(waitSeconds * 1000);
+        }
+      }
+    }
+
+    function titleLooksClose(song, track) {
+      const a = normalizeText(spotifySearchClean(song.title));
+      const b = normalizeText(spotifySearchClean(track?.name || ''));
+      if (!a || !b) return false;
+      return a === b || a.includes(b) || b.includes(a);
+    }
+
+    async function searchSpotifyUriForSong(song) {
+      if (song.spotifyUri) return song;
+      const title = spotifySearchClean(song.title);
+      const artist = primaryArtistName(song.artist);
+      const queries = [
+        `${title} ${artist}`,
+        `${song.title} ${song.artist}`
+      ].filter(Boolean);
+
+      let bestOverall = null;
+      let firstError = null;
+
+      for (const q of queries) {
+        let data = null;
+        try {
+          data = await spotifySearchTracks(q, 'SE');
+        } catch (err) {
+          firstError = firstError || err;
+          try {
+            data = await spotifySearchTracks(q, '');
+          } catch (err2) {
+            firstError = firstError || err2;
+            continue;
+          }
+        }
+
+        const candidates = data?.tracks?.items || [];
+        if (!candidates.length) continue;
+        const localBest = candidates
+          .filter(track => track && track.type === 'track' && !track.is_local && track.uri)
+          .map(track => ({ track, score: scoreSpotifyTrackMatch(song, track) }))
+          .sort((a, b) => b.score - a.score)[0];
+        if (!localBest) continue;
+        if (!bestOverall || localBest.score > bestOverall.score) bestOverall = localBest;
+
+        const bestArtists = normalizeText((localBest.track.artists || []).map(a => a.name).join(' '));
+        const wantedArtist = normalizeText(primaryArtistName(song.artist));
+        const artistOk = wantedArtist && bestArtists.includes(wantedArtist);
+        const titleOk = titleLooksClose(song, localBest.track);
+
+        // Den gamla gränsen var för hård. Spotify-titlar skiljer sig ofta med remix/remaster/feat.-text.
+        if ((artistOk && titleOk && localBest.score >= 60) || localBest.score >= 115) {
+          const matched = trackFromSpotifyObject(localBest.track, song);
+          matched.matchScore = Math.round(localBest.score);
+          return matched;
+        }
+      }
+
+      if (bestOverall && bestOverall.score >= 80) {
+        const matched = trackFromSpotifyObject(bestOverall.track, song);
+        matched.matchScore = Math.round(bestOverall.score);
+        matched.matchWarning = 'Svagare automatisk matchning. Kontrollera låten om den verkar fel.';
+        return matched;
+      }
+
+      if (firstError) {
+        song.searchError = firstError.message || String(firstError);
+      }
+      return song;
+    }
+
+    function patchCurrentQuizFromLoadedSongs() {
+      if (!state.quiz.length) return;
+      const byText = new Map(state.songs.map(s => [`${normalizeText(s.title)}|${normalizeText(s.artist)}`, s]));
+      state.quiz = state.quiz.map(q => {
+        const key = `${normalizeText(q.title)}|${normalizeText(q.artist)}`;
+        return byText.has(key) ? { ...q, ...byText.get(key) } : q;
+      });
+      renderQuestion();
+      saveSession();
+    }
+
+    async function syncUrisBySearchFallback(reason = '') {
+      const base = mergeSongs(state.songs.length ? state.songs : DEFAULT_SONGS, getImportedSongs());
+      const synced = [];
+      let found = 0;
+      let failed = 0;
+      let firstSearchError = '';
+      setSpotifyStatus(`${reason ? reason + ' ' : ''}Söker fram Spotify-URI:er från quizlistan...`);
+
+      for (let i = 0; i < base.length; i++) {
+        const original = base[i];
+        try {
+          const matched = await searchSpotifyUriForSong(original);
+          if (matched.spotifyUri) found++;
+          else {
+            failed++;
+            if (!firstSearchError && matched.searchError) firstSearchError = matched.searchError;
+          }
+          synced.push(matched);
+        } catch (err) {
+          failed++;
+          if (!firstSearchError) firstSearchError = err.message || String(err);
+          synced.push(original);
+        }
+        if (i === 0 || (i + 1) % 5 === 0 || i === base.length - 1) {
+          const extra = firstSearchError ? ` Första fel: ${firstSearchError}` : '';
+          setSpotifyStatus(`Söker fram Spotify-URI:er... ${i + 1}/${base.length}. Hittade ${found}, saknar ${failed}.${extra}`);
+        }
+        if ((i + 1) % 10 === 0 || i === base.length - 1) {
+          const partialSongs = mergeSongs([...synced, ...base.slice(i + 1)]);
+          writeLocal(LS.playlistCache, {
+            playlistId: getConfiguredPlaylistId(false),
+            totalFromSpotify: null,
+            sourceMethod: 'spotify_search_partial',
+            fetchedAt: Date.now(),
+            songs: partialSongs
+          });
+        }
+      }
+
+      const cache = {
+        playlistId: getConfiguredPlaylistId(false),
+        totalFromSpotify: null,
+        sourceMethod: 'spotify_search',
+        fetchedAt: Date.now(),
+        songs: mergeSongs(synced)
+      };
+      writeLocal(LS.playlistCache, cache);
+      loadSongs();
+      patchCurrentQuizFromLoadedSongs();
+      setSpotifyStatus(`Klart. ${found}/${base.length} låtar fick Spotify-URI via sökning och sparades lokalt.${firstSearchError ? ' Första fel: ' + firstSearchError : ''} Starta nytt quiz så alla frågor använder uppdaterad data.`);
+    }
+
+    async function spotifyFetchWithRetry(path, options = {}, actionText = 'Hämtar från Spotify') {
+      for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+          return await spotifyFetch(path, options);
+        } catch (err) {
+          if (err.status !== 429 || attempt === 5) throw err;
+          const waitSeconds = Math.max(err.retryAfter || 0, 8);
+          setSpotifyStatus(`${actionText}. Spotify rate limit. Väntar ${waitSeconds} sekunder och fortsätter automatiskt...`);
+          await sleep(waitSeconds * 1000);
+        }
+      }
+    }
+
+    async function fetchFullPlaylistFromSpotify() {
+      try {
+        setSpotifyStatus('Hämtar spellistan från Spotify...');
+        els.syncPlaylistBtn.disabled = true;
+        const playlistId = getConfiguredPlaylistId();
+        if (!playlistId) return;
+        localStorage.setItem(LS.playlistId, playlistId);
+
+        const fetched = [];
+        const seenTrackUris = new Set();
+        const seenPageSignatures = new Set();
+        const pageLimit = 10; // Spotify accepterar 10 säkert i nya Web API-läget.
+        let offset = 0;
+        let total = null;
+        let pages = 0;
+        const maxPages = 120;
+        const yearIdx = defaultYearIndex();
+        const fields = 'total,limit,offset,next,items(item(id,name,uri,type,is_local,artists(name),album(release_date,release_date_precision,images(url)),external_urls(spotify)),track(id,name,uri,type,is_local,artists(name),album(release_date,release_date_precision,images(url)),external_urls(spotify)))';
+
+        while (pages < maxPages) {
+          const path = `/playlists/${playlistId}/items?limit=${pageLimit}&offset=${offset}&market=from_token&fields=${encodeURIComponent(fields)}`;
+          const data = await spotifyFetchWithRetry(path, {}, 'Hämtar spellistan från Spotify');
+          pages++;
+
+          if (Number.isFinite(Number(data?.total))) total = Number(data.total);
+          const items = Array.isArray(data?.items) ? data.items : [];
+          if (!items.length) break;
+
+          const pageSignature = items.map(item => getPlaylistItemTrack(item)?.uri || '').join('|');
+          if (pageSignature && seenPageSignatures.has(pageSignature)) {
+            setSpotifyStatus('Spotify skickade samma sida igen, så hämtningen stoppades för att undvika en loop.');
+            break;
+          }
+          if (pageSignature) seenPageSignatures.add(pageSignature);
+
+          for (let i = 0; i < items.length; i++) {
+            const track = getPlaylistItemTrack(items[i]);
+            if (!track) continue;
+            if (seenTrackUris.has(track.uri)) continue;
+            seenTrackUris.add(track.uri);
+
+            const artist = (track.artists || []).map(a => a.name).filter(Boolean).join(', ') || 'Okänd artist';
+            const releaseDate = track.album?.release_date || '';
+            let year = Number.parseInt(String(releaseDate).slice(0, 4), 10);
+            let yearSource = 'spotify_album';
+            const exactKey = `${normalizeText(track.name)}|${normalizeText(artist)}`;
+            if (yearIdx.exact.has(exactKey)) {
+              year = yearIdx.exact.get(exactKey);
+              yearSource = 'matched_yearified';
+            } else {
+              const titleMatches = yearIdx.titleOnly.get(normalizeText(track.name)) || [];
+              if (titleMatches.length === 1) {
+                year = titleMatches[0];
+                yearSource = 'matched_yearified';
+              }
+            }
+            if (!Number.isInteger(year)) continue;
+            fetched.push({
+              nr: offset + i + 1,
+              title: track.name,
+              artist,
+              year,
+              spotifyUri: track.uri,
+              spotifyUrl: track.external_urls?.spotify || '',
+              albumImage: pickAlbumImage(track.album?.images),
+              releaseDate,
+              yearSource,
+              albumImageUrl: track.album?.images?.[0]?.url || ''
+            });
+          }
+
+          offset += items.length;
+          const totalText = total && total > offset ? ` av ${total}` : '';
+          setSpotifyStatus(`Hämtar spellistan från Spotify... ${offset}${totalText} poster lästa, ${fetched.length} låtar sparade.`);
+
+          // Spara delresultat så inget tappas om token/rate limit strular mitt i.
+          if (pages % 5 === 0) {
+            writeLocal(LS.playlistCache, {
+              playlistId: getConfiguredPlaylistId(false),
+              totalFromSpotify: total || offset,
+              sourceMethod: 'playlist_items_partial',
+              fetchedAt: Date.now(),
+              songs: mergeSongs(fetched)
+            });
+          }
+
+          // Lita inte blint på data.total. I vissa lägen rapporterar Spotify bara första sidan.
+          // Stoppa först när en sida är kortare än limit, eller när nästa sida är tom.
+          if (items.length < pageLimit) break;
+        }
+
+        const cache = {
+          playlistId: getConfiguredPlaylistId(false),
+          totalFromSpotify: total && total > fetched.length ? total : offset,
+          sourceMethod: 'playlist_items',
+          fetchedAt: Date.now(),
+          songs: mergeSongs(fetched)
+        };
+        writeLocal(LS.playlistCache, cache);
+        loadSongs();
+        patchCurrentQuizFromLoadedSongs();
+        if (cache.songs.length) {
+          setSpotifyStatus(`Klart. ${cache.songs.length}/${cache.totalFromSpotify || '?'} låtar sparades lokalt. Starta nytt quiz så används hela listan.`);
+        } else {
+          setSpotifyStatus(`Spellistan lästes (${total || offset || 0} poster), men inga vanliga låtar kunde sparas. Kontrollera att länken är en låtspellista och inte en annan Spotify-lista. Testa också Ctrl+F5 och hämta igen.`);
+        }
+      } catch (err) {
+        if (err.status === 403 && err.path && err.path.includes('/playlists/')) {
+          setSpotifyStatus('Spotify nekade att läsa den här spellistan. Lösning: kopiera spellistan till ditt eget Spotify-konto, klistra in länken till kopian i fältet “Spotify-spellista URL eller ID” och klicka Hämta spellistan igen.');
+        } else {
+          setSpotifyStatus(`Kunde inte hämta spellistan: ${err.message}`);
+        }
+      } finally {
+        els.syncPlaylistBtn.disabled = false;
+      }
+    }
+
+    async function playCurrentSpotify() {
+      if (state.currentIndex < 0 || state.currentIndex >= state.quiz.length) return;
+      const song = state.quiz[state.currentIndex];
+      if (!song.spotifyUri) {
+        setSpotifyStatus('Den här låten saknar Spotify-URI. Klicka på Hämta spellistan eller importera låten med URI.');
+        return;
+      }
+      try {
+        saveSelectedDevice();
+        const deviceId = els.spotifyDeviceSelect.value || localStorage.getItem(LS.deviceId) || '';
+        const path = deviceId ? `/me/player/play?device_id=${encodeURIComponent(deviceId)}` : '/me/player/play';
+        await spotifyFetch(path, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uris: [song.spotifyUri], position_ms: 0 })
+        });
+        setSpotifyStatus(`Spelar: ${song.title} - ${song.artist}`);
+      } catch (err) {
+        setSpotifyStatus(err.message);
+      }
+    }
+
+    function maybeAutoPlayCurrent() {
+      if (els.autoPlay.checked && state.currentIndex >= 0) {
+        setTimeout(() => playCurrentSpotify(), 250);
+      }
+    }
+
+    function spotifyLogout() {
+      localStorage.removeItem(LS.token);
+      localStorage.removeItem(LS.verifier);
+      localStorage.removeItem(LS.oauthState);
+      localStorage.removeItem(LS.oauthPayload);
+      localStorage.removeItem(LS.redirectUri);
+      sessionStorage.removeItem(LS.oauthPayload);
+      setSpotifyStatus('Utloggad från Spotify i quiz-sidan. Spellista och historik ligger kvar lokalt.');
+    }
+
+    els.startBtn.addEventListener('click', startQuiz);
+    els.resumeBtn.addEventListener('click', resumeSession);
+    els.nextBtn.addEventListener('click', nextQuestion);
+    els.practiceAnswerBtn.addEventListener('click', answerPractice);
+    els.practiceGuess.addEventListener('keydown', event => { if (event.key === 'Enter') answerPractice(); });
+    els.hintBtn.addEventListener('click', showHint);
+    els.revealBtn.addEventListener('click', revealPracticeAnswer);
+    els.ratingRow.addEventListener('click', event => { const btn = event.target.closest('button[data-rating]'); if (btn) rateCurrentSong(btn.dataset.rating); });
+    els.searchBtn.addEventListener('click', openSpotifySearch);
+    els.spotifyPlayBtn.addEventListener('click', playCurrentSpotify);
+    els.spotifyLoginBtn.addEventListener('click', spotifyLogin);
+    els.spotifyLogoutBtn.addEventListener('click', spotifyLogout);
+    els.spotifyDevicesBtn.addEventListener('click', refreshSpotifyDevices);
+    els.syncPlaylistBtn.addEventListener('click', fetchFullPlaylistFromSpotify);
+    els.spotifyDeviceSelect.addEventListener('change', saveSelectedDevice);
+    els.spotifyClientId.addEventListener('change', () => localStorage.setItem(LS.clientId, els.spotifyClientId.value.trim()));
+    els.spotifyPlaylistInput.addEventListener('change', savePlaylistId);
+    els.importBtn.addEventListener('click', importSongs);
+    els.resetImportsBtn.addEventListener('click', resetImports);
+    els.exportDataBtn.addEventListener('click', exportData);
+    els.clearLocalBtn.addEventListener('click', clearLocalData);
+    els.newPracticeSetBtn.addEventListener('click', forceNewPracticeSet);
+    els.clearPracticeSetBtn.addEventListener('click', clearPracticeSet);
+    els.practiceSetLocked.addEventListener('change', saveSettings);
+    els.modeSelect.addEventListener('change', saveSettings);
+    els.questionCount.addEventListener('change', saveSettings);
+    els.difficulty.addEventListener('change', saveSettings);
+    els.autoPlay.addEventListener('change', saveSettings);
+
+    async function init() {
+      loadSettings();
+      loadSpotifySettings();
+      await handleSpotifyCallback();
+      loadSongs();
+      updateStats();
+      updateHistory();
+      updateDataStatus();
+      updatePracticeSetStatus();
+      updateAlbumVisuals(null);
+      els.resumeBtn.disabled = !readLocal(LS.session, null)?.quiz?.length;
+    }
+
+    init();
+  </script>
+</body>
+</html>
