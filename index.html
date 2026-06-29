@@ -4661,5 +4661,146 @@ Jolene;Dolly Parton;1973"></textarea>
 
     init();
   </script>
+
+
+  <script>
+    // Safety fallback: keeps the app mode buttons and Spotify login usable even if the main script crashes.
+    (function () {
+      const DEFAULT_CLIENT_ID_FALLBACK = 'cd412c7bf9344b9994aeb0e564ac5049';
+      const LS_FALLBACK = {
+        clientId: 'hitster_spotify_client_id_v3',
+        token: 'hitster_spotify_token_v3',
+        verifier: 'hitster_spotify_pkce_verifier_v3',
+        oauthState: 'hitster_spotify_oauth_state_v3',
+        oauthPayload: 'hitster_spotify_oauth_payload_v4',
+        redirectUri: 'hitster_spotify_redirect_uri_v4'
+      };
+
+      function $(id) { return document.getElementById(id); }
+      function redirectUri() { return window.location.origin + window.location.pathname; }
+      function status(text) {
+        const el = $('spotifyStatus');
+        if (el) el.textContent = text || '';
+      }
+      function appStatus(text) {
+        const el = $('appModeStatus');
+        if (el) el.textContent = text || '';
+      }
+      function setMode(mode) {
+        const isMulti = mode === 'multi';
+        localStorage.setItem('hitster_app_mode_v1', isMulti ? 'multi' : 'single');
+        $('singleModeBtn')?.classList.toggle('active', !isMulti);
+        $('multiModeBtn')?.classList.toggle('active', isMulti);
+        $('multiplayerPanel')?.classList.toggle('hidden', !isMulti);
+        appStatus(isMulti
+          ? 'Multiplayer valt. Logga in med Spotify, anslut Firebase och skapa eller gå med i ett rum.'
+          : 'Single-player valt. Du kan spela själv, öva årtal och repetera svåra låtar.');
+        if (isMulti) $('multiplayerPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      function randomString(length) {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+        const values = crypto.getRandomValues(new Uint8Array(length));
+        return Array.from(values).map(v => chars[v % chars.length]).join('');
+      }
+      async function sha256(plain) {
+        return crypto.subtle.digest('SHA-256', new TextEncoder().encode(plain));
+      }
+      function base64Url(buffer) {
+        return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+      }
+      async function fallbackSpotifyLogin(event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (window.location.protocol !== 'https:' && window.location.hostname !== '127.0.0.1' && window.location.hostname !== '[::1]') {
+          status('Spotify-login kräver HTTPS online eller http://127.0.0.1 lokalt. Nuvarande adress: ' + redirectUri());
+          return;
+        }
+        const input = $('spotifyClientId');
+        const clientId = (input?.value || localStorage.getItem(LS_FALLBACK.clientId) || DEFAULT_CLIENT_ID_FALLBACK).trim();
+        if (!clientId) {
+          status('Saknar Spotify Client ID.');
+          return;
+        }
+        if (input && !input.value) input.value = clientId;
+        localStorage.setItem(LS_FALLBACK.clientId, clientId);
+        const verifier = randomString(96);
+        const challenge = base64Url(await sha256(verifier));
+        const state = randomString(32);
+        const payload = { clientId, verifier, state, redirectUri: redirectUri(), startedAt: Date.now() };
+        localStorage.setItem(LS_FALLBACK.verifier, verifier);
+        localStorage.setItem(LS_FALLBACK.oauthState, state);
+        localStorage.setItem(LS_FALLBACK.redirectUri, payload.redirectUri);
+        localStorage.setItem(LS_FALLBACK.oauthPayload, JSON.stringify(payload));
+        sessionStorage.setItem(LS_FALLBACK.oauthPayload, JSON.stringify(payload));
+        const scope = 'user-read-private user-read-email user-read-playback-state user-modify-playback-state playlist-read-private playlist-read-collaborative';
+        const params = new URLSearchParams({
+          response_type: 'code',
+          client_id: clientId,
+          scope,
+          redirect_uri: payload.redirectUri,
+          code_challenge_method: 'S256',
+          code_challenge: challenge,
+          state,
+          show_dialog: 'true'
+        });
+        status('Skickar till Spotify. Redirect URI: ' + payload.redirectUri);
+        window.location.href = 'https://accounts.spotify.com/authorize?' + params.toString();
+      }
+      async function fallbackHandleCallback() {
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const returnedState = params.get('state') || '';
+        const err = params.get('error');
+        if (err) {
+          status('Spotify-login avbröts: ' + err);
+          history.replaceState({}, document.title, redirectUri());
+          return;
+        }
+        if (!code) return;
+        let payload = null;
+        try { payload = JSON.parse(localStorage.getItem(LS_FALLBACK.oauthPayload) || sessionStorage.getItem(LS_FALLBACK.oauthPayload) || '{}'); } catch {}
+        const savedState = payload?.state || localStorage.getItem(LS_FALLBACK.oauthState) || '';
+        if (!savedState || savedState !== returnedState) return;
+        const clientId = payload.clientId || localStorage.getItem(LS_FALLBACK.clientId) || DEFAULT_CLIENT_ID_FALLBACK;
+        const verifier = payload.verifier || localStorage.getItem(LS_FALLBACK.verifier);
+        const rUri = payload.redirectUri || redirectUri();
+        try {
+          status('Spotify skickade tillbaka en kod. Loggar in...');
+          const body = new URLSearchParams({ client_id: clientId, grant_type: 'authorization_code', code, redirect_uri: rUri, code_verifier: verifier });
+          const res = await fetch('https://accounts.spotify.com/api/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body });
+          if (!res.ok) {
+            let txt = await res.text();
+            try { const j = JSON.parse(txt); txt = j.error_description || j.error || txt; } catch {}
+            throw new Error(txt);
+          }
+          const json = await res.json();
+          localStorage.setItem(LS_FALLBACK.token, JSON.stringify({ access_token: json.access_token, refresh_token: json.refresh_token || '', expires_at: Date.now() + ((json.expires_in || 3600) - 60) * 1000 }));
+          localStorage.removeItem(LS_FALLBACK.oauthPayload);
+          sessionStorage.removeItem(LS_FALLBACK.oauthPayload);
+          history.replaceState({}, document.title, redirectUri());
+          status('Inloggad mot Spotify. Hämta enheter och Spotify-profil.');
+        } catch (e) {
+          status('Kunde inte logga in: ' + e.message + '. Kontrollera att Redirect URI i Spotify är exakt: ' + rUri);
+        }
+      }
+
+      window.addEventListener('error', function (e) {
+        const el = $('appModeStatus');
+        if (el && !el.textContent) el.textContent = 'Ett JavaScript-fel stoppade delar av sidan: ' + (e.message || 'okänt fel');
+      });
+      document.addEventListener('DOMContentLoaded', function () {
+        $('singleModeBtn')?.addEventListener('click', function (e) { e.preventDefault(); setMode('single'); }, true);
+        $('multiModeBtn')?.addEventListener('click', function (e) { e.preventDefault(); setMode('multi'); }, true);
+        $('spotifyLoginBtn')?.addEventListener('click', fallbackSpotifyLogin, true);
+        const input = $('spotifyClientId');
+        if (input && !input.value) input.value = localStorage.getItem(LS_FALLBACK.clientId) || DEFAULT_CLIENT_ID_FALLBACK;
+        const redir = $('spotifyRedirectUri');
+        if (redir) redir.textContent = redirectUri();
+        setMode(localStorage.getItem('hitster_app_mode_v1') === 'multi' ? 'multi' : 'single');
+        fallbackHandleCallback();
+      });
+    })();
+  </script>
+
 </body>
 </html>
