@@ -64,6 +64,28 @@
     .title { font-size: clamp(1.8rem, 5vw, 3.4rem); line-height: 1.03; font-weight: 800; letter-spacing: -0.04em; }
     .artist { font-size: 1.15rem; color: var(--muted); margin-top: 10px; }
     .trackMeta { display: none; }
+    .appChoice { margin-bottom: 16px; padding: 18px; }
+    .modeCards { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+    @media (max-width: 700px) { .modeCards { grid-template-columns: 1fr; } }
+    .modeCard { text-align:left; padding: 16px; border-radius: 18px; background: var(--panel2); border:1px solid var(--border); }
+    .modeCard strong { display:block; font-size:1.1rem; margin-bottom:4px; }
+    .modeCard span { display:block; color: var(--muted); font-size:.9rem; line-height:1.35; }
+    .modeCard.active { border-color: rgba(125,211,252,.85); box-shadow: 0 0 0 2px rgba(125,211,252,.14) inset; }
+    .mpPanel { border:1px solid rgba(125,211,252,.28); background: rgba(125,211,252,.055); border-radius: 18px; padding: 14px; margin: 14px 0; }
+    .mpProfile { display:flex; align-items:center; gap:10px; margin: 10px 0; }
+    .mpAvatar { width:42px; height:42px; border-radius:50%; background: var(--panel2); object-fit:cover; border:1px solid var(--border); }
+    .mpPlayers { display:grid; gap:8px; margin-top:8px; }
+    .mpPlayer { display:flex; align-items:center; gap:10px; justify-content:space-between; padding:8px 10px; border-radius: 12px; background: rgba(255,255,255,.045); border:1px solid var(--border); }
+    .mpPlayerLeft { display:flex; align-items:center; gap:8px; min-width:0; }
+    .mpPlayerName { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:150px; }
+    .mpBadge { color:#08111b; background:var(--accent); border-radius: 999px; padding:2px 7px; font-size:.75rem; font-weight:700; }
+    .mpScore { font-weight:800; }
+    .mpAnswerList { display:grid; gap:8px; margin-top:12px; }
+    .mpAnswerItem { padding: 10px 12px; border-radius: 14px; border:1px solid var(--border); background:rgba(255,255,255,.04); display:flex; justify-content:space-between; gap:10px; }
+    .mpAnswerItem b { color:var(--text); }
+    .mpStatusLine { color: var(--muted); margin-top: 10px; }
+    .firebaseBox { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; min-height: 110px; }
+
     .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
     @media (max-width: 700px) { .songVisual { grid-template-columns: 1fr; } .coverWrap { max-width: 220px; } }
     @media (max-width: 560px) { .options { grid-template-columns: 1fr; } }
@@ -128,6 +150,16 @@
         <span class="pill" id="savePill">Sparas lokalt i webbläsaren</span>
       </div>
     </header>
+
+    <section class="card appChoice" id="appChoice">
+      <h2>Välj spelläge</h2>
+      <p>Single-player är samma quiz som tidigare. Multiplayer synkar frågor och svar online via Firebase, medan varje spelare spelar låten på sin egen Spotify.</p>
+      <div class="modeCards">
+        <button class="modeCard" id="singleModeBtn" type="button"><strong>Single-player</strong><span>Spela själv, öva årtal och repetera svåra låtar.</span></button>
+        <button class="modeCard" id="multiModeBtn" type="button"><strong>Multiplayer online</strong><span>Skapa eller gå med i ett rum. Alla loggar in med Spotify och svarar samtidigt.</span></button>
+      </div>
+      <p class="small" id="appModeStatus" style="margin-top:10px"></p>
+    </section>
 
     <div class="grid">
       <main class="card main">
@@ -257,6 +289,48 @@
         </div>
         <p class="small spotifyStatus" id="spotifyStatus"></p>
 
+        <div class="mpPanel hidden" id="multiplayerPanel">
+          <h2>Multiplayer online</h2>
+          <p class="small">Kräver Firebase Realtime Database. Alla spelare loggar in med Spotify och använder samma rumskod.</p>
+
+          <div class="control">
+            <label for="firebaseConfigInput">Firebase config</label>
+            <textarea id="firebaseConfigInput" class="firebaseBox" placeholder='Klistra in Firebase config här, t.ex. { &quot;apiKey&quot;: &quot;...&quot;, &quot;databaseURL&quot;: &quot;...&quot;, &quot;projectId&quot;: &quot;...&quot;, &quot;appId&quot;: &quot;...&quot; }'></textarea>
+          </div>
+          <div class="actions" style="margin-top:0">
+            <button class="secondary" id="saveFirebaseBtn" type="button">Spara Firebase</button>
+            <button class="secondary" id="connectFirebaseBtn" type="button">Anslut</button>
+          </div>
+
+          <div class="mpProfile" id="mpProfile">
+            <img class="mpAvatar" id="mpAvatar" alt="Profilbild">
+            <div>
+              <div id="mpName">Inte inloggad med Spotify</div>
+              <div class="small" id="mpProfileSub">Logga in med Spotify först.</div>
+            </div>
+          </div>
+          <button class="secondary" id="loadSpotifyProfileBtn" type="button">Hämta Spotify-profil</button>
+
+          <hr>
+          <div class="control">
+            <label for="roomCodeInput">Rumskod</label>
+            <input id="roomCodeInput" autocomplete="off" placeholder="Exempel: 4827">
+          </div>
+          <div class="actions" style="margin-top:0">
+            <button class="primary" id="createRoomBtn" type="button">Skapa rum</button>
+            <button class="secondary" id="joinRoomBtn" type="button">Gå med</button>
+            <button class="secondary" id="leaveRoomBtn" type="button">Lämna</button>
+          </div>
+
+          <div class="actions" style="margin-top:10px">
+            <button class="primary" id="mpStartBtn" type="button">Starta multiplayer</button>
+            <button class="secondary" id="mpNextBtn" type="button">Nästa fråga</button>
+            <button class="secondary" id="mpReadyBtn" type="button">Redo</button>
+          </div>
+          <p class="small mpStatusLine" id="mpStatus"></p>
+          <div class="mpPlayers" id="mpPlayers"></div>
+        </div>
+
         <hr>
         <h2>Lokal data</h2>
         <p class="small" id="dataStatus"></p>
@@ -291,6 +365,8 @@ Jolene;Dolly Parton;1973"></textarea>
     </footer>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
   <script>
     const DEFAULT_SONGS = [
   {
@@ -2112,7 +2188,11 @@ Jolene;Dolly Parton;1973"></textarea>
       playlistId: 'hitster_spotify_playlist_id_v5',
       paletteCache: 'hitster_palette_cache_v1',
       learningStats: 'hitster_learning_stats_v1',
-      practiceSet: 'hitster_practice_set_v1'
+      practiceSet: 'hitster_practice_set_v1',
+      appMode: 'hitster_app_mode_v1',
+      firebaseConfig: 'hitster_firebase_config_v1',
+      multiplayerRoom: 'hitster_multiplayer_room_v1',
+      spotifyProfile: 'hitster_spotify_profile_v1'
     };
 
     const els = {
@@ -2168,7 +2248,28 @@ Jolene;Dolly Parton;1973"></textarea>
       importBtn: document.getElementById('importBtn'),
       resetImportsBtn: document.getElementById('resetImportsBtn'),
       importMsg: document.getElementById('importMsg'),
-      history: document.getElementById('history')
+      history: document.getElementById('history'),
+      appChoice: document.getElementById('appChoice'),
+      singleModeBtn: document.getElementById('singleModeBtn'),
+      multiModeBtn: document.getElementById('multiModeBtn'),
+      appModeStatus: document.getElementById('appModeStatus'),
+      multiplayerPanel: document.getElementById('multiplayerPanel'),
+      firebaseConfigInput: document.getElementById('firebaseConfigInput'),
+      saveFirebaseBtn: document.getElementById('saveFirebaseBtn'),
+      connectFirebaseBtn: document.getElementById('connectFirebaseBtn'),
+      loadSpotifyProfileBtn: document.getElementById('loadSpotifyProfileBtn'),
+      mpAvatar: document.getElementById('mpAvatar'),
+      mpName: document.getElementById('mpName'),
+      mpProfileSub: document.getElementById('mpProfileSub'),
+      roomCodeInput: document.getElementById('roomCodeInput'),
+      createRoomBtn: document.getElementById('createRoomBtn'),
+      joinRoomBtn: document.getElementById('joinRoomBtn'),
+      leaveRoomBtn: document.getElementById('leaveRoomBtn'),
+      mpStartBtn: document.getElementById('mpStartBtn'),
+      mpNextBtn: document.getElementById('mpNextBtn'),
+      mpReadyBtn: document.getElementById('mpReadyBtn'),
+      mpStatus: document.getElementById('mpStatus'),
+      mpPlayers: document.getElementById('mpPlayers')
     };
 
     const state = {
@@ -2181,7 +2282,9 @@ Jolene;Dolly Parton;1973"></textarea>
       selectedYear: null,
       options: [],
       mode: 'quiz',
-      hintVisible: false
+      hintVisible: false,
+      appMode: 'single',
+      mp: { app: null, db: null, roomCode: '', unsubscribe: null, player: null, room: null, lastQuestionId: '', playTimer: null, finishTimer: null, monitorTimer: null, serverOffset: 0 }
     };
 
     function safeJsonParse(value, fallback) {
@@ -2250,6 +2353,7 @@ Jolene;Dolly Parton;1973"></textarea>
         song.albumImage = String(albumImage);
         if (!song.albumImageUrl) song.albumImageUrl = String(albumImage);
       }
+      if (raw.durationMs || raw.duration_ms) song.durationMs = Number(raw.durationMs || raw.duration_ms) || 0;
       if (raw.releaseDate) song.releaseDate = String(raw.releaseDate);
       if (raw.yearSource) song.yearSource = String(raw.yearSource);
       if (raw.albumImageUrl) song.albumImageUrl = String(raw.albumImageUrl);
@@ -3878,7 +3982,8 @@ Jolene;Dolly Parton;1973"></textarea>
               albumImage: pickAlbumImage(track.album?.images),
               releaseDate,
               yearSource,
-              albumImageUrl: track.album?.images?.[0]?.url || ''
+              albumImageUrl: track.album?.images?.[0]?.url || '',
+              durationMs: track.duration_ms || 0
             });
           }
 
@@ -3956,6 +4061,526 @@ Jolene;Dolly Parton;1973"></textarea>
       }
     }
 
+
+    function setAppMode(mode) {
+      state.appMode = mode === 'multi' ? 'multi' : 'single';
+      localStorage.setItem(LS.appMode, state.appMode);
+      els.singleModeBtn?.classList.toggle('active', state.appMode === 'single');
+      els.multiModeBtn?.classList.toggle('active', state.appMode === 'multi');
+      els.multiplayerPanel?.classList.toggle('hidden', state.appMode !== 'multi');
+      if (els.appModeStatus) {
+        els.appModeStatus.textContent = state.appMode === 'multi'
+          ? 'Multiplayer valt. Anslut Firebase, logga in med Spotify och skapa eller gå med i ett rum.'
+          : 'Single-player valt. Du kan spela som tidigare.';
+      }
+    }
+
+    function loadAppMode() {
+      const saved = localStorage.getItem(LS.appMode) || 'single';
+      setAppMode(saved === 'multi' ? 'multi' : 'single');
+      const cfg = localStorage.getItem(LS.firebaseConfig) || '';
+      if (els.firebaseConfigInput) els.firebaseConfigInput.value = cfg;
+      const room = localStorage.getItem(LS.multiplayerRoom) || '';
+      if (els.roomCodeInput) els.roomCodeInput.value = room;
+      const profile = readLocal(LS.spotifyProfile, null);
+      if (profile) setMultiplayerProfile(profile);
+    }
+
+    function setMultiplayerStatus(message) {
+      if (els.mpStatus) els.mpStatus.textContent = message || '';
+    }
+
+    function parseFirebaseConfig() {
+      const raw = String(els.firebaseConfigInput?.value || '').trim();
+      if (!raw) throw new Error('Klistra in Firebase config först.');
+      let text = raw;
+      // Tillåt att användaren klistrar in "const firebaseConfig = {...};" direkt från Firebase.
+      const match = text.match(/firebaseConfig\s*=\s*(\{[\s\S]*?\})\s*;?$/);
+      if (match) text = match[1];
+      try {
+        return JSON.parse(text);
+      } catch {
+        // Tillåt enklare JS-object-format med nycklar utan citattecken.
+        try {
+          return Function(`"use strict"; return (${text});`)();
+        } catch (err) {
+          throw new Error('Firebase config kunde inte läsas. Klistra in hela objektet från Firebase Web App.');
+        }
+      }
+    }
+
+    function saveFirebaseConfig() {
+      try {
+        const cfg = parseFirebaseConfig();
+        localStorage.setItem(LS.firebaseConfig, JSON.stringify(cfg, null, 2));
+        els.firebaseConfigInput.value = JSON.stringify(cfg, null, 2);
+        setMultiplayerStatus('Firebase config sparad lokalt. Klicka Anslut.');
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    async function connectFirebase() {
+      try {
+        if (!window.firebase?.initializeApp) throw new Error('Firebase SDK laddades inte. Kontrollera internetanslutning och att GitHub Pages får ladda externa script.');
+        const cfg = parseFirebaseConfig();
+        const appName = 'hitster-multiplayer';
+        let app = firebase.apps.find(a => a.name === appName);
+        if (!app) app = firebase.initializeApp(cfg, appName);
+        state.mp.app = app;
+        state.mp.db = firebase.database(app);
+        state.mp.db.ref('.info/serverTimeOffset').on('value', snap => {
+          state.mp.serverOffset = Number(snap.val()) || 0;
+        });
+        localStorage.setItem(LS.firebaseConfig, JSON.stringify(cfg, null, 2));
+        setMultiplayerStatus('Ansluten till Firebase. Skapa eller gå med i ett rum.');
+      } catch (err) {
+        setMultiplayerStatus(`Kunde inte ansluta Firebase: ${err.message}`);
+      }
+    }
+
+    function mpNow() {
+      return Date.now() + (Number(state.mp.serverOffset) || 0);
+    }
+
+    function firebaseKey(value) {
+      return String(value || randomString(12)).replace(/[.#$/\[\]]/g, '_');
+    }
+
+    async function loadSpotifyProfile() {
+      try {
+        const me = await spotifyFetch('/me');
+        const profile = {
+          id: firebaseKey(me.id || randomString(12)),
+          spotifyId: me.id || '',
+          name: me.display_name || me.id || 'Spotify-spelare',
+          imageUrl: me.images?.[0]?.url || ''
+        };
+        writeLocal(LS.spotifyProfile, profile);
+        setMultiplayerProfile(profile);
+        setMultiplayerStatus(`Spotify-profil hämtad: ${profile.name}`);
+        return profile;
+      } catch (err) {
+        setMultiplayerStatus(`Kunde inte hämta Spotify-profil: ${err.message}`);
+        throw err;
+      }
+    }
+
+    function setMultiplayerProfile(profile) {
+      state.mp.player = profile;
+      if (els.mpName) els.mpName.textContent = profile?.name || 'Inte inloggad med Spotify';
+      if (els.mpProfileSub) els.mpProfileSub.textContent = profile?.spotifyId ? `Spotify ID: ${profile.spotifyId}` : 'Logga in med Spotify först.';
+      if (els.mpAvatar) {
+        els.mpAvatar.src = profile?.imageUrl || '';
+        els.mpAvatar.style.visibility = profile?.imageUrl ? 'visible' : 'hidden';
+      }
+    }
+
+    async function ensureMultiplayerReady() {
+      if (!state.mp.db) await connectFirebase();
+      if (!state.mp.player?.id) await loadSpotifyProfile();
+      if (!state.mp.db) throw new Error('Firebase är inte anslutet.');
+      if (!state.mp.player?.id) throw new Error('Spotify-profil saknas. Logga in med Spotify först.');
+    }
+
+    function randomRoomCode() {
+      return String(Math.floor(1000 + Math.random() * 9000));
+    }
+
+    function roomRef(code = state.mp.roomCode) {
+      if (!state.mp.db) throw new Error('Firebase är inte anslutet.');
+      return state.mp.db.ref(`rooms/${firebaseKey(code)}`);
+    }
+
+    function playerPublicData(extra = {}) {
+      const p = state.mp.player || {};
+      return {
+        id: p.id,
+        spotifyId: p.spotifyId || '',
+        name: p.name || 'Spelare',
+        imageUrl: p.imageUrl || '',
+        connected: true,
+        joinedAt: firebase.database.ServerValue.TIMESTAMP,
+        ...extra
+      };
+    }
+
+    async function createRoom() {
+      try {
+        await ensureMultiplayerReady();
+        const code = randomRoomCode();
+        state.mp.roomCode = code;
+        localStorage.setItem(LS.multiplayerRoom, code);
+        els.roomCodeInput.value = code;
+        const playerId = state.mp.player.id;
+        await roomRef(code).set({
+          code,
+          createdAt: firebase.database.ServerValue.TIMESTAMP,
+          hostId: playerId,
+          status: 'lobby',
+          currentIndex: -1,
+          settings: {
+            questionCount: els.questionCount.value,
+            difficulty: els.difficulty.value,
+            playlistId: getConfiguredPlaylistId(false)
+          },
+          players: { [playerId]: playerPublicData({ score: 0, ready: false }) }
+        });
+        attachRoomListener(code);
+        setMultiplayerStatus(`Rum skapat: ${code}. Dela koden med de andra.`);
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    async function joinRoom() {
+      try {
+        await ensureMultiplayerReady();
+        const code = String(els.roomCodeInput.value || '').trim();
+        if (!code) throw new Error('Skriv en rumskod först.');
+        const snap = await roomRef(code).get();
+        if (!snap.exists()) throw new Error('Rummet finns inte. Kontrollera koden.');
+        state.mp.roomCode = code;
+        localStorage.setItem(LS.multiplayerRoom, code);
+        await roomRef(code).child(`players/${state.mp.player.id}`).update(playerPublicData({ ready: false }));
+        roomRef(code).child(`players/${state.mp.player.id}/connected`).onDisconnect().set(false);
+        attachRoomListener(code);
+        setMultiplayerStatus(`Du är med i rum ${code}.`);
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    async function leaveRoom() {
+      try {
+        if (state.mp.unsubscribe) state.mp.unsubscribe();
+        if (state.mp.roomCode && state.mp.player?.id && state.mp.db) {
+          await roomRef(state.mp.roomCode).child(`players/${state.mp.player.id}/connected`).set(false);
+        }
+      } catch {}
+      state.mp.roomCode = '';
+      state.mp.room = null;
+      state.mp.lastQuestionId = '';
+      localStorage.removeItem(LS.multiplayerRoom);
+      if (els.mpPlayers) els.mpPlayers.innerHTML = '';
+      setMultiplayerStatus('Du har lämnat multiplayer-rummet.');
+    }
+
+    function attachRoomListener(code) {
+      if (state.mp.unsubscribe) state.mp.unsubscribe();
+      const ref = roomRef(code);
+      const callback = snap => onRoomUpdate(snap.val());
+      ref.on('value', callback);
+      state.mp.unsubscribe = () => ref.off('value', callback);
+    }
+
+    function isMultiplayerHost(room = state.mp.room) {
+      return Boolean(room?.hostId && state.mp.player?.id && room.hostId === state.mp.player.id);
+    }
+
+    function playersArray(room = state.mp.room) {
+      return Object.values(room?.players || {}).filter(Boolean);
+    }
+
+    function onRoomUpdate(room) {
+      state.mp.room = room;
+      renderMultiplayerRoom(room);
+      if (!room) return;
+      if (room.status === 'question' && room.questionId && room.questionId !== state.mp.lastQuestionId) {
+        state.mp.lastQuestionId = room.questionId;
+        renderMultiplayerQuestion(room);
+        scheduleMultiplayerPlayback(room);
+      } else if (room.status === 'question') {
+        renderMultiplayerQuestion(room);
+      } else if (room.status === 'results') {
+        renderMultiplayerResults(room);
+      } else if (room.status === 'finished') {
+        renderMultiplayerFinished(room);
+      }
+      monitorMultiplayerRound(room);
+    }
+
+    function renderMultiplayerRoom(room) {
+      if (!els.mpPlayers) return;
+      if (!room) {
+        els.mpPlayers.innerHTML = '<p class="small">Inget rum anslutet.</p>';
+        return;
+      }
+      const players = playersArray(room).sort((a,b) => (b.score || 0) - (a.score || 0));
+      els.mpPlayers.innerHTML = players.map(p => `
+        <div class="mpPlayer">
+          <div class="mpPlayerLeft">
+            ${p.imageUrl ? `<img class="mpAvatar" src="${escapeHtml(p.imageUrl)}" alt="">` : '<span class="mpAvatar"></span>'}
+            <span class="mpPlayerName">${escapeHtml(p.name || 'Spelare')}</span>
+            ${room.hostId === p.id ? '<span class="mpBadge">Host</span>' : ''}
+            ${p.ready ? '<span class="mpBadge">Redo</span>' : ''}
+          </div>
+          <span class="mpScore">${Number(p.score) || 0}</span>
+        </div>
+      `).join('');
+      const hostText = isMultiplayerHost(room) ? 'Du är host.' : 'Du är spelare.';
+      setMultiplayerStatus(`Rum ${room.code || state.mp.roomCode}. ${hostText} Status: ${room.status || 'lobby'}. Spelare: ${players.length}.`);
+      els.mpStartBtn.disabled = !isMultiplayerHost(room);
+      els.mpNextBtn.disabled = !isMultiplayerHost(room) || !['results', 'lobby'].includes(room.status);
+      els.mpReadyBtn.disabled = !room.currentSong || room.status !== 'question';
+    }
+
+    function sanitizeMultiplayerSong(song) {
+      const s = cleanSong(song);
+      if (!s) return null;
+      return {
+        nr: s.nr || 0,
+        title: s.title,
+        artist: s.artist,
+        year: s.year,
+        spotifyUri: s.spotifyUri || '',
+        spotifyUrl: s.spotifyUrl || '',
+        albumImageUrl: s.albumImageUrl || s.albumImage || '',
+        albumImage: s.albumImage || s.albumImageUrl || '',
+        releaseDate: s.releaseDate || '',
+        durationMs: Number(s.durationMs) || 0
+      };
+    }
+
+    async function startMultiplayerQuiz() {
+      try {
+        const room = state.mp.room;
+        if (!room || !isMultiplayerHost(room)) throw new Error('Bara hosten kan starta multiplayer.');
+        if (!state.songs.length) throw new Error('Inga låtar laddade. Klicka Hämta spellistan först.');
+        const countSetting = els.questionCount.value;
+        const count = countSetting === 'all' ? state.songs.length : Math.min(Number(countSetting) || 10, state.songs.length);
+        const quiz = shuffle(state.songs).slice(0, count).map(sanitizeMultiplayerSong).filter(Boolean);
+        if (!quiz.length) throw new Error('Kunde inte skapa quiz med laddade låtar.');
+        const updates = {
+          status: 'lobby',
+          currentIndex: -1,
+          quiz,
+          currentSong: null,
+          options: null,
+          questionId: null,
+          questionStartedAt: null,
+          questionDurationMs: null,
+          settings: {
+            questionCount: countSetting,
+            difficulty: els.difficulty.value,
+            playlistId: getConfiguredPlaylistId(false)
+          }
+        };
+        for (const p of playersArray(room)) {
+          updates[`players/${p.id}/score`] = 0;
+          updates[`players/${p.id}/answer`] = null;
+          updates[`players/${p.id}/ready`] = false;
+        }
+        await roomRef().update(updates);
+        await nextMultiplayerQuestion();
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    async function nextMultiplayerQuestion() {
+      try {
+        const room = state.mp.room;
+        if (!room || !isMultiplayerHost(room)) throw new Error('Bara hosten kan gå vidare.');
+        const quiz = Array.isArray(room.quiz) ? room.quiz : [];
+        if (!quiz.length) throw new Error('Starta multiplayer först.');
+        const nextIndex = Number(room.currentIndex || -1) + 1;
+        if (nextIndex >= quiz.length) {
+          await roomRef().update({ status: 'finished', finishedAt: firebase.database.ServerValue.TIMESTAMP });
+          return;
+        }
+        const song = sanitizeMultiplayerSong(quiz[nextIndex]);
+        const options = generateOptions(song.year);
+        const durationMs = Math.max(30000, Number(song.durationMs) || 30000);
+        const startAt = mpNow() + 3000;
+        const updates = {
+          status: 'question',
+          currentIndex: nextIndex,
+          currentSong: song,
+          options,
+          questionId: randomString(12),
+          questionStartedAt: startAt,
+          questionDurationMs: durationMs,
+          resultsShownAt: null
+        };
+        for (const p of playersArray(room)) {
+          updates[`players/${p.id}/answer`] = null;
+          updates[`players/${p.id}/ready`] = false;
+        }
+        await roomRef().update(updates);
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    function renderMultiplayerQuestion(room) {
+      const song = sanitizeMultiplayerSong(room.currentSong);
+      if (!song) return;
+      state.quiz = [song];
+      state.currentIndex = 0;
+      state.options = room.options || generateOptions(song.year);
+      state.mode = 'quiz';
+      const player = room.players?.[state.mp.player?.id] || {};
+      const answered = Boolean(player.answer);
+      state.answered = answered;
+      state.selectedYear = player.answer?.year || null;
+      els.practicePanel.classList.add('hidden');
+      els.options.innerHTML = '';
+      els.songTitle.textContent = song.title;
+      els.songArtist.textContent = song.artist;
+      els.trackMeta.textContent = '';
+      els.spotifyPlayBtn.disabled = !song.spotifyUri;
+      els.searchBtn.disabled = false;
+      updateSongVisual(song);
+      els.score.textContent = Number(player.score) || 0;
+      els.qnum.textContent = `${Number(room.currentIndex) + 1}/${room.quiz?.length || 0}`;
+      els.percent.textContent = 'MP';
+      els.bar.style.width = room.quiz?.length ? `${((Number(room.currentIndex)+1)/(room.quiz.length))*100}%` : '0%';
+
+      for (const year of (room.options || [])) {
+        const btn = document.createElement('button');
+        btn.className = 'option';
+        btn.textContent = year;
+        btn.disabled = answered;
+        btn.addEventListener('click', () => submitMultiplayerAnswer(year));
+        if (answered) {
+          if (year === song.year) btn.classList.add('correct');
+          if (year === player.answer?.year && year !== song.year) btn.classList.add('wrong');
+        }
+        els.options.appendChild(btn);
+      }
+      const msLeft = Math.max(0, Math.round(((room.questionStartedAt || mpNow()) + (room.questionDurationMs || 30000) - mpNow()) / 1000));
+      if (answered) {
+        const a = player.answer;
+        els.feedback.innerHTML = `Du svarade ${a.year}. ${a.delta === 0 ? '<strong class="ok">Exakt rätt.</strong>' : `Du var <strong>${a.delta}</strong> år fel.`} Poäng: <strong>${a.points}</strong>. Tryck Redo när du är klar.`;
+        els.mpReadyBtn.disabled = false;
+      } else {
+        const startsIn = Math.ceil(((room.questionStartedAt || mpNow()) - mpNow()) / 1000);
+        els.feedback.textContent = startsIn > 0 ? `Låten startar om ${startsIn} sekunder. Alla svarar samtidigt.` : `Svara så snabbt du kan. Rundan slutar när alla är redo eller om cirka ${msLeft} sekunder.`;
+      }
+      els.nextBtn.disabled = true;
+    }
+
+    function calculateMultiplayerPoints(guess, correctYear, answerMs, durationMs) {
+      const delta = Math.abs(Number(guess) - Number(correctYear));
+      const yearPoints = Math.max(0, 800 - delta * 80);
+      const speedWindow = Math.max(10000, Math.min(Number(durationMs) || 30000, 60000));
+      const speedPoints = Math.max(0, Math.round(200 * (1 - Math.min(answerMs, speedWindow) / speedWindow)));
+      return Math.round(yearPoints + speedPoints);
+    }
+
+    async function submitMultiplayerAnswer(year) {
+      try {
+        const room = state.mp.room;
+        if (!room?.currentSong || room.status !== 'question') return;
+        const song = sanitizeMultiplayerSong(room.currentSong);
+        const answerMs = Math.max(0, mpNow() - (Number(room.questionStartedAt) || mpNow()));
+        const delta = Math.abs(Number(year) - Number(song.year));
+        const points = calculateMultiplayerPoints(year, song.year, answerMs, room.questionDurationMs);
+        await roomRef().child(`players/${state.mp.player.id}`).update({
+          answer: { year, correctYear: song.year, delta, points, answerMs, at: firebase.database.ServerValue.TIMESTAMP },
+          ready: false
+        });
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    async function setMultiplayerReady() {
+      try {
+        const room = state.mp.room;
+        if (!room || room.status !== 'question') return;
+        const player = room.players?.[state.mp.player?.id];
+        if (!player?.answer) {
+          setMultiplayerStatus('Svara först, tryck sedan Redo.');
+          return;
+        }
+        await roomRef().child(`players/${state.mp.player.id}/ready`).set(true);
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    function scheduleMultiplayerPlayback(room) {
+      clearTimeout(state.mp.playTimer);
+      clearTimeout(state.mp.finishTimer);
+      const delay = Math.max(0, (Number(room.questionStartedAt) || mpNow()) - mpNow());
+      if (room.currentSong?.spotifyUri) {
+        state.mp.playTimer = setTimeout(() => playCurrentSpotify(), delay);
+      }
+      if (isMultiplayerHost(room)) {
+        const duration = Math.max(30000, Number(room.questionDurationMs) || 30000);
+        state.mp.finishTimer = setTimeout(() => maybeFinishMultiplayerRound(), delay + duration + 1200);
+      }
+    }
+
+    function monitorMultiplayerRound(room) {
+      clearTimeout(state.mp.monitorTimer);
+      if (!room || room.status !== 'question' || !isMultiplayerHost(room)) return;
+      state.mp.monitorTimer = setTimeout(() => maybeFinishMultiplayerRound(), 1200);
+    }
+
+    async function maybeFinishMultiplayerRound() {
+      try {
+        const room = state.mp.room;
+        if (!room || room.status !== 'question' || !isMultiplayerHost(room)) return;
+        const players = playersArray(room).filter(p => p.connected !== false);
+        const allDone = players.length && players.every(p => p.answer && p.ready);
+        const timeUp = mpNow() >= (Number(room.questionStartedAt) || 0) + (Number(room.questionDurationMs) || 30000);
+        if (!allDone && !timeUp) return;
+        const updates = { status: 'results', resultsShownAt: firebase.database.ServerValue.TIMESTAMP };
+        for (const p of players) {
+          const points = Number(p.answer?.points) || 0;
+          updates[`players/${p.id}/score`] = (Number(p.score) || 0) + points;
+        }
+        await roomRef().update(updates);
+      } catch (err) {
+        setMultiplayerStatus(err.message);
+      }
+    }
+
+    function renderMultiplayerResults(room) {
+      const song = sanitizeMultiplayerSong(room.currentSong);
+      if (!song) return;
+      state.quiz = [song];
+      state.currentIndex = 0;
+      els.songTitle.textContent = song.title;
+      els.songArtist.textContent = `${song.artist} · Rätt år: ${song.year}`;
+      updateSongVisual(song);
+      els.options.innerHTML = '';
+      els.practicePanel.classList.add('hidden');
+      els.nextBtn.disabled = true;
+      const players = playersArray(room).sort((a,b) => (Number(b.answer?.points)||0) - (Number(a.answer?.points)||0));
+      els.feedback.innerHTML = `
+        <strong>Resultat för frågan</strong>
+        <div class="mpAnswerList">
+          ${players.map(p => {
+            const a = p.answer;
+            if (!a) return `<div class="mpAnswerItem"><span>${escapeHtml(p.name || 'Spelare')}</span><span>Inget svar · 0p</span></div>`;
+            return `<div class="mpAnswerItem"><span>${escapeHtml(p.name || 'Spelare')}: <b>${a.year}</b> (${a.delta} år fel)</span><span><b>${a.points}p</b></span></div>`;
+          }).join('')}
+        </div>
+        <p class="small" style="margin-top:10px">Host kan klicka Nästa fråga.</p>
+      `;
+      els.mpNextBtn.disabled = !isMultiplayerHost(room);
+    }
+
+    function renderMultiplayerFinished(room) {
+      const players = playersArray(room).sort((a,b) => (b.score || 0) - (a.score || 0));
+      els.songTitle.textContent = 'Multiplayer klart';
+      els.songArtist.textContent = players[0] ? `${players[0].name} vann med ${players[0].score || 0} poäng.` : 'Inga spelare.';
+      els.options.innerHTML = '';
+      els.practicePanel.classList.add('hidden');
+      updateSongVisual(null);
+      els.feedback.innerHTML = `
+        <strong>Slutresultat</strong>
+        <div class="mpAnswerList">
+          ${players.map((p, i) => `<div class="mpAnswerItem"><span>${i + 1}. ${escapeHtml(p.name || 'Spelare')}</span><span><b>${Number(p.score) || 0}p</b></span></div>`).join('')}
+        </div>
+      `;
+      els.mpNextBtn.disabled = true;
+    }
+
     function spotifyLogout() {
       localStorage.removeItem(LS.token);
       localStorage.removeItem(LS.verifier);
@@ -3998,10 +4623,22 @@ Jolene;Dolly Parton;1973"></textarea>
     els.questionCount.addEventListener('change', saveSettings);
     els.difficulty.addEventListener('change', saveSettings);
     els.autoPlay.addEventListener('change', saveSettings);
+    els.singleModeBtn?.addEventListener('click', () => setAppMode('single'));
+    els.multiModeBtn?.addEventListener('click', () => setAppMode('multi'));
+    els.saveFirebaseBtn?.addEventListener('click', saveFirebaseConfig);
+    els.connectFirebaseBtn?.addEventListener('click', connectFirebase);
+    els.loadSpotifyProfileBtn?.addEventListener('click', loadSpotifyProfile);
+    els.createRoomBtn?.addEventListener('click', createRoom);
+    els.joinRoomBtn?.addEventListener('click', joinRoom);
+    els.leaveRoomBtn?.addEventListener('click', leaveRoom);
+    els.mpStartBtn?.addEventListener('click', startMultiplayerQuiz);
+    els.mpNextBtn?.addEventListener('click', nextMultiplayerQuestion);
+    els.mpReadyBtn?.addEventListener('click', setMultiplayerReady);
 
     async function init() {
       loadSettings();
       loadSpotifySettings();
+      loadAppMode();
       await handleSpotifyCallback();
       loadSongs();
       updateStats();
