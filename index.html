@@ -8847,5 +8847,734 @@ Jolene;Dolly Parton;1973"></textarea>
     })();
   </script>
 
+
+
+  <script>
+    // v26: JSON-playlists for multiplayer. No Spotify playlist fetch when switching playlists.
+    // Upload playlists.json + playlist JSON files to GitHub Pages, then choose from dropdown.
+    (function () {
+      const ROOM = 'active';
+      const LS_CUSTOM = 'spotify_year_quiz_custom_json_playlists_v26';
+      const $ = id => document.getElementById(id);
+      const status = text => { const el = $('mpStatus'); if (el) el.textContent = text || ''; };
+      const clean = value => {
+        if (Array.isArray(value)) return value.map(clean).filter(v => v !== undefined && v !== null);
+        if (value && typeof value === 'object') {
+          const out = {};
+          for (const [k, v] of Object.entries(value)) {
+            if (v === undefined || v === null) continue;
+            out[k] = clean(v);
+          }
+          return out;
+        }
+        return value;
+      };
+      const readLocal = (key, fallback) => {
+        try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+        catch { return fallback; }
+      };
+      const writeLocal = (key, value) => {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+      };
+      function normalizeSong(song, nr = 0) {
+        if (!song) return null;
+        try {
+          if (typeof sanitizeMultiplayerSong === 'function') {
+            const s = sanitizeMultiplayerSong(song);
+            if (s && s.title && s.spotifyUri && Number.isInteger(Number(s.year))) return s;
+          }
+        } catch {}
+        const title = song.title || song.name || song.trackName || '';
+        const artist = song.artist || song.artistsText || (Array.isArray(song.artists) ? song.artists.map(a => a.name || a).join(', ') : '') || '';
+        const year = Number(song.year || song.releaseYear || String(song.releaseDate || '').slice(0, 4));
+        const spotifyUri = song.spotifyUri || song.uri || song.spotify_uri || '';
+        if (!title || !artist || !spotifyUri || !Number.isInteger(year)) return null;
+        return {
+          nr: Number(song.nr) || nr || 0,
+          title,
+          artist,
+          year,
+          spotifyUri,
+          spotifyUrl: song.spotifyUrl || song.externalUrl || '',
+          albumImageUrl: song.albumImageUrl || song.albumImage || song.cover || song.image || '',
+          albumImage: song.albumImage || song.albumImageUrl || song.cover || song.image || '',
+          releaseDate: song.releaseDate || String(year),
+          durationMs: Number(song.durationMs || song.duration_ms || 0) || 0
+        };
+      }
+      function normalizeSongs(json) {
+        let arr = [];
+        if (Array.isArray(json)) arr = json;
+        else if (Array.isArray(json?.songs)) arr = json.songs;
+        else if (Array.isArray(json?.tracks)) arr = json.tracks;
+        else if (Array.isArray(json?.items)) arr = json.items;
+        return arr.map((s, i) => normalizeSong(s, i + 1)).filter(Boolean);
+      }
+      function room() {
+        if (typeof roomRef !== 'function') throw new Error('Firebase-rummet är inte initierat. Välj multiplayer och anslut först.');
+        return roomRef(ROOM);
+      }
+      async function ensureReady() {
+        if (!window.state?.mp?.db && typeof connectFirebase === 'function') await connectFirebase();
+        if (!window.state?.mp?.player?.id && typeof loadSpotifyProfile === 'function') await loadSpotifyProfile();
+        if (!window.state?.mp?.db) throw new Error('Firebase är inte anslutet.');
+        if (!window.state?.mp?.player?.id) throw new Error('Spotify-profil saknas. Logga in med Spotify först.');
+        window.state.mp.roomCode = ROOM;
+        try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM); } catch {}
+      }
+      function activePlayers(oldRoom) {
+        const players = {};
+        for (const [id, p] of Object.entries(oldRoom?.players || {})) {
+          if (!p || p.connected === false) continue;
+          const safeId = p.id || id;
+          players[safeId] = { ...p, id: safeId, connected: true, ready: false, answer: null };
+        }
+        const me = window.state?.mp?.player;
+        if (me?.id) players[me.id] = { ...(players[me.id] || {}), ...me, connected: true, ready: false, answer: null };
+        return players;
+      }
+      async function fetchJson(url) {
+        const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now(), { cache: 'no-store' });
+        if (!res.ok) throw new Error(`Kunde inte läsa ${url}: ${res.status}`);
+        return await res.json();
+      }
+      function getCustomLists() { return readLocal(LS_CUSTOM, []); }
+      function saveCustomList(entry) {
+        const lists = getCustomLists().filter(x => x.id !== entry.id);
+        lists.push(entry);
+        writeLocal(LS_CUSTOM, lists);
+      }
+      function makePlaylistSelect() {
+        let block = $('jsonPlaylistBlock');
+        if (block) return block;
+        const setup = $('mpPlaylistSetup');
+        if (!setup) return null;
+        block = document.createElement('div');
+        block.className = 'control';
+        block.id = 'jsonPlaylistBlock';
+        block.innerHTML = `
+          <label for="jsonPlaylistSelect">JSON-spellista</label>
+          <select id="jsonPlaylistSelect"><option value="">Laddar playlists.json...</option></select>
+          <p class="small" id="jsonPlaylistHint" style="margin-top:6px">Välj en färdig JSON-spellista. Den sparas i multiplayer-rummet när du klickar Hämta spellistan.</p>
+          <input id="jsonPlaylistFile" type="file" accept="application/json,.json" style="margin-top:8px; width:100%">
+        `;
+        setup.insertBefore(block, setup.firstChild);
+        const oldInputControl = $('mpPlaylistInput')?.closest('.control');
+        if (oldInputControl) oldInputControl.style.display = 'none';
+        const syncBtn = $('mpSyncPlaylistBtn');
+        if (syncBtn) syncBtn.textContent = 'Ladda vald JSON-spellista';
+        return block;
+      }
+      async function loadManifest() {
+        makePlaylistSelect();
+        const select = $('jsonPlaylistSelect');
+        if (!select) return;
+        const options = [];
+        try {
+          const manifest = await fetchJson('./playlists.json');
+          const list = Array.isArray(manifest) ? manifest : (manifest.playlists || []);
+          for (const item of list) {
+            if (!item) continue;
+            options.push({
+              id: item.id || item.name || item.url || ('playlist_' + options.length),
+              name: item.name || item.title || item.id || item.url,
+              url: item.url || item.path || '',
+              songs: Array.isArray(item.songs) ? item.songs : null
+            });
+          }
+        } catch {
+          // No playlists.json yet. File import still works.
+        }
+        for (const item of getCustomLists()) options.push(item);
+        select.innerHTML = '';
+        if (!options.length) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Ingen playlists.json hittad - importera JSON-fil nedan';
+          select.appendChild(opt);
+        } else {
+          for (const item of options) {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = item.name;
+            opt.dataset.url = item.url || '';
+            if (item.songs) opt.dataset.inline = '1';
+            select.appendChild(opt);
+          }
+          window.__JSON_PLAYLISTS_V26 = options;
+        }
+      }
+      async function readSelectedJsonPlaylist() {
+        const select = $('jsonPlaylistSelect');
+        const lists = window.__JSON_PLAYLISTS_V26 || getCustomLists();
+        const selectedId = select?.value || '';
+        const selected = lists.find(x => String(x.id) === String(selectedId));
+        if (!selected) throw new Error('Välj en JSON-spellista eller importera en JSON-fil.');
+        let json = null;
+        if (selected.songs) json = { songs: selected.songs };
+        else if (selected.url) json = await fetchJson(selected.url);
+        else throw new Error('Den valda spellistan saknar url eller songs.');
+        const songs = normalizeSongs(json);
+        if (!songs.length) throw new Error('JSON-filen innehöll inga användbara låtar. Varje låt behöver title, artist, year och spotifyUri.');
+        return { id: selected.id, name: selected.name, songs };
+      }
+      async function importJsonFile(file) {
+        if (!file) return;
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const songs = normalizeSongs(json);
+        if (!songs.length) throw new Error('JSON-filen innehöll inga användbara låtar.');
+        const name = json.name || json.title || file.name.replace(/\.json$/i, '');
+        const id = 'import_' + name.toLowerCase().replace(/[^a-z0-9åäö]+/gi, '_') + '_' + Date.now();
+        saveCustomList({ id, name: name + ' (importerad)', songs });
+        await loadManifest();
+        if ($('jsonPlaylistSelect')) $('jsonPlaylistSelect').value = id;
+        status(`Importerade JSON-spellista: ${songs.length} låtar. Klicka Ladda vald JSON-spellista.`);
+      }
+      async function loadJsonPlaylistIntoRoom() {
+        try {
+          await ensureReady();
+          const oldSnap = await room().get();
+          const oldRoom = oldSnap.exists() ? oldSnap.val() : null;
+          const selected = await readSelectedJsonPlaylist();
+          const players = activePlayers(oldRoom);
+          await room().set(clean({
+            code: ROOM,
+            createdAt: oldRoom?.createdAt || firebase.database.ServerValue.TIMESTAMP,
+            playlistLoadedAt: firebase.database.ServerValue.TIMESTAMP,
+            status: 'lobby',
+            currentIndex: -1,
+            quiz: [],
+            currentSong: null,
+            options: [],
+            questionId: null,
+            questionStartedAt: null,
+            questionDurationMs: null,
+            answers: null,
+            ready: null,
+            results: null,
+            resultsShownAt: null,
+            finishedAt: null,
+            playlistLoading: null,
+            songBank: selected.songs,
+            settings: { ...(oldRoom?.settings || {}), playlistSource: 'json', playlistId: selected.id, playlistName: selected.name, questionCount: $('mpQuestionCountMirror')?.value || '25', mpMode: $('mpGameModeSelect')?.value || 'standard', mode: $('mpGameModeSelect')?.value || 'standard' },
+            mpMode: $('mpGameModeSelect')?.value || 'standard',
+            players
+          }));
+          if (window.state?.mp) window.state.mp.room = (await room().get()).val();
+          status(`JSON-spellistan är sparad i multiplayer-rummet: ${selected.songs.length} låtar (${selected.name}). Klicka Starta / starta om.`);
+        } catch (err) {
+          status(`Kunde inte ladda JSON-spellista: ${err?.message || String(err)}`);
+        }
+      }
+      function bindJsonPlaylistMode() {
+        makePlaylistSelect();
+        loadManifest();
+        const file = $('jsonPlaylistFile');
+        if (file && !file.__v26Bound) {
+          file.__v26Bound = true;
+          file.addEventListener('change', async e => {
+            try { await importJsonFile(e.target.files?.[0]); }
+            catch (err) { status(`Kunde inte importera JSON: ${err?.message || String(err)}`); }
+          });
+        }
+        const sync = $('mpSyncPlaylistBtn');
+        if (sync && !sync.__v26Bound) {
+          const c = sync.cloneNode(true);
+          c.__v26Bound = true;
+          c.textContent = 'Ladda vald JSON-spellista';
+          sync.replaceWith(c);
+          try { if (typeof els === 'object') els.mpSyncPlaylistBtn = c; } catch {}
+          c.addEventListener('click', e => {
+            e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+            loadJsonPlaylistIntoRoom();
+          }, true);
+        }
+        const oldInputControl = $('mpPlaylistInput')?.closest('.control');
+        if (oldInputControl) oldInputControl.style.display = 'none';
+        status('JSON-spellistor används i multiplayer. Välj en lista och klicka Ladda vald JSON-spellista.');
+      }
+      window.loadJsonPlaylistIntoRoom = loadJsonPlaylistIntoRoom;
+      window.addEventListener('DOMContentLoaded', bindJsonPlaylistMode);
+      window.addEventListener('pageshow', bindJsonPlaylistMode);
+      setTimeout(bindJsonPlaylistMode, 800);
+    })();
+  </script>
+
+
+<script>
+  // v27: Spotify import once -> save playlists in Firebase dropdown + more random multiplayer year options.
+  (function () {
+    const ROOM = 'active';
+    const $ = id => document.getElementById(id);
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+    function setStatus(text) {
+      const el = $('mpStatus');
+      if (el) el.textContent = text || '';
+    }
+
+    function clean(value) {
+      if (Array.isArray(value)) return value.map(clean).filter(v => v !== undefined && v !== null);
+      if (value && typeof value === 'object') {
+        const out = {};
+        for (const [k, v] of Object.entries(value)) {
+          if (v === undefined || v === null) continue;
+          out[k] = clean(v);
+        }
+        return out;
+      }
+      return value;
+    }
+
+    function asArray(value) {
+      if (Array.isArray(value)) return value;
+      if (value && typeof value === 'object') return Object.values(value);
+      return [];
+    }
+
+    function shuffleLocal(arr) {
+      const out = arr.slice();
+      for (let i = out.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [out[i], out[j]] = [out[j], out[i]];
+      }
+      return out;
+    }
+
+    function validYear(y) {
+      return Number.isInteger(Number(y)) && Number(y) >= 1900 && Number(y) <= 2100;
+    }
+
+    function clampYear(y) {
+      return Math.max(1900, Math.min(2100, Number(y)));
+    }
+
+    function finalShuffleWithCorrectNotFixed(options, correctYear) {
+      let out = shuffleLocal([...new Set(options.map(Number).filter(validYear))]);
+      while (out.length < 4) {
+        const range = Number(correctYear) >= 2000 ? 6 : 22;
+        const offset = Math.floor(Math.random() * (range * 2 + 1)) - range;
+        if (offset !== 0) out.push(clampYear(Number(correctYear) + offset));
+        out = [...new Set(out)].filter(validYear);
+      }
+      out = shuffleLocal(out.slice(0, 4));
+
+      // Undvik att rätt svar ofta hamnar på samma plats. Om det slumpas till index 2 två gånger i rad, rotera.
+      try {
+        const idx = out.findIndex(y => Number(y) === Number(correctYear));
+        const last = Number(sessionStorage.getItem('mp_last_correct_option_index_v27'));
+        if (idx === 2 && last === 2) {
+          const swapWith = Math.floor(Math.random() * out.length);
+          if (swapWith !== idx) [out[idx], out[swapWith]] = [out[swapWith], out[idx]];
+        }
+        sessionStorage.setItem('mp_last_correct_option_index_v27', String(out.findIndex(y => Number(y) === Number(correctYear))));
+      } catch {}
+      return out;
+    }
+
+    window.generateMultiplayerOptions = function generateMultiplayerOptionsV27(correctYear, sourceSongs = []) {
+      const year = Number(correctYear);
+      const list = Array.isArray(sourceSongs) && sourceSongs.length ? sourceSongs : (window.state?.songs || []);
+      const playlistYears = [...new Set(list.map(s => Number(s.year)).filter(validYear))].filter(y => y !== year);
+      const options = new Set([year]);
+
+      function add(y) {
+        y = Number(y);
+        if (validYear(y) && y !== year) options.add(y);
+      }
+
+      // Försök först ta år från spellistan, men utan att alltid välja de kronologiskt närmaste.
+      const nearbyFromPlaylist = shuffleLocal(playlistYears)
+        .filter(y => {
+          const d = Math.abs(y - year);
+          return year >= 2000 ? d >= 1 && d <= 6 : d >= 3 && d <= 22;
+        });
+      for (const y of nearbyFromPlaylist) {
+        if (options.size >= 4) break;
+        add(y);
+      }
+
+      if (year >= 2000) {
+        // Moderna årtal ska vara nära, men slumpade runt svaret.
+        const offsetPools = [
+          [-1, 1, -2, 2, -3, 3],
+          [-1, 2, -3, 4, 1, -2],
+          [-4, -2, 1, 3, 5, -1],
+          [-5, -3, 2, 4, -1, 1]
+        ];
+        for (const offset of shuffleLocal(offsetPools[Math.floor(Math.random() * offsetPools.length)])) {
+          if (options.size >= 4) break;
+          add(year + offset);
+        }
+      } else {
+        // Äldre låtar får lite större avstånd, men inte alltid symmetriskt.
+        const offsetPools = [
+          [-4, 6, -9, 12, 15, -16],
+          [-6, 5, -11, 9, 14, -18],
+          [-8, 7, -13, 16, 20, -4],
+          [-3, 10, -15, 6, 18, -21]
+        ];
+        for (const offset of shuffleLocal(offsetPools[Math.floor(Math.random() * offsetPools.length)])) {
+          if (options.size >= 4) break;
+          add(year + offset);
+        }
+      }
+
+      let guard = 0;
+      while (options.size < 4 && guard++ < 200) {
+        const span = year >= 2000 ? 7 : 25;
+        const offset = Math.floor(Math.random() * (span * 2 + 1)) - span;
+        if (offset !== 0) add(year + offset);
+      }
+
+      return finalShuffleWithCorrectNotFixed([...options], year);
+    };
+    try { generateMultiplayerOptions = window.generateMultiplayerOptions; } catch {}
+
+    function normalizeTextSafe(text) {
+      try { return normalizeText(text); }
+      catch { return String(text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9åäö]/gi, ''); }
+    }
+
+    function yearIndexSafe() {
+      try { return defaultYearIndex(); }
+      catch { return { exact: new Map(), titleOnly: new Map() }; }
+    }
+
+    function imageFrom(images) {
+      const arr = Array.isArray(images) ? images.filter(x => x && x.url) : [];
+      if (!arr.length) return '';
+      return arr.slice().sort((a,b) => Math.abs((a.width || 300) - 300) - Math.abs((b.width || 300) - 300))[0]?.url || arr[0].url || '';
+    }
+
+    function sanitizeSong(song, nr = 0) {
+      if (!song) return null;
+      try {
+        if (typeof sanitizeMultiplayerSong === 'function') {
+          const s = sanitizeMultiplayerSong(song);
+          if (s && s.title && s.artist && s.spotifyUri && validYear(s.year)) return s;
+        }
+      } catch {}
+      const title = song.title || song.name || '';
+      const artist = song.artist || song.artistsText || '';
+      const year = Number(song.year || String(song.releaseDate || '').slice(0,4));
+      const spotifyUri = song.spotifyUri || song.uri || '';
+      if (!title || !artist || !spotifyUri || !validYear(year)) return null;
+      return {
+        nr: Number(song.nr) || nr,
+        title,
+        artist,
+        year,
+        spotifyUri,
+        spotifyUrl: song.spotifyUrl || '',
+        albumImageUrl: song.albumImageUrl || song.albumImage || '',
+        albumImage: song.albumImage || song.albumImageUrl || '',
+        releaseDate: song.releaseDate || String(year),
+        durationMs: Number(song.durationMs) || 0
+      };
+    }
+
+    function getTrack(item) {
+      const t = item?.item || item?.track || item;
+      if (!t) return null;
+      if (t.type && t.type !== 'track') return null;
+      if (t.is_local) return null;
+      if (!String(t.uri || '').startsWith('spotify:track:')) return null;
+      return t;
+    }
+
+    function playlistIdFromInput(raw) {
+      raw = String(raw || '').trim();
+      let id = '';
+      try { if (typeof extractSpotifyPlaylistId === 'function') id = extractSpotifyPlaylistId(raw); } catch {}
+      if (!id) {
+        const url = raw.match(/open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/);
+        const uri = raw.match(/spotify:playlist:([A-Za-z0-9]+)/);
+        id = url?.[1] || uri?.[1] || (/^[A-Za-z0-9]{15,}$/.test(raw) ? raw : '');
+      }
+      if (!id) throw new Error('Klistra in en Spotify-spellista URL eller ID först.');
+      return id;
+    }
+
+    async function ensureMultiplayerReady() {
+      if (!window.state?.mp?.db && typeof connectFirebase === 'function') await connectFirebase();
+      if (!window.state?.mp?.player?.id && typeof loadSpotifyProfile === 'function') await loadSpotifyProfile();
+      if (!window.state?.mp?.db) throw new Error('Firebase är inte anslutet.');
+      if (!window.state?.mp?.player?.id) throw new Error('Spotify-profil saknas. Logga in med Spotify först.');
+      window.state.mp.roomCode = ROOM;
+      try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM); } catch {}
+    }
+
+    function room() {
+      if (typeof roomRef !== 'function') throw new Error('Firebase-rummet är inte initierat.');
+      return roomRef(ROOM);
+    }
+
+    async function readRoom() {
+      await ensureMultiplayerReady();
+      const snap = await room().get();
+      const val = snap.exists() ? snap.val() : null;
+      if (window.state?.mp) window.state.mp.room = val;
+      return val;
+    }
+
+    function activePlayers(oldRoom) {
+      const players = {};
+      for (const [id, p] of Object.entries(oldRoom?.players || {})) {
+        if (!p || p.connected === false) continue;
+        const safeId = p.id || id;
+        players[safeId] = { ...p, id: safeId, connected: true, ready: false, answer: null };
+      }
+      const me = window.state?.mp?.player;
+      if (me?.id) players[me.id] = { ...(players[me.id] || {}), ...me, connected: true, ready: false, answer: null };
+      return players;
+    }
+
+    async function spotifyGet(path, label) {
+      for (let attempt = 1; attempt <= 4; attempt++) {
+        try { return await spotifyFetch(path); }
+        catch (err) {
+          if (err?.status !== 429 || attempt === 4) throw err;
+          const wait = Math.max(Number(err.retryAfter) || 0, 8);
+          setStatus(`${label}. Spotify rate limit. Väntar ${wait} sekunder och fortsätter automatiskt...`);
+          await sleep(wait * 1000);
+        }
+      }
+    }
+
+    async function fetchPlaylistFromSpotifyOnce(playlistId) {
+      const fields = 'total,items(track(id,name,uri,type,is_local,duration_ms,artists(name),album(release_date,images(url,width,height)),external_urls(spotify)))';
+      const limit = 50;
+      let offset = 0;
+      let total = null;
+      const seen = new Set();
+      const songs = [];
+      const yidx = yearIndexSafe();
+      for (let page = 0; page < 40; page++) {
+        const path = `/playlists/${playlistId}/items?limit=${limit}&offset=${offset}&fields=${encodeURIComponent(fields)}`;
+        const data = await spotifyGet(path, `Importerar Spotify-spellista (${songs.length} låtar sparade)`);
+        if (Number.isFinite(Number(data?.total))) total = Number(data.total);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        if (!items.length) break;
+        for (let i = 0; i < items.length; i++) {
+          const t = getTrack(items[i]);
+          if (!t || seen.has(t.uri)) continue;
+          seen.add(t.uri);
+          const title = t.name || '';
+          const artist = (t.artists || []).map(a => a.name).filter(Boolean).join(', ') || 'Okänd artist';
+          const releaseDate = t.album?.release_date || '';
+          let year = Number(String(releaseDate).slice(0,4));
+          const exactKey = `${normalizeTextSafe(title)}|${normalizeTextSafe(artist)}`;
+          if (yidx.exact?.has(exactKey)) year = yidx.exact.get(exactKey);
+          else {
+            const titleMatches = yidx.titleOnly?.get(normalizeTextSafe(title)) || [];
+            if (titleMatches.length === 1) year = titleMatches[0];
+          }
+          if (!validYear(year)) continue;
+          songs.push(sanitizeSong({
+            nr: offset + i + 1,
+            title,
+            artist,
+            year,
+            spotifyUri: t.uri,
+            spotifyUrl: t.external_urls?.spotify || '',
+            albumImageUrl: imageFrom(t.album?.images),
+            albumImage: imageFrom(t.album?.images),
+            releaseDate,
+            durationMs: Number(t.duration_ms) || 0
+          }, offset + i + 1));
+        }
+        offset += items.length;
+        setStatus(`Importerar Spotify-spellista... ${offset}${total ? '/' + total : ''} poster lästa, ${songs.length} låtar sparade.`);
+        if (items.length < limit || (total && offset >= total)) break;
+        await sleep(250);
+      }
+      return songs.filter(Boolean);
+    }
+
+    function buildImportUi() {
+      const setup = $('mpPlaylistSetup');
+      if (!setup) return;
+      let block = $('firebasePlaylistBlock');
+      if (!block) {
+        block = document.createElement('div');
+        block.id = 'firebasePlaylistBlock';
+        block.className = 'control';
+        block.innerHTML = `
+          <label for="firebasePlaylistSelect">Sparade spellistor</label>
+          <select id="firebasePlaylistSelect"><option value="">Laddar sparade spellistor...</option></select>
+          <div class="row" style="margin-top:10px">
+            <button class="secondary" id="loadSavedFirebasePlaylistBtn" type="button">Använd vald spellista</button>
+          </div>
+          <label for="mpSpotifyImportInput" style="margin-top:14px">Importera Spotify-spellista</label>
+          <input id="mpSpotifyImportInput" autocomplete="off" placeholder="Klistra in Spotify-spellista URL eller ID">
+          <div class="row" style="margin-top:10px">
+            <button class="secondary" id="importSpotifyPlaylistBtn" type="button">Hämta och spara i Firebase</button>
+          </div>
+          <p class="small" style="margin-top:6px">Spotify hämtas bara när du importerar. Efteråt väljer ni spellistan från listan.</p>
+        `;
+        setup.insertBefore(block, setup.firstChild);
+      }
+      // Dölj gamla/blandade JSON- och Spotify-fält så det bara finns ett tydligt flöde.
+      const oldJson = $('jsonPlaylistBlock'); if (oldJson) oldJson.style.display = 'none';
+      const oldInputControl = $('mpPlaylistInput')?.closest('.control'); if (oldInputControl) oldInputControl.style.display = 'none';
+      const sync = $('mpSyncPlaylistBtn'); if (sync) sync.style.display = 'none';
+    }
+
+    async function refreshSavedPlaylistDropdown() {
+      const select = $('firebasePlaylistSelect');
+      if (!select) return;
+      try {
+        await ensureMultiplayerReady();
+        const snap = await room().child('savedPlaylists').get();
+        const raw = snap.exists() ? snap.val() : {};
+        const lists = Object.entries(raw || {})
+          .map(([id, p]) => ({ id, ...(p || {}) }))
+          .filter(p => p && asArray(p.songs).length)
+          .sort((a,b) => String(a.name || a.id).localeCompare(String(b.name || b.id), 'sv'));
+        select.innerHTML = '';
+        if (!lists.length) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'Ingen spellista sparad än';
+          select.appendChild(opt);
+          return;
+        }
+        for (const item of lists) {
+          const opt = document.createElement('option');
+          opt.value = item.id;
+          opt.textContent = `${item.name || item.id} (${asArray(item.songs).length} låtar)`;
+          select.appendChild(opt);
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="">Kunde inte läsa Firebase-listor</option>';
+      }
+    }
+
+    async function getSpotifyPlaylistName(playlistId) {
+      try {
+        const data = await spotifyGet(`/playlists/${playlistId}?fields=${encodeURIComponent('name')}`, 'Hämtar spellistans namn');
+        return data?.name || playlistId;
+      } catch { return playlistId; }
+    }
+
+    async function importSpotifyPlaylistToFirebase() {
+      try {
+        await ensureMultiplayerReady();
+        const raw = $('mpSpotifyImportInput')?.value || $('mpPlaylistInput')?.value || '';
+        const playlistId = playlistIdFromInput(raw);
+        const oldRoom = await readRoom();
+        setStatus('Importerar Spotify-spellista. Gör detta bara en gång per spellista...');
+        const [name, songs] = await Promise.all([
+          getSpotifyPlaylistName(playlistId),
+          fetchPlaylistFromSpotifyOnce(playlistId)
+        ]);
+        if (!songs.length) throw new Error('Spotify returnerade 0 användbara låtar. Kontrollera att spellistan innehåller vanliga låtar och att appen får läsa den.');
+        const cleanSongs = clean(songs);
+        const players = activePlayers(oldRoom);
+        await room().update(clean({
+          [`savedPlaylists/${playlistId}`]: {
+            id: playlistId,
+            name,
+            importedAt: firebase.database.ServerValue.TIMESTAMP,
+            importedBy: window.state?.mp?.player?.name || '',
+            songs: cleanSongs
+          },
+          songBank: cleanSongs,
+          status: 'lobby',
+          currentIndex: -1,
+          quiz: [],
+          currentSong: null,
+          options: [],
+          questionId: null,
+          questionStartedAt: null,
+          answers: null,
+          ready: null,
+          results: null,
+          finishedAt: null,
+          settings: { ...(oldRoom?.settings || {}), playlistId, playlistName: name, questionCount: $('mpQuestionCountMirror')?.value || '25', mpMode: $('mpGameModeSelect')?.value || 'standard', mode: $('mpGameModeSelect')?.value || 'standard' },
+          players
+        }));
+        if ($('firebasePlaylistSelect')) $('firebasePlaylistSelect').value = playlistId;
+        await refreshSavedPlaylistDropdown();
+        if ($('firebasePlaylistSelect')) $('firebasePlaylistSelect').value = playlistId;
+        setStatus(`Spellistan är importerad och vald: ${name} (${songs.length} låtar). Klicka Starta / starta om.`);
+      } catch (err) {
+        setStatus(`Kunde inte importera Spotify-spellista: ${err?.message || String(err)}`);
+      }
+    }
+
+    async function useSavedFirebasePlaylist() {
+      try {
+        await ensureMultiplayerReady();
+        const id = $('firebasePlaylistSelect')?.value || '';
+        if (!id) throw new Error('Välj en sparad spellista först.');
+        const oldRoom = await readRoom();
+        const snap = await room().child(`savedPlaylists/${id}`).get();
+        if (!snap.exists()) throw new Error('Den valda spellistan finns inte längre i Firebase.');
+        const p = snap.val();
+        const songs = asArray(p.songs).map((s, i) => sanitizeSong(s, i + 1)).filter(Boolean);
+        if (!songs.length) throw new Error('Den valda spellistan saknar användbara låtar.');
+        const players = activePlayers(oldRoom);
+        await room().update(clean({
+          songBank: songs,
+          status: 'lobby',
+          currentIndex: -1,
+          quiz: [],
+          currentSong: null,
+          options: [],
+          questionId: null,
+          questionStartedAt: null,
+          answers: null,
+          ready: null,
+          results: null,
+          finishedAt: null,
+          settings: { ...(oldRoom?.settings || {}), playlistId: id, playlistName: p.name || id, questionCount: $('mpQuestionCountMirror')?.value || '25', mpMode: $('mpGameModeSelect')?.value || 'standard', mode: $('mpGameModeSelect')?.value || 'standard' },
+          players
+        }));
+        setStatus(`Vald spellista är laddad i rummet: ${p.name || id} (${songs.length} låtar). Klicka Starta / starta om.`);
+      } catch (err) {
+        setStatus(`Kunde inte använda sparad spellista: ${err?.message || String(err)}`);
+      }
+    }
+
+    function bindV27() {
+      buildImportUi();
+      refreshSavedPlaylistDropdown();
+      const importBtn = $('importSpotifyPlaylistBtn');
+      if (importBtn && !importBtn.__v27Bound) {
+        importBtn.__v27Bound = true;
+        importBtn.addEventListener('click', e => {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          importSpotifyPlaylistToFirebase();
+        }, true);
+      }
+      const loadBtn = $('loadSavedFirebasePlaylistBtn');
+      if (loadBtn && !loadBtn.__v27Bound) {
+        loadBtn.__v27Bound = true;
+        loadBtn.addEventListener('click', e => {
+          e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+          useSavedFirebasePlaylist();
+        }, true);
+      }
+      const select = $('firebasePlaylistSelect');
+      if (select && !select.__v27Bound) {
+        select.__v27Bound = true;
+        select.addEventListener('focus', refreshSavedPlaylistDropdown);
+      }
+    }
+
+    window.importSpotifyPlaylistToFirebase = importSpotifyPlaylistToFirebase;
+    window.useSavedFirebasePlaylist = useSavedFirebasePlaylist;
+    window.refreshSavedPlaylistDropdown = refreshSavedPlaylistDropdown;
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindV27);
+    else bindV27();
+    window.addEventListener('pageshow', bindV27);
+    setTimeout(bindV27, 1000);
+  })();
+</script>
+
 </body>
 </html>
