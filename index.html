@@ -310,6 +310,95 @@
       .dropSlot.emptySlot,.activeTimelineArea .dropSlot.emptySlot,body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot{width:136px!important;min-width:136px!important;height:190px!important;min-height:190px!important;}
     }
 
+
+    /* v22: tighter top spacing + own timeline bigger and cleaner */
+    :root{--ownH:142px!important;}
+    body.playingMode{padding-bottom:calc(var(--ownH) + 16px)!important;}
+    .gameShell,
+    body.playingMode .gameShell{
+      padding-top:30px!important;
+      min-height:calc(100vh - var(--ownH) - 12px)!important;
+    }
+    .centerStage{gap:10px!important;}
+    .currentCardZone{
+      min-height:300px!important;
+      padding-top:0!important;
+      margin-top:0!important;
+    }
+    .activePlayerBanner{margin-top:0!important;}
+    .activeTimelineArea{padding-top:22px!important;}
+
+    .ownTimelineDock{
+      min-height:var(--ownH)!important;
+      height:var(--ownH)!important;
+      padding:8px 176px 18px!important;
+      overflow:hidden!important;
+    }
+    .ownTimelineDock .timelineHeader{
+      display:grid!important;
+      place-items:center!important;
+      justify-content:center!important;
+      text-align:center!important;
+      margin-bottom:4px!important;
+      width:100%!important;
+    }
+    .ownTimelineDock .timelineHeader>div,
+    .ownTimelineDock .timelineHeader h2{
+      width:100%!important;
+      text-align:center!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+    }
+    .ownTimelineDock .timelineHeader h2{
+      font-size:.86rem!important;
+      line-height:1.1!important;
+    }
+    .ownTimelineDock .timeline{
+      min-height:102px!important;
+      height:102px!important;
+      padding:4px 0!important;
+      gap:8px!important;
+      overflow-x:auto!important;
+      justify-content:center!important;
+    }
+    .ownTimelineDock .tlCard{
+      width:92px!important;
+      min-width:92px!important;
+      height:96px!important;
+      min-height:96px!important;
+      border-radius:13px!important;
+      padding:6px!important;
+    }
+    .ownTimelineDock .tlCard .cover{
+      display:block!important;
+      height:44px!important;
+      min-height:44px!important;
+      border-radius:9px!important;
+    }
+    .ownTimelineDock .tlTag{display:none!important;}
+    .ownTimelineDock .tlCardTitle{
+      display:block!important;
+      font-size:.58rem!important;
+      line-height:1.03!important;
+      margin-top:4px!important;
+    }
+    .ownTimelineDock .tlArtist{display:none!important;}
+    .ownTimelineDock .tlYear{
+      font-size:.66rem!important;
+      margin-top:2px!important;
+    }
+    .ownTimelineDock .legend{display:none!important;}
+
+    @media(max-width:920px){
+      :root{--ownH:128px!important;}
+      .gameShell,body.playingMode .gameShell{padding-top:18px!important;}
+      .currentCardZone{min-height:260px!important;}
+      .ownTimelineDock{padding-left:10px!important;padding-right:10px!important;height:var(--ownH)!important;}
+      .ownTimelineDock .timeline{height:88px!important;min-height:88px!important;justify-content:flex-start!important;}
+      .ownTimelineDock .tlCard{width:82px!important;min-width:82px!important;height:84px!important;min-height:84px!important;}
+      .ownTimelineDock .tlCard .cover{height:36px!important;min-height:36px!important;}
+    }
+
   </style>
 </head>
 <body>
@@ -319,7 +408,7 @@
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div></div><div class="timeline" id="ownTimeline"></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton" id="profileButton" type="button"><span class="avatarDot"></span><span><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in med Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v21</span></div></div>
+  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v22</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -328,7 +417,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v21';
+  const VERSION = 'timeline-game-v22';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
   const ROOM_ID = 'active';
@@ -934,7 +1023,7 @@
     const tl=timelineOf(viewed);
     const isMine=viewed.id===player.id;
     const title=(isMine?'Din tidslinje':((viewed.name||'Spelare')+'s tidslinje'));
-    setText(els.ownTimelineTitle,title+' · '+lockedCount(viewed)+'/'+WIN_SCORE+' låsta · '+pendingCount(viewed)+' riskeras');
+    setText(els.ownTimelineTitle,title+' · '+lockedCount(viewed)+'/'+WIN_SCORE);
     els.ownTimeline.innerHTML='';
     if(!tl.length){ els.ownTimeline.innerHTML='<p class="tiny">'+(isMine?'Din':'Spelarens')+' tidslinje är tom. Första kortet kan läggas var som helst.</p>'; return; }
     tl.forEach(c=>els.ownTimeline.appendChild(makeTimelineCard(c)));
