@@ -222,6 +222,94 @@
       .activePlayerBanner{min-width:min(260px,calc(100vw - 36px))!important;}
     }
 
+
+    /* v21: static drag layout, smaller bottom timeline, cleaner waiting screen */
+    :root{--ownH:98px!important;}
+    body.playingMode{padding-bottom:calc(var(--ownH) + 18px)!important;}
+    .dragStaticPlaceholder{display:block;flex:0 0 auto;visibility:hidden;pointer-events:none;}
+    .currentCardZone{min-height:360px!important;}
+    .drawCard.dragging,.tlCard.dragging{margin:0!important;}
+    body.draggingTimelineCard .centerStage,
+    body.draggingTimelineCard .activeTimelineArea,
+    body.draggingTimelineCard .timeline,
+    body.draggingTimelineCard .currentCardZone{transform:none!important;transition:none!important;}
+
+    .dropSlot.emptySlot,
+    .activeTimelineArea .dropSlot.emptySlot,
+    body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot,
+    body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot.active,
+    body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot.selected,
+    body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot:hover{
+      width:156px!important;
+      min-width:156px!important;
+      height:218px!important;
+      min-height:218px!important;
+      padding:12px!important;
+      margin:0!important;
+      opacity:1!important;
+      display:grid!important;
+      place-items:center!important;
+      transform:none!important;
+      background:rgba(var(--active-player-rgb),.10)!important;
+      border:2px dashed rgba(var(--active-player-rgb),.72)!important;
+      border-radius:18px!important;
+      box-shadow:none!important;
+      overflow:hidden!important;
+      text-align:center!important;
+      color:rgba(255,255,255,.70)!important;
+    }
+    .dropSlot.emptySlot::after,
+    .activeTimelineArea .dropSlot.emptySlot::after,
+    body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot::after{
+      content:'Placera första kortet här'!important;
+      display:block!important;
+      color:rgba(255,255,255,.72)!important;
+      font-size:.76rem!important;
+      font-weight:900!important;
+      line-height:1.18!important;
+      letter-spacing:.035em!important;
+      text-transform:uppercase!important;
+      white-space:normal!important;
+      max-width:120px!important;
+    }
+
+    .ownTimelineDock{
+      min-height:var(--ownH)!important;
+      height:var(--ownH)!important;
+      bottom:0!important;
+      z-index:18!important;
+      padding:5px 176px 12px!important;
+      overflow:hidden!important;
+      pointer-events:auto!important;
+    }
+    .ownTimelineDock .timelineHeader{margin-bottom:1px!important;}
+    .ownTimelineDock .timelineHeader h2{font-size:.72rem!important;line-height:1.05!important;}
+    .ownTimelineDock .timeline{min-height:58px!important;height:58px!important;padding:2px 0 2px!important;gap:5px!important;overflow-x:auto!important;}
+    .ownTimelineDock .tlCard{width:64px!important;min-width:64px!important;min-height:54px!important;height:54px!important;border-radius:9px!important;padding:4px!important;}
+    .ownTimelineDock .tlCard .cover{display:none!important;}
+    .ownTimelineDock .tlTag{display:none!important;}
+    .ownTimelineDock .tlCardTitle{font-size:.48rem!important;line-height:1.02!important;margin-top:0!important;}
+    .ownTimelineDock .tlArtist{display:none!important;}
+    .ownTimelineDock .tlYear{font-size:.55rem!important;margin-top:2px!important;}
+    .ownTimelineDock .legend{display:none!important;}
+    .profileArea,.playlistArea,.floatingPlayers{z-index:40!important;}
+
+    body.waitingMode .turnTitle{
+      background:transparent!important;
+      border:0!important;
+      border-radius:0!important;
+      padding:0!important;
+      box-shadow:none!important;
+    }
+    body.waitingMode .gameShell{place-items:center!important;padding:0 16px!important;min-height:100vh!important;}
+    body.waitingMode .bigMessage{font-size:clamp(1.8rem,4vw,3.5rem)!important;}
+
+    @media(max-width:920px){
+      :root{--ownH:86px!important;}
+      .ownTimelineDock{padding-left:10px!important;padding-right:10px!important;height:var(--ownH)!important;}
+      .dropSlot.emptySlot,.activeTimelineArea .dropSlot.emptySlot,body.draggingTimelineCard .activeTimelineArea .dropSlot.emptySlot{width:136px!important;min-width:136px!important;height:190px!important;min-height:190px!important;}
+    }
+
   </style>
 </head>
 <body>
@@ -231,7 +319,7 @@
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div></div><div class="timeline" id="ownTimeline"></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton" id="profileButton" type="button"><span class="avatarDot"></span><span><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in med Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v20</span></div></div>
+  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v21</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -240,7 +328,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v20';
+  const VERSION = 'timeline-game-v21';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
   const ROOM_ID = 'active';
@@ -674,7 +762,7 @@
   }
 
   function bindCardPointerDrag(cardEl, card){
-    let offsetX=0,offsetY=0,dragging=false,lastX=0,rot=0,original={};
+    let offsetX=0,offsetY=0,dragging=false,lastX=0,rot=0,original={}, placeholder=null;
     function clearActiveSlots(){ document.querySelectorAll('.dropSlot').forEach(s=>s.classList.remove('active')); }
     function slotAt(x,y){
       const oldPointer = cardEl.style.pointerEvents;
@@ -704,7 +792,14 @@
       e.preventDefault();
       const rect=cardEl.getBoundingClientRect();
       offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top; lastX=e.clientX; rot=0;
-      original={position:cardEl.style.position,left:cardEl.style.left,top:cardEl.style.top,width:cardEl.style.width,zIndex:cardEl.style.zIndex,pointerEvents:cardEl.style.pointerEvents,transition:cardEl.style.transition,transform:cardEl.style.transform};
+      original={position:cardEl.style.position,left:cardEl.style.left,top:cardEl.style.top,width:cardEl.style.width,height:cardEl.style.height,zIndex:cardEl.style.zIndex,pointerEvents:cardEl.style.pointerEvents,transition:cardEl.style.transition,transform:cardEl.style.transform};
+      placeholder=document.createElement('div');
+      placeholder.className='dragStaticPlaceholder';
+      placeholder.style.width=rect.width+'px';
+      placeholder.style.height=rect.height+'px';
+      placeholder.style.minWidth=rect.width+'px';
+      placeholder.style.minHeight=rect.height+'px';
+      cardEl.parentNode.insertBefore(placeholder, cardEl);
       cardEl.setPointerCapture?.(e.pointerId);
       cardEl.classList.add('dragging');
       cardEl.style.position='fixed';
@@ -740,6 +835,7 @@
       cardEl.classList.remove('dragging');
       cardEl.style.removeProperty('--drag-rot');
       Object.assign(cardEl.style, original);
+      if(placeholder){ placeholder.remove(); placeholder=null; }
     }
     cardEl.addEventListener('pointerup', end);
     cardEl.addEventListener('pointercancel', end);
