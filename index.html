@@ -333,7 +333,7 @@
         <p class="small spotifyStatus" id="spotifyStatus"></p>
 
         <div class="mpPanel hidden" id="multiplayerPanel">
-          <h2>Multiplayer online</h2>
+          <h2>Musik Quiz</h2>
           <p class="small">Alla som loggar in med Spotify spelar tillsammans. Max 5 spelare rekommenderas.</p>
 
           <div class="mpSetupGrid" id="mpPlaylistSetup">
@@ -354,9 +354,7 @@
           </div>
           <div class="mpCompactActions" id="mpQuickActions">
             <button class="secondary" id="mpSpotifyLoginBtn" type="button">Logga in Spotify</button>
-            <button class="secondary" id="mpSpotifyDevicesBtn" type="button">Hämta enheter</button>
             <button class="secondary" id="mpSyncPlaylistBtn" type="button">Hämta spellistan</button>
-            <button class="secondary" id="mpLoadProfileQuickBtn" type="button">Hämta profil</button>
           </div>
 
           <div class="control">
@@ -375,8 +373,6 @@
               <div class="small" id="mpProfileSub">Logga in med Spotify först.</div>
             </div>
           </div>
-          <button class="secondary" id="loadSpotifyProfileBtn" type="button">Hämta Spotify-profil</button>
-
           <input id="roomCodeInput" type="hidden" value="active">
 
           <div class="actions" style="margin-top:10px">
@@ -3348,7 +3344,7 @@ Jolene;Dolly Parton;1973"></textarea>
       if (window.location.hostname === 'localhost') {
         setSpotifyStatus('Öppna sidan med 127.0.0.1 i stället för localhost. Spotify godkänner loopback-IP, och login-data sparas per adress.');
       } else if (getStoredToken()?.access_token) {
-        setSpotifyStatus('Spotify-login finns sparad lokalt. Hämta enheter eller uppdatera spellistan.');
+        setSpotifyStatus('Spotify-login finns sparad lokalt. Profil och enheter hämtas automatiskt.');
       }
     }
 
@@ -3515,7 +3511,8 @@ Jolene;Dolly Parton;1973"></textarea>
         clearOAuthPayload();
         window.history.replaceState({}, document.title, getRedirectUri());
         const expires = token.expires_at ? new Date(token.expires_at).toLocaleTimeString('sv-SE') : '';
-        setSpotifyStatus(`Inloggad mot Spotify. Token sparad lokalt${expires ? ` till ungefär ${expires}` : ''}. Hämta enheter och hämta spellistan.`);
+        setSpotifyStatus(`Inloggad mot Spotify. Token sparad lokalt${expires ? ` till ungefär ${expires}` : ''}. Hämtar profil och enheter automatiskt...`);
+        setTimeout(() => autoPrepareSpotifyAfterLogin().catch(() => {}), 0);
       } catch (err) {
         setSpotifyStatus(`Kunde inte logga in: ${err.message}. Kontrollera att Redirect URI i Spotify Dashboard är exakt: ${redirectUri}`);
       }
@@ -4143,6 +4140,9 @@ Jolene;Dolly Parton;1973"></textarea>
           ? 'Multiplayer valt. Logga in med Spotify, välj spellista och tryck Starta.'
           : 'Single-player valt. Du kan spela som tidigare.';
       }
+      if (state.appMode === 'multi') {
+        autoPrepareSpotifyAfterLogin().catch(() => {});
+      }
       if (state.appMode === 'multi' && state.mp.db && state.mp.player?.id) {
         joinActiveRoom().catch(err => setMultiplayerStatus(err.message));
       }
@@ -4208,6 +4208,9 @@ Jolene;Dolly Parton;1973"></textarea>
         });
         localStorage.setItem(LS.firebaseConfig, JSON.stringify(cfg, null, 2));
         setMultiplayerStatus('Ansluten till Firebase. Logga in med Spotify och tryck Starta multiplayer.');
+        if (state.appMode === 'multi') {
+          await autoPrepareSpotifyAfterLogin().catch(() => {});
+        }
         if (state.appMode === 'multi' && state.mp.player?.id) {
           await joinActiveRoom();
         }
@@ -4254,6 +4257,19 @@ Jolene;Dolly Parton;1973"></textarea>
         els.mpAvatar.src = profile?.imageUrl || '';
         els.mpAvatar.style.visibility = profile?.imageUrl ? 'visible' : 'hidden';
       }
+    }
+
+    async function autoPrepareSpotifyAfterLogin() {
+      const token = getStoredToken();
+      if (!token?.access_token) return;
+      const jobs = [];
+      if (els.spotifyDeviceSelect && (!els.spotifyDeviceSelect.value || els.spotifyDeviceSelect.options.length <= 1)) {
+        jobs.push(refreshSpotifyDevices().catch(err => setMultiplayerStatus(`Kunde inte hämta Spotify-enheter automatiskt: ${err.message}`)));
+      }
+      if (!state.mp.player?.id) {
+        jobs.push(loadSpotifyProfile().catch(err => setMultiplayerStatus(`Kunde inte hämta Spotify-profil automatiskt: ${err.message}`)));
+      }
+      if (jobs.length) await Promise.allSettled(jobs);
     }
 
     async function ensureMultiplayerReady() {
@@ -4394,7 +4410,7 @@ Jolene;Dolly Parton;1973"></textarea>
           <span class="mpScore">${Number(p.score) || 0}</span>
         </div>
       `).join('');
-      setMultiplayerStatus(`Multiplayer. Status: ${room.status || 'lobby'}. Spelare: ${players.length}/5.`);
+      setMultiplayerStatus(`Musik Quiz. Status: ${room.status || 'lobby'}. Spelare: ${players.length}/5.`);
       els.mpStartBtn.disabled = false;
       els.mpNextBtn.disabled = !['results', 'lobby'].includes(room.status);
       els.mpReadyBtn.disabled = !room.currentSong || room.status !== 'question';
@@ -4659,7 +4675,7 @@ Jolene;Dolly Parton;1973"></textarea>
 
     function renderMultiplayerFinished(room) {
       const players = playersArray(room).sort((a,b) => (b.score || 0) - (a.score || 0));
-      els.songTitle.textContent = 'Multiplayer klart';
+      els.songTitle.textContent = 'Musik Quiz klart';
       els.songArtist.textContent = players[0] ? `${players[0].name} vann med ${players[0].score || 0} poäng.` : 'Inga spelare.';
       els.options.innerHTML = '';
       els.practicePanel.classList.add('hidden');
@@ -4732,6 +4748,7 @@ Jolene;Dolly Parton;1973"></textarea>
       loadSpotifySettings();
       loadAppMode();
       await handleSpotifyCallback();
+      await autoPrepareSpotifyAfterLogin().catch(() => {});
       loadSongs();
       updateStats();
       updateHistory();
@@ -4860,7 +4877,7 @@ Jolene;Dolly Parton;1973"></textarea>
           localStorage.removeItem(LS_FALLBACK.oauthPayload);
           sessionStorage.removeItem(LS_FALLBACK.oauthPayload);
           history.replaceState({}, document.title, redirectUri());
-          status('Inloggad mot Spotify. Hämta enheter och Spotify-profil.');
+          status('Inloggad mot Spotify. Profil och enheter hämtas automatiskt av huvudsidan.');
         } catch (e) {
           status('Kunde inte logga in: ' + e.message + '. Kontrollera att Redirect URI i Spotify är exakt: ' + rUri);
         }
@@ -4944,7 +4961,7 @@ Jolene;Dolly Parton;1973"></textarea>
           : 'Single-player valt. Multiplayer är dolt.');
 
         if (isMulti) {
-          if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Multiplayer-lobby';
+          if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Musik Quiz';
           if ($('songArtist')) $('songArtist').textContent = 'Logga in, välj spellista och tryck Starta multiplayer.';
         }
       }
@@ -5095,7 +5112,7 @@ Jolene;Dolly Parton;1973"></textarea>
 
         if (isMulti) {
           syncMpFromExisting();
-          if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Multiplayer';
+          if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Musik Quiz';
           if ($('songArtist')) $('songArtist').textContent = 'Välj spellista, logga in med Spotify och tryck Starta multiplayer.';
           setText('appModeStatus', 'Multiplayer valt. Allt styrs från den centrerade multiplayer-panelen. Alla spelare kan starta och gå vidare.');
         } else {
