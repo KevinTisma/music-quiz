@@ -9656,12 +9656,11 @@ Jolene;Dolly Parton;1973"></textarea>
 
 
 <script>
-  // v31: Robust Firebase playlist import. Kör oberoende av window.state och default Firebase-app.
+  // v32: Robust Firebase playlist import. Ingen parallell Spotify-request. Längre retry vid 429.
   (function () {
     const ROOM = 'active';
     const APP_NAME = 'hitster-multiplayer';
     const DEFAULT_DB_URL = 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app';
-    const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
     const $ = id => document.getElementById(id);
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -9734,17 +9733,20 @@ Jolene;Dolly Parton;1973"></textarea>
       catch { return null; }
     }
 
-    async function spotifyFetchDirect(path) {
-      if (typeof spotifyFetch === 'function') return spotifyFetch(path);
+    async function spotifyFetchRaw(path) {
       const token = readToken();
       if (!token?.access_token) throw new Error('Du är inte inloggad med Spotify. Klicka Logga in Spotify först.');
-      const res = await fetch('https://api.spotify.com/v1' + path, { headers: { Authorization: 'Bearer ' + token.access_token } });
+      const res = await fetch('https://api.spotify.com/v1' + path, {
+        headers: { Authorization: 'Bearer ' + token.access_token },
+        cache: 'no-store'
+      });
       if (res.status === 429) {
         const err = new Error('Spotify rate limit');
         err.status = 429;
-        err.retryAfter = Number(res.headers.get('Retry-After')) || 8;
+        err.retryAfter = Number(res.headers.get('Retry-After')) || 0;
         throw err;
       }
+      if (res.status === 401) throw new Error('Spotify-token är ogiltig eller utgången. Logga ut och logga in med Spotify igen.');
       if (!res.ok) {
         let text = await res.text();
         try { const json = JSON.parse(text); text = json.error?.message || text; } catch {}
@@ -9754,12 +9756,13 @@ Jolene;Dolly Parton;1973"></textarea>
     }
 
     async function spotifyGet(path, label) {
-      for (let attempt = 1; attempt <= 4; attempt++) {
-        try { return await spotifyFetchDirect(path); }
+      const fallbackWaits = [20, 45, 90, 180, 300, 300];
+      for (let attempt = 1; attempt <= fallbackWaits.length + 1; attempt++) {
+        try { return await spotifyFetchRaw(path); }
         catch (err) {
-          if (err?.status !== 429 || attempt === 4) throw err;
-          const wait = Math.max(Number(err.retryAfter) || 0, 8);
-          setStatus(`${label}. Spotify rate limit. Väntar ${wait} sekunder och fortsätter...`);
+          if (err?.status !== 429 || attempt > fallbackWaits.length) throw err;
+          const wait = Math.max(Number(err.retryAfter) || 0, fallbackWaits[attempt - 1]);
+          setStatus(`${label}. Spotify rate limit. Väntar ${wait} sekunder. Försök ${attempt}/${fallbackWaits.length + 1}...`);
           await sleep(wait * 1000);
         }
       }
@@ -9793,11 +9796,14 @@ Jolene;Dolly Parton;1973"></textarea>
       return { exact, titleOnly };
     }
 
-    async function fetchPlaylistName(playlistId) {
+    async function tryFetchPlaylistName(playlistId) {
       try {
         const data = await spotifyGet(`/playlists/${playlistId}?fields=${encodeURIComponent('name')}`, 'Hämtar spellistans namn');
         return data?.name || playlistId;
-      } catch { return playlistId; }
+      } catch (err) {
+        if (err?.status === 429 || String(err?.message || '').includes('rate limit')) return playlistId;
+        return playlistId;
+      }
     }
 
     async function fetchPlaylistSongs(playlistId) {
@@ -9828,6 +9834,7 @@ Jolene;Dolly Parton;1973"></textarea>
             if (titleMatches.length === 1) year = titleMatches[0];
           }
           if (!validYear(year)) continue;
+          const img = imageFrom(t.album?.images);
           songs.push({
             nr: songs.length + 1,
             title,
@@ -9835,8 +9842,8 @@ Jolene;Dolly Parton;1973"></textarea>
             year: Number(year),
             spotifyUri: t.uri,
             spotifyUrl: t.external_urls?.spotify || '',
-            albumImageUrl: imageFrom(t.album?.images),
-            albumImage: imageFrom(t.album?.images),
+            albumImageUrl: img,
+            albumImage: img,
             releaseDate: releaseDate || String(year),
             durationMs: Number(t.duration_ms) || 0
           });
@@ -9844,12 +9851,12 @@ Jolene;Dolly Parton;1973"></textarea>
         offset += items.length;
         setStatus(`Importerar Spotify-spellista... ${offset}${total ? '/' + total : ''} poster lästa, ${songs.length} låtar sparade.`);
         if (items.length < limit || (total && offset >= total)) break;
-        await sleep(250);
+        await sleep(1200);
       }
       return songs;
     }
 
-    async function importPlaylistV31() {
+    async function importPlaylistV32() {
       const db = getDb();
       const ref = db.ref('rooms/' + ROOM);
       const raw = $('mpSpotifyImportInput')?.value || $('mpPlaylistInput')?.value || $('spotifyPlaylistInput')?.value || '';
@@ -9858,12 +9865,14 @@ Jolene;Dolly Parton;1973"></textarea>
       await ref.child('playlistImportDebug').set({
         playlistId,
         status: 'started',
-        startedAt: firebase.database.ServerValue.TIMESTAMP
+        startedAt: firebase.database.ServerValue.TIMESTAMP,
+        version: 'v32'
       });
 
       setStatus('Import startad. Hämtar spellistan från Spotify...');
-      const [name, songs] = await Promise.all([fetchPlaylistName(playlistId), fetchPlaylistSongs(playlistId)]);
+      const songs = await fetchPlaylistSongs(playlistId);
       if (!songs.length) throw new Error('Spotify returnerade 0 användbara låtar. Kontrollera att spellistan innehåller vanliga låtar.');
+      const name = await tryFetchPlaylistName(playlistId);
 
       const oldSnap = await ref.get();
       const oldRoom = oldSnap.exists() ? oldSnap.val() : {};
@@ -9887,7 +9896,8 @@ Jolene;Dolly Parton;1973"></textarea>
           name,
           status: 'saved',
           count: cleanSongs.length,
-          savedAt: firebase.database.ServerValue.TIMESTAMP
+          savedAt: firebase.database.ServerValue.TIMESTAMP,
+          version: 'v32'
         },
         status: 'lobby',
         currentIndex: -1,
@@ -9916,11 +9926,11 @@ Jolene;Dolly Parton;1973"></textarea>
       setStatus(`Sparat i Firebase: ${name} (${songs.length} låtar).`);
     }
 
-    function bindImportButtonV31() {
+    function bindImportButtonV32() {
       const btn = $('importSpotifyPlaylistBtn');
-      if (!btn || btn.dataset.v31Bound === '1') return;
+      if (!btn || btn.dataset.v32Bound === '1') return;
       const clone = btn.cloneNode(true);
-      clone.dataset.v31Bound = '1';
+      clone.dataset.v32Bound = '1';
       clone.textContent = 'Hämta och spara i Firebase';
       btn.replaceWith(clone);
       clone.addEventListener('click', async event => {
@@ -9928,25 +9938,25 @@ Jolene;Dolly Parton;1973"></textarea>
         event.stopPropagation();
         event.stopImmediatePropagation();
         clone.disabled = true;
-        try { await importPlaylistV31(); }
+        try { await importPlaylistV32(); }
         catch (err) {
           const msg = err?.message || String(err);
           setStatus('Kunde inte spara spellistan: ' + msg);
-          console.error('[playlist-import-v31]', err);
+          console.error('[playlist-import-v32]', err);
         }
         finally { clone.disabled = false; }
       }, true);
     }
 
-    window.importSpotifyPlaylistToFirebase = importPlaylistV31;
-    window.robustImportSpotifyPlaylistToFirebase = importPlaylistV31;
+    window.importSpotifyPlaylistToFirebase = importPlaylistV32;
+    window.robustImportSpotifyPlaylistToFirebase = importPlaylistV32;
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindImportButtonV31);
-    else bindImportButtonV31();
-    window.addEventListener('pageshow', bindImportButtonV31);
-    setTimeout(bindImportButtonV31, 300);
-    setTimeout(bindImportButtonV31, 1200);
-    setTimeout(bindImportButtonV31, 2500);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindImportButtonV32);
+    else bindImportButtonV32();
+    window.addEventListener('pageshow', bindImportButtonV32);
+    setTimeout(bindImportButtonV32, 300);
+    setTimeout(bindImportButtonV32, 1200);
+    setTimeout(bindImportButtonV32, 2500);
   })();
 </script>
 
