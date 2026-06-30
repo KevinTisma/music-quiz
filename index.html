@@ -148,6 +148,7 @@
     #saveFirebaseBtn,
     #connectFirebaseBtn { display: none !important; }
     #history { display: none !important; }
+    #roomCodeInput { display:none !important; }
     .mpSetupGrid { display:grid; grid-template-columns: 1.3fr .7fr; gap: 10px; align-items:end; margin: 10px 0 12px; }
     .mpSetupGrid .control { margin-bottom: 0; }
     .mpCompactActions { display:flex; flex-wrap:wrap; gap:8px; margin: 8px 0 4px; }
@@ -177,6 +178,9 @@
       body[data-app-mode="multi"] .songVisual { grid-template-columns: 1fr; }
     }
 
+    /* Multiplayer v7: no visible room-code/connect section. Active room is automatic. */
+    #createRoomBtn, #joinRoomBtn, #leaveRoomBtn { display:none !important; }
+
   </style>
 </head>
 <body>
@@ -195,7 +199,7 @@
       <p>Single-player är samma quiz som tidigare. Multiplayer synkar frågor och svar online via Firebase, medan varje spelare spelar låten på sin egen Spotify.</p>
       <div class="modeCards">
         <button class="modeCard" id="singleModeBtn" type="button"><strong>Single-player</strong><span>Spela själv, öva årtal och repetera svåra låtar.</span></button>
-        <button class="modeCard" id="multiModeBtn" type="button"><strong>Multiplayer online</strong><span>Skapa eller gå med i ett rum. Alla loggar in med Spotify och svarar samtidigt.</span></button>
+        <button class="modeCard" id="multiModeBtn" type="button"><strong>Multiplayer online</strong><span>Alla loggar in med Spotify och svarar samtidigt.</span></button>
       </div>
       <p class="small" id="appModeStatus" style="margin-top:10px"></p>
     </section>
@@ -251,7 +255,7 @@
         <div class="actions">
           <button class="primary" id="startBtn">Starta / starta om</button>
           <button class="secondary" id="resumeBtn">Fortsätt sparat quiz</button>
-          <button class="secondary" id="nextBtn" disabled>Nästa fråga</button>
+          <button class="secondary" id="nextBtn" disabled>Nästa låt</button>
           <button class="secondary" id="spotifyPlayBtn" disabled>Spela i Spotify</button>
           <button class="secondary" id="searchBtn" disabled>Öppna Spotify-sökning</button>
         </div>
@@ -330,11 +334,11 @@
 
         <div class="mpPanel hidden" id="multiplayerPanel">
           <h2>Multiplayer online</h2>
-          <p class="small">Kräver Firebase Realtime Database. Alla spelare loggar in med Spotify och använder samma rumskod.</p>
+          <p class="small">Alla som loggar in med Spotify spelar tillsammans. Max 5 spelare rekommenderas.</p>
 
           <div class="mpSetupGrid" id="mpPlaylistSetup">
             <div class="control">
-              <label for="mpPlaylistInput">Spellista för multiplayer-rummet</label>
+              <label for="mpPlaylistInput">Spellista för multiplayer</label>
               <input id="mpPlaylistInput" autocomplete="off" placeholder="Spotify-spellista URL eller ID">
             </div>
             <div class="control">
@@ -373,20 +377,11 @@
           </div>
           <button class="secondary" id="loadSpotifyProfileBtn" type="button">Hämta Spotify-profil</button>
 
-          <hr>
-          <div class="control">
-            <label for="roomCodeInput">Rumskod</label>
-            <input id="roomCodeInput" autocomplete="off" placeholder="Exempel: 4827">
-          </div>
-          <div class="actions" style="margin-top:0">
-            <button class="primary" id="createRoomBtn" type="button">Skapa rum</button>
-            <button class="secondary" id="joinRoomBtn" type="button">Gå med</button>
-            <button class="secondary" id="leaveRoomBtn" type="button">Lämna</button>
-          </div>
+          <input id="roomCodeInput" type="hidden" value="active">
 
           <div class="actions" style="margin-top:10px">
-            <button class="primary" id="mpStartBtn" type="button">Starta / starta om multiplayer</button>
-            <button class="secondary" id="mpNextBtn" type="button">Nästa fråga</button>
+            <button class="primary" id="mpStartBtn" type="button">Starta / starta om</button>
+            <button class="secondary" id="mpNextBtn" type="button">Nästa låt</button>
             <button class="secondary" id="mpReadyBtn" type="button">Redo</button>
           </div>
           <p class="small mpStatusLine" id="mpStatus"></p>
@@ -2232,6 +2227,9 @@ Jolene;Dolly Parton;1973"></textarea>
     const DEFAULT_FIREBASE_CONFIG = {
       databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app'
     };
+
+    // Multiplayer använder ett enda aktivt rum. Inga rumskoder behövs.
+    const ACTIVE_MULTIPLAYER_ROOM = 'active';
 
     function getDefaultFirebaseConfigText() {
       return JSON.stringify(DEFAULT_FIREBASE_CONFIG, null, 2);
@@ -4142,8 +4140,11 @@ Jolene;Dolly Parton;1973"></textarea>
       els.multiplayerPanel?.classList.toggle('hidden', state.appMode !== 'multi');
       if (els.appModeStatus) {
         els.appModeStatus.textContent = state.appMode === 'multi'
-          ? 'Multiplayer valt. Firebase är förifyllt. Klicka Anslut, logga in med Spotify och skapa eller gå med i ett rum.'
+          ? 'Multiplayer valt. Logga in med Spotify, välj spellista och tryck Starta.'
           : 'Single-player valt. Du kan spela som tidigare.';
+      }
+      if (state.appMode === 'multi' && state.mp.db && state.mp.player?.id) {
+        joinActiveRoom().catch(err => setMultiplayerStatus(err.message));
       }
     }
 
@@ -4152,7 +4153,8 @@ Jolene;Dolly Parton;1973"></textarea>
       setAppMode(saved === 'multi' ? 'multi' : 'single');
       const cfg = localStorage.getItem(LS.firebaseConfig) || getDefaultFirebaseConfigText();
       if (els.firebaseConfigInput) els.firebaseConfigInput.value = cfg;
-      const room = localStorage.getItem(LS.multiplayerRoom) || '';
+      const room = ACTIVE_MULTIPLAYER_ROOM;
+      localStorage.setItem(LS.multiplayerRoom, room);
       if (els.roomCodeInput) els.roomCodeInput.value = room;
       const profile = readLocal(LS.spotifyProfile, null);
       if (profile) setMultiplayerProfile(profile);
@@ -4205,7 +4207,10 @@ Jolene;Dolly Parton;1973"></textarea>
           state.mp.serverOffset = Number(snap.val()) || 0;
         });
         localStorage.setItem(LS.firebaseConfig, JSON.stringify(cfg, null, 2));
-        setMultiplayerStatus('Ansluten till Firebase. Skapa eller gå med i ett rum.');
+        setMultiplayerStatus('Ansluten till Firebase. Logga in med Spotify och tryck Starta multiplayer.');
+        if (state.appMode === 'multi' && state.mp.player?.id) {
+          await joinActiveRoom();
+        }
       } catch (err) {
         setMultiplayerStatus(`Kunde inte ansluta Firebase: ${err.message}`);
       }
@@ -4231,6 +4236,9 @@ Jolene;Dolly Parton;1973"></textarea>
         writeLocal(LS.spotifyProfile, profile);
         setMultiplayerProfile(profile);
         setMultiplayerStatus(`Spotify-profil hämtad: ${profile.name}`);
+        if (state.appMode === 'multi') {
+          joinActiveRoom().catch(err => setMultiplayerStatus(err.message));
+        }
         return profile;
       } catch (err) {
         setMultiplayerStatus(`Kunde inte hämta Spotify-profil: ${err.message}`);
@@ -4277,50 +4285,46 @@ Jolene;Dolly Parton;1973"></textarea>
       };
     }
 
-    async function createRoom() {
+    async function joinActiveRoom() {
       try {
         await ensureMultiplayerReady();
-        const code = randomRoomCode();
+        const code = ACTIVE_MULTIPLAYER_ROOM;
         state.mp.roomCode = code;
         localStorage.setItem(LS.multiplayerRoom, code);
-        els.roomCodeInput.value = code;
+        if (els.roomCodeInput) els.roomCodeInput.value = code;
+        const ref = roomRef(code);
+        const snap = await ref.get();
         const playerId = state.mp.player.id;
-        await roomRef(code).set({
-          code,
-          createdAt: firebase.database.ServerValue.TIMESTAMP,
-          hostId: playerId,
-          status: 'lobby',
-          currentIndex: -1,
-          settings: {
-            questionCount: els.questionCount.value,
-            difficulty: els.difficulty.value,
-            playlistId: getConfiguredPlaylistId(false)
-          },
-          players: { [playerId]: playerPublicData({ score: 0, ready: false }) }
-        });
+        if (!snap.exists()) {
+          await ref.set({
+            code,
+            createdAt: firebase.database.ServerValue.TIMESTAMP,
+            status: 'lobby',
+            currentIndex: -1,
+            settings: {
+              questionCount: els.mpQuestionCountMirror?.value || els.questionCount.value,
+              difficulty: els.difficulty.value,
+              playlistId: getConfiguredPlaylistId(false)
+            },
+            players: { [playerId]: playerPublicData({ score: 0, ready: false }) }
+          });
+        } else {
+          await ref.child(`players/${playerId}`).update(playerPublicData({ ready: false }));
+        }
+        ref.child(`players/${playerId}/connected`).onDisconnect().set(false);
         attachRoomListener(code);
-        setMultiplayerStatus(`Rum skapat: ${code}. Dela koden med de andra.`);
+        setMultiplayerStatus('Ansluten till multiplayer.');
       } catch (err) {
         setMultiplayerStatus(err.message);
       }
     }
 
+    async function createRoom() {
+      return joinActiveRoom();
+    }
+
     async function joinRoom() {
-      try {
-        await ensureMultiplayerReady();
-        const code = String(els.roomCodeInput.value || '').trim();
-        if (!code) throw new Error('Skriv en rumskod först.');
-        const snap = await roomRef(code).get();
-        if (!snap.exists()) throw new Error('Rummet finns inte. Kontrollera koden.');
-        state.mp.roomCode = code;
-        localStorage.setItem(LS.multiplayerRoom, code);
-        await roomRef(code).child(`players/${state.mp.player.id}`).update(playerPublicData({ ready: false }));
-        roomRef(code).child(`players/${state.mp.player.id}/connected`).onDisconnect().set(false);
-        attachRoomListener(code);
-        setMultiplayerStatus(`Du är med i rum ${code}.`);
-      } catch (err) {
-        setMultiplayerStatus(err.message);
-      }
+      return joinActiveRoom();
     }
 
     async function leaveRoom() {
@@ -4335,7 +4339,7 @@ Jolene;Dolly Parton;1973"></textarea>
       state.mp.lastQuestionId = '';
       localStorage.removeItem(LS.multiplayerRoom);
       if (els.mpPlayers) els.mpPlayers.innerHTML = '';
-      setMultiplayerStatus('Du har lämnat multiplayer-rummet.');
+      setMultiplayerStatus('Du har lämnat multiplayer. Välj multiplayer igen eller tryck Starta för att ansluta automatiskt.');
     }
 
     function attachRoomListener(code) {
@@ -4347,7 +4351,8 @@ Jolene;Dolly Parton;1973"></textarea>
     }
 
     function isMultiplayerHost(room = state.mp.room) {
-      return Boolean(room?.hostId && state.mp.player?.id && room.hostId === state.mp.player.id);
+      // Det finns ingen host längre. Alla anslutna spelare får styra start/nästa.
+      return Boolean(state.mp.player?.id && room);
     }
 
     function playersArray(room = state.mp.room) {
@@ -4375,7 +4380,7 @@ Jolene;Dolly Parton;1973"></textarea>
     function renderMultiplayerRoom(room) {
       if (!els.mpPlayers) return;
       if (!room) {
-        els.mpPlayers.innerHTML = '<p class="small">Inget rum anslutet.</p>';
+        els.mpPlayers.innerHTML = '<p class="small">Ingen multiplayer-session ansluten.</p>';
         return;
       }
       const players = playersArray(room).sort((a,b) => (b.score || 0) - (a.score || 0));
@@ -4389,10 +4394,9 @@ Jolene;Dolly Parton;1973"></textarea>
           <span class="mpScore">${Number(p.score) || 0}</span>
         </div>
       `).join('');
-      const hostText = isMultiplayerHost(room) ? 'Du är host.' : 'Du är spelare.';
-      setMultiplayerStatus(`Rum ${room.code || state.mp.roomCode}. ${hostText} Status: ${room.status || 'lobby'}. Spelare: ${players.length}.`);
-      els.mpStartBtn.disabled = !isMultiplayerHost(room);
-      els.mpNextBtn.disabled = !isMultiplayerHost(room) || !['results', 'lobby'].includes(room.status);
+      setMultiplayerStatus(`Multiplayer. Status: ${room.status || 'lobby'}. Spelare: ${players.length}/5.`);
+      els.mpStartBtn.disabled = false;
+      els.mpNextBtn.disabled = !['results', 'lobby'].includes(room.status);
       els.mpReadyBtn.disabled = !room.currentSong || room.status !== 'question';
     }
 
@@ -4416,9 +4420,9 @@ Jolene;Dolly Parton;1973"></textarea>
     async function startMultiplayerQuiz() {
       try {
         const room = state.mp.room;
-        if (!room || !isMultiplayerHost(room)) throw new Error('Bara hosten kan starta multiplayer.');
+        if (!room) throw new Error('Du är inte ansluten till multiplayer.');
         if (!state.songs.length) throw new Error('Inga låtar laddade. Klicka Hämta spellistan först.');
-        const countSetting = els.questionCount.value;
+        const countSetting = (els.mpQuestionCountMirror?.value || els.questionCount.value);
         const count = countSetting === 'all' ? state.songs.length : Math.min(Number(countSetting) || 10, state.songs.length);
         const quiz = shuffle(state.songs).slice(0, count).map(sanitizeMultiplayerSong).filter(Boolean);
         if (!quiz.length) throw new Error('Kunde inte skapa quiz med laddade låtar.');
@@ -4451,19 +4455,38 @@ Jolene;Dolly Parton;1973"></textarea>
 
     async function nextMultiplayerQuestion() {
       try {
-        const room = state.mp.room;
-        if (!room || !isMultiplayerHost(room)) throw new Error('Bara hosten kan gå vidare.');
+        if (!state.mp.db) await connectFirebase();
+        if (!state.mp.player?.id) await loadSpotifyProfile();
+        if (!state.mp.roomCode) state.mp.roomCode = ACTIVE_MULTIPLAYER_ROOM;
+
+        let room = state.mp.room;
+        // Hämta senaste rummet direkt från Firebase. Annars kan en klient använda gammal state
+        // och därför spela samma låt igen.
+        if (state.mp.db && state.mp.roomCode) {
+          const snap = await roomRef(state.mp.roomCode).get();
+          if (snap.exists()) {
+            room = snap.val();
+            state.mp.room = room;
+          }
+        }
+
+        if (!room) throw new Error('Du är inte ansluten till multiplayer.');
         const quiz = Array.isArray(room.quiz) ? room.quiz : [];
         if (!quiz.length) throw new Error('Starta multiplayer först.');
-        const nextIndex = Number(room.currentIndex || -1) + 1;
+
+        const currentRaw = Number(room.currentIndex);
+        const currentIndex = Number.isFinite(currentRaw) ? currentRaw : -1;
+        const nextIndex = currentIndex + 1;
+
         if (nextIndex >= quiz.length) {
-          await roomRef().update({ status: 'finished', finishedAt: firebase.database.ServerValue.TIMESTAMP });
+          await roomRef(state.mp.roomCode).update({ status: 'finished', finishedAt: firebase.database.ServerValue.TIMESTAMP });
           return;
         }
         const song = sanitizeMultiplayerSong(quiz[nextIndex]);
+        if (!song) throw new Error('Kunde inte läsa nästa låt i multiplayer-listan.');
         const options = generateOptions(song.year);
         const durationMs = Math.max(30000, Number(song.durationMs) || 30000);
-        const startAt = mpNow() + 3000;
+        const startAt = mpNow();
         const updates = {
           status: 'question',
           currentIndex: nextIndex,
@@ -4478,7 +4501,7 @@ Jolene;Dolly Parton;1973"></textarea>
           updates[`players/${p.id}/answer`] = null;
           updates[`players/${p.id}/ready`] = false;
         }
-        await roomRef().update(updates);
+        await roomRef(state.mp.roomCode).update(updates);
       } catch (err) {
         setMultiplayerStatus(err.message);
       }
@@ -4527,7 +4550,7 @@ Jolene;Dolly Parton;1973"></textarea>
         els.mpReadyBtn.disabled = false;
       } else {
         const startsIn = Math.ceil(((room.questionStartedAt || mpNow()) - mpNow()) / 1000);
-        els.feedback.textContent = startsIn > 0 ? `Låten startar om ${startsIn} sekunder. Alla svarar samtidigt.` : `Svara så snabbt du kan. Rundan slutar när alla är redo eller om cirka ${msLeft} sekunder.`;
+        els.feedback.textContent = startsIn > 0 ? `Låten startar strax. Alla svarar samtidigt.` : `Svara så snabbt du kan. Rundan slutar när alla är redo eller om cirka ${msLeft} sekunder.`;
       }
       els.nextBtn.disabled = true;
     }
@@ -4579,22 +4602,20 @@ Jolene;Dolly Parton;1973"></textarea>
       if (room.currentSong?.spotifyUri) {
         state.mp.playTimer = setTimeout(() => playCurrentSpotify(), delay);
       }
-      if (isMultiplayerHost(room)) {
-        const duration = Math.max(30000, Number(room.questionDurationMs) || 30000);
-        state.mp.finishTimer = setTimeout(() => maybeFinishMultiplayerRound(), delay + duration + 1200);
-      }
+      const duration = Math.max(30000, Number(room.questionDurationMs) || 30000);
+      state.mp.finishTimer = setTimeout(() => maybeFinishMultiplayerRound(), delay + duration + 1200);
     }
 
     function monitorMultiplayerRound(room) {
       clearTimeout(state.mp.monitorTimer);
-      if (!room || room.status !== 'question' || !isMultiplayerHost(room)) return;
+      if (!room || room.status !== 'question') return;
       state.mp.monitorTimer = setTimeout(() => maybeFinishMultiplayerRound(), 1200);
     }
 
     async function maybeFinishMultiplayerRound() {
       try {
         const room = state.mp.room;
-        if (!room || room.status !== 'question' || !isMultiplayerHost(room)) return;
+        if (!room || room.status !== 'question') return;
         const players = playersArray(room).filter(p => p.connected !== false);
         const allDone = players.length && players.every(p => p.answer && p.ready);
         const timeUp = mpNow() >= (Number(room.questionStartedAt) || 0) + (Number(room.questionDurationMs) || 30000);
@@ -4631,9 +4652,9 @@ Jolene;Dolly Parton;1973"></textarea>
             return `<div class="mpAnswerItem"><span>${escapeHtml(p.name || 'Spelare')}: <b>${a.year}</b> (${a.delta} år fel)</span><span><b>${a.points}p</b></span></div>`;
           }).join('')}
         </div>
-        <p class="small" style="margin-top:10px">Host kan klicka Nästa fråga.</p>
+        <p class="small" style="margin-top:10px">Alla spelare kan klicka Nästa fråga.</p>
       `;
-      els.mpNextBtn.disabled = !isMultiplayerHost(room);
+      els.mpNextBtn.disabled = false;
     }
 
     function renderMultiplayerFinished(room) {
@@ -4754,7 +4775,7 @@ Jolene;Dolly Parton;1973"></textarea>
         $('multiModeBtn')?.classList.toggle('active', isMulti);
         $('multiplayerPanel')?.classList.toggle('hidden', !isMulti);
         appStatus(isMulti
-          ? 'Multiplayer valt. Logga in med Spotify, anslut Firebase och skapa eller gå med i ett rum.'
+          ? 'Multiplayer valt. Logga in med Spotify, välj spellista och tryck Starta.'
           : 'Single-player valt. Du kan spela själv, öva årtal och repetera svåra låtar.');
         if (isMulti) $('multiplayerPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -4919,12 +4940,12 @@ Jolene;Dolly Parton;1973"></textarea>
         if (input && !input.value.trim()) input.value = firebaseDefaultText();
 
         setText('appModeStatus', isMulti
-          ? 'Multiplayer valt. Single-player-kontroller är dolda. Anslut Firebase och skapa eller gå med i ett rum.'
+          ? 'Multiplayer valt. Single-player-kontroller är dolda. Logga in, välj spellista och tryck Starta.'
           : 'Single-player valt. Multiplayer är dolt.');
 
         if (isMulti) {
           if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Multiplayer-lobby';
-          if ($('songArtist')) $('songArtist').textContent = 'Anslut Firebase, hämta Spotify-profil och skapa eller gå med i ett rum.';
+          if ($('songArtist')) $('songArtist').textContent = 'Logga in, välj spellista och tryck Starta multiplayer.';
         }
       }
 
@@ -4976,9 +4997,9 @@ Jolene;Dolly Parton;1973"></textarea>
         bindButton('saveFirebaseBtn', 'saveFirebaseConfig', 'Sparar Firebase');
         bindButton('connectFirebaseBtn', 'connectFirebase', 'Ansluter Firebase');
         bindButton('loadSpotifyProfileBtn', 'loadSpotifyProfile', 'Hämtar Spotify-profil');
-        bindButton('createRoomBtn', 'createRoom', 'Skapar rum');
-        bindButton('joinRoomBtn', 'joinRoom', 'Går med i rum');
-        bindButton('leaveRoomBtn', 'leaveRoom', 'Lämnar rum');
+        bindButton('createRoomBtn', 'createRoom', 'Ansluter multiplayer');
+        bindButton('joinRoomBtn', 'joinRoom', 'Ansluter multiplayer');
+        bindButton('leaveRoomBtn', 'leaveRoom', 'Lämnar multiplayer');
         bindButton('mpStartBtn', 'startMultiplayerQuiz', 'Startar multiplayer');
         bindButton('mpNextBtn', 'nextMultiplayerQuestion', 'Går till nästa fråga');
         bindButton('mpReadyBtn', 'setMultiplayerReady', 'Markerar redo');
@@ -5075,7 +5096,7 @@ Jolene;Dolly Parton;1973"></textarea>
         if (isMulti) {
           syncMpFromExisting();
           if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Multiplayer';
-          if ($('songArtist')) $('songArtist').textContent = 'Välj spellista, logga in med Spotify, skapa eller gå med i ett rum.';
+          if ($('songArtist')) $('songArtist').textContent = 'Välj spellista, logga in med Spotify och tryck Starta multiplayer.';
           setText('appModeStatus', 'Multiplayer valt. Allt styrs från den centrerade multiplayer-panelen. Alla spelare kan starta och gå vidare.');
         } else {
           setText('appModeStatus', 'Single-player valt.');
@@ -5157,7 +5178,7 @@ Jolene;Dolly Parton;1973"></textarea>
             });
             if (room) {
               const status = $('mpStatus');
-              if (status) status.textContent = `Rum ${room.code || localStorage.getItem('hitster_multiplayer_room_v1') || ''}. Status: ${room.status || 'lobby'}. Alla spelare kan starta och gå vidare.`;
+              if (status) status.textContent = `Status: ${room.status || 'lobby'}. Alla spelare kan starta och gå vidare.`;
               if ($('mpStartBtn')) $('mpStartBtn').disabled = false;
               if ($('mpNextBtn')) $('mpNextBtn').disabled = !['results', 'lobby'].includes(room.status);
             }
@@ -5197,8 +5218,8 @@ Jolene;Dolly Parton;1973"></textarea>
             applyModeV6('multi');
             // Create a room automatically if the player has not created/joined one yet.
             const st = getState();
-            if (!st?.mp?.roomCode && typeof window.createRoom === 'function') {
-              setText('mpStatus', 'Skapar rum...');
+            if ((!st?.mp?.roomCode || !st?.mp?.room) && typeof window.createRoom === 'function') {
+              setText('mpStatus', 'Ansluter multiplayer...');
               await window.createRoom();
               await sleep(400);
               if (st?.mp?.roomCode && typeof roomRef === 'function') {
