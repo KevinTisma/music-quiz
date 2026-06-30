@@ -138,6 +138,45 @@
     .ratingRow button[data-rating="ok"] { background: rgba(251,191,36,.16); }
     .ratingRow button[data-rating="easy"] { background: rgba(64,217,139,.16); }
     footer { margin-top: 18px; color: var(--muted); font-size: .86rem; }
+
+
+    /* Multiplayer cleanup v6 */
+    #spotifyClientId,
+    label[for="spotifyClientId"] { display: none !important; }
+    #firebaseConfigInput,
+    label[for="firebaseConfigInput"],
+    #saveFirebaseBtn,
+    #connectFirebaseBtn { display: none !important; }
+    #history { display: none !important; }
+    .mpSetupGrid { display:grid; grid-template-columns: 1.3fr .7fr; gap: 10px; align-items:end; margin: 10px 0 12px; }
+    .mpSetupGrid .control { margin-bottom: 0; }
+    .mpCompactActions { display:flex; flex-wrap:wrap; gap:8px; margin: 8px 0 4px; }
+    .mpCompactActions button { padding: 10px 13px; }
+    .mpPanel p.small:first-of-type { display:none; }
+    body[data-app-mode="multi"] .wrap { max-width: 980px; padding-top: 18px; }
+    body[data-app-mode="multi"] header { text-align:center; margin-bottom: 12px; }
+    body[data-app-mode="multi"] header .row { justify-content:center; }
+    body[data-app-mode="multi"] .appChoice { max-width: 920px; margin: 0 auto 12px; }
+    body[data-app-mode="multi"] .grid { display:block; max-width: 920px; margin: 0 auto; }
+    body[data-app-mode="multi"] aside.side { display:none !important; }
+    body[data-app-mode="multi"] main.main { min-height: auto; padding: 16px; }
+    body[data-app-mode="multi"] #multiplayerPanel { display:block; margin: 0 0 14px; padding: 14px; }
+    body[data-app-mode="multi"] #multiplayerPanel h2 { margin-bottom: 4px; }
+    body[data-app-mode="multi"] .stats { margin: 8px 0 10px; }
+    body[data-app-mode="multi"] .songBox { margin: 12px 0; padding: 18px; }
+    body[data-app-mode="multi"] .songVisual { grid-template-columns: minmax(92px, 130px) 1fr; gap: 14px; }
+    body[data-app-mode="multi"] .title { font-size: clamp(1.5rem, 4vw, 2.6rem); }
+    body[data-app-mode="multi"] .artist { font-size: 1rem; }
+    body[data-app-mode="multi"] .options { margin-top: 8px; }
+    body[data-app-mode="multi"] .option { padding: 15px; font-size: 1.35rem; }
+    body[data-app-mode="multi"] main.main > .actions { display:none !important; }
+    body[data-app-mode="multi"] footer { text-align:center; max-width: 920px; margin-left:auto; margin-right:auto; }
+    body[data-app-mode="multi"] #mpStatus { min-height: 20px; }
+    @media (max-width: 700px) {
+      .mpSetupGrid { grid-template-columns: 1fr; }
+      body[data-app-mode="multi"] .songVisual { grid-template-columns: 1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -293,6 +332,29 @@
           <h2>Multiplayer online</h2>
           <p class="small">Kräver Firebase Realtime Database. Alla spelare loggar in med Spotify och använder samma rumskod.</p>
 
+          <div class="mpSetupGrid" id="mpPlaylistSetup">
+            <div class="control">
+              <label for="mpPlaylistInput">Spellista för multiplayer-rummet</label>
+              <input id="mpPlaylistInput" autocomplete="off" placeholder="Spotify-spellista URL eller ID">
+            </div>
+            <div class="control">
+              <label for="mpQuestionCountMirror">Antal frågor</label>
+              <select id="mpQuestionCountMirror">
+                <option value="10">10 frågor</option>
+                <option value="25" selected>25 frågor</option>
+                <option value="50">50 frågor</option>
+                <option value="100">100 frågor</option>
+                <option value="all">Alla laddade låtar</option>
+              </select>
+            </div>
+          </div>
+          <div class="mpCompactActions" id="mpQuickActions">
+            <button class="secondary" id="mpSpotifyLoginBtn" type="button">Logga in Spotify</button>
+            <button class="secondary" id="mpSpotifyDevicesBtn" type="button">Hämta enheter</button>
+            <button class="secondary" id="mpSyncPlaylistBtn" type="button">Hämta spellistan</button>
+            <button class="secondary" id="mpLoadProfileQuickBtn" type="button">Hämta profil</button>
+          </div>
+
           <div class="control">
             <label for="firebaseConfigInput">Firebase config</label>
             <textarea id="firebaseConfigInput" class="firebaseBox" placeholder='Firebase-databasen är redan förifylld. Ändra bara om du byter databas.'></textarea>
@@ -323,7 +385,7 @@
           </div>
 
           <div class="actions" style="margin-top:10px">
-            <button class="primary" id="mpStartBtn" type="button">Starta multiplayer</button>
+            <button class="primary" id="mpStartBtn" type="button">Starta / starta om multiplayer</button>
             <button class="secondary" id="mpNextBtn" type="button">Nästa fråga</button>
             <button class="secondary" id="mpReadyBtn" type="button">Redo</button>
           </div>
@@ -4322,7 +4384,6 @@ Jolene;Dolly Parton;1973"></textarea>
           <div class="mpPlayerLeft">
             ${p.imageUrl ? `<img class="mpAvatar" src="${escapeHtml(p.imageUrl)}" alt="">` : '<span class="mpAvatar"></span>'}
             <span class="mpPlayerName">${escapeHtml(p.name || 'Spelare')}</span>
-            ${room.hostId === p.id ? '<span class="mpBadge">Host</span>' : ''}
             ${p.ready ? '<span class="mpBadge">Redo</span>' : ''}
           </div>
           <span class="mpScore">${Number(p.score) || 0}</span>
@@ -4931,6 +4992,238 @@ Jolene;Dolly Parton;1973"></textarea>
         bindAll();
       }
       window.addEventListener('pageshow', function () { applySingleMultiVisibility(getMode()); });
+    })();
+  </script>
+
+
+  <script>
+    // Multiplayer layout and no-host patch v6
+    (function () {
+      const DEFAULT_PLAYLIST_ID_V6 = '6AkPSXrefOXADb7onndgvp';
+      const DEFAULT_FIREBASE_TEXT_V6 = JSON.stringify({ databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' }, null, 2);
+      function $(id) { return document.getElementById(id); }
+      function setHidden(el, hidden) { if (el) el.classList.toggle('hidden', Boolean(hidden)); }
+      function setText(id, text) { const el = $(id); if (el) el.textContent = text || ''; }
+      function closest(el, selector) { return el && el.closest ? el.closest(selector) : null; }
+      function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+      function getState() { try { return state; } catch { return null; } }
+
+      function moveMultiplayerPanelToMain() {
+        const panel = $('multiplayerPanel');
+        const main = document.querySelector('main.main');
+        const progress = main?.querySelector('.progress');
+        if (panel && main && panel.parentElement !== main) {
+          main.insertBefore(panel, progress || main.firstChild);
+        }
+      }
+
+      function hideRemovedUi() {
+        setHidden(closest($('spotifyClientId'), '.control'), true);
+        setHidden(closest($('firebaseConfigInput'), '.control'), true);
+        setHidden($('saveFirebaseBtn'), true);
+        setHidden($('connectFirebaseBtn'), true);
+        document.querySelectorAll('aside h2').forEach(h => {
+          const text = (h.textContent || '').trim().toLowerCase();
+          if (text === 'historik') setHidden(h, true);
+        });
+        setHidden($('history'), true);
+        const cfg = $('firebaseConfigInput');
+        if (cfg && !cfg.value.trim()) cfg.value = localStorage.getItem('hitster_firebase_config_v1') || DEFAULT_FIREBASE_TEXT_V6;
+        const client = $('spotifyClientId');
+        if (client && !client.value.trim()) client.value = 'cd412c7bf9344b9994aeb0e564ac5049';
+      }
+
+      function syncPlaylistInputsFromMp() {
+        const mpInput = $('mpPlaylistInput');
+        const mainInput = $('spotifyPlaylistInput');
+        const value = (mpInput?.value || mainInput?.value || localStorage.getItem('hitster_spotify_playlist_id_v5') || DEFAULT_PLAYLIST_ID_V6).trim();
+        if (mpInput && !mpInput.value.trim()) mpInput.value = value;
+        if (mainInput) mainInput.value = value;
+        if (value) localStorage.setItem('hitster_spotify_playlist_id_v5', value);
+        const mirror = $('mpQuestionCountMirror');
+        const qc = $('questionCount');
+        if (mirror && qc) qc.value = mirror.value || qc.value;
+        return value;
+      }
+
+      function syncMpFromExisting() {
+        const mpInput = $('mpPlaylistInput');
+        const mainInput = $('spotifyPlaylistInput');
+        const value = (mainInput?.value || localStorage.getItem('hitster_spotify_playlist_id_v5') || DEFAULT_PLAYLIST_ID_V6).trim();
+        if (mpInput && !mpInput.value.trim()) mpInput.value = value;
+        const mirror = $('mpQuestionCountMirror');
+        const qc = $('questionCount');
+        if (mirror && qc) mirror.value = qc.value || mirror.value;
+      }
+
+      function applyModeV6(mode) {
+        const isMulti = mode === 'multi';
+        document.body.dataset.appMode = isMulti ? 'multi' : 'single';
+        localStorage.setItem('hitster_app_mode_v1', isMulti ? 'multi' : 'single');
+        moveMultiplayerPanelToMain();
+        hideRemovedUi();
+        $('singleModeBtn')?.classList.toggle('active', !isMulti);
+        $('multiModeBtn')?.classList.toggle('active', isMulti);
+        setHidden($('multiplayerPanel'), !isMulti);
+
+        // Single-player controls are not visible in multiplayer.
+        setHidden($('startBtn'), isMulti);
+        setHidden($('resumeBtn'), isMulti);
+        setHidden($('nextBtn'), isMulti);
+        setHidden($('practicePanel'), isMulti || $('practicePanel')?.classList.contains('hidden'));
+
+        if (isMulti) {
+          syncMpFromExisting();
+          if ($('songTitle') && $('songTitle').textContent === 'Starta quizzet') $('songTitle').textContent = 'Multiplayer';
+          if ($('songArtist')) $('songArtist').textContent = 'Välj spellista, logga in med Spotify, skapa eller gå med i ett rum.';
+          setText('appModeStatus', 'Multiplayer valt. Allt styrs från den centrerade multiplayer-panelen. Alla spelare kan starta och gå vidare.');
+        } else {
+          setText('appModeStatus', 'Single-player valt.');
+        }
+      }
+
+      async function callMain(name, label) {
+        const fn = window[name];
+        if (typeof fn !== 'function') {
+          setText('mpStatus', label + ' misslyckades: funktionen saknas. Uppdatera sidan med Ctrl+F5.');
+          return;
+        }
+        try {
+          const result = fn();
+          if (result && typeof result.then === 'function') await result;
+        } catch (err) {
+          setText('mpStatus', label + ' misslyckades: ' + (err?.message || String(err)));
+        }
+      }
+
+      async function syncPlaylistForMultiplayer() {
+        syncPlaylistInputsFromMp();
+        if (typeof window.fetchFullPlaylistFromSpotify !== 'function') {
+          setText('mpStatus', 'Kunde inte hämta spellistan: funktionen saknas. Uppdatera sidan med Ctrl+F5.');
+          return;
+        }
+        setText('mpStatus', 'Hämtar spellistan till multiplayer...');
+        await window.fetchFullPlaylistFromSpotify();
+      }
+
+      function patchNoHostFunctions() {
+        // UI: nobody is special. Internally Firebase still stores creator id, but all players may start and go next.
+        try { window.isMultiplayerHost = function (room) { const st = getState(); return Boolean((room || st?.mp?.room) && st?.mp?.player?.id); }; } catch {}
+        try { isMultiplayerHost = window.isMultiplayerHost; } catch {}
+
+        if (typeof window.maybeFinishMultiplayerRound === 'function' && !window.maybeFinishMultiplayerRound.__v6Patched) {
+          window.maybeFinishMultiplayerRound = async function () {
+            try {
+              const st = getState();
+              const room = st?.mp?.room;
+              if (!room || room.status !== 'question') return;
+              const ref = (typeof roomRef === 'function') ? roomRef() : null;
+              if (!ref) return;
+              const now = Date.now() + (Number(st?.mp?.serverOffset) || 0);
+              await ref.transaction(current => {
+                if (!current || current.status !== 'question') return current;
+                const playersObj = current.players || {};
+                const players = Object.values(playersObj).filter(p => p && p.connected !== false);
+                const allDone = players.length && players.every(p => p.answer && p.ready);
+                const timeUp = now >= (Number(current.questionStartedAt) || 0) + (Number(current.questionDurationMs) || 30000);
+                if (!allDone && !timeUp) return current;
+                current.status = 'results';
+                current.resultsShownAt = now;
+                current.scoreAppliedFor = current.questionId || '';
+                Object.keys(playersObj).forEach(pid => {
+                  const p = playersObj[pid] || {};
+                  const points = Number(p.answer?.points) || 0;
+                  p.score = (Number(p.score) || 0) + points;
+                  playersObj[pid] = p;
+                });
+                current.players = playersObj;
+                return current;
+              });
+            } catch (err) {
+              setText('mpStatus', 'Kunde inte avsluta rundan: ' + (err?.message || String(err)));
+            }
+          };
+          window.maybeFinishMultiplayerRound.__v6Patched = true;
+          try { maybeFinishMultiplayerRound = window.maybeFinishMultiplayerRound; } catch {}
+        }
+
+        if (typeof window.renderMultiplayerRoom === 'function' && !window.renderMultiplayerRoom.__v6Patched) {
+          const originalRenderRoom = window.renderMultiplayerRoom;
+          window.renderMultiplayerRoom = function (room) {
+            originalRenderRoom(room);
+            // Remove host wording and always enable shared controls when a room exists.
+            document.querySelectorAll('.mpBadge').forEach(badge => {
+              if ((badge.textContent || '').trim().toLowerCase() === 'host') badge.remove();
+            });
+            if (room) {
+              const status = $('mpStatus');
+              if (status) status.textContent = `Rum ${room.code || localStorage.getItem('hitster_multiplayer_room_v1') || ''}. Status: ${room.status || 'lobby'}. Alla spelare kan starta och gå vidare.`;
+              if ($('mpStartBtn')) $('mpStartBtn').disabled = false;
+              if ($('mpNextBtn')) $('mpNextBtn').disabled = !['results', 'lobby'].includes(room.status);
+            }
+          };
+          window.renderMultiplayerRoom.__v6Patched = true;
+          try { renderMultiplayerRoom = window.renderMultiplayerRoom; } catch {}
+        }
+      }
+
+      function bindV6() {
+        moveMultiplayerPanelToMain();
+        hideRemovedUi();
+        syncMpFromExisting();
+        patchNoHostFunctions();
+
+        $('singleModeBtn')?.addEventListener('click', e => { e.preventDefault(); applyModeV6('single'); }, true);
+        $('multiModeBtn')?.addEventListener('click', e => { e.preventDefault(); applyModeV6('multi'); }, true);
+
+        $('mpPlaylistInput')?.addEventListener('change', syncPlaylistInputsFromMp);
+        $('mpQuestionCountMirror')?.addEventListener('change', syncPlaylistInputsFromMp);
+        $('mpSpotifyLoginBtn')?.addEventListener('click', e => { e.preventDefault(); syncPlaylistInputsFromMp(); callMain('spotifyLogin', 'Spotify-login'); }, true);
+        $('mpSpotifyDevicesBtn')?.addEventListener('click', e => { e.preventDefault(); callMain('refreshSpotifyDevices', 'Hämta enheter'); }, true);
+        $('mpSyncPlaylistBtn')?.addEventListener('click', async e => { e.preventDefault(); await syncPlaylistForMultiplayer(); }, true);
+        $('mpLoadProfileQuickBtn')?.addEventListener('click', e => { e.preventDefault(); callMain('loadSpotifyProfile', 'Hämta profil'); }, true);
+
+        // Ensure playlist is chosen before room creation/start.
+        const originalCreate = window.createRoom;
+        if (typeof originalCreate === 'function' && !originalCreate.__v6Patched) {
+          window.createRoom = async function () { syncPlaylistInputsFromMp(); return originalCreate(); };
+          window.createRoom.__v6Patched = true;
+          try { createRoom = window.createRoom; } catch {}
+        }
+        const originalStart = window.startMultiplayerQuiz;
+        if (typeof originalStart === 'function' && !originalStart.__v6Patched) {
+          window.startMultiplayerQuiz = async function () {
+            syncPlaylistInputsFromMp();
+            applyModeV6('multi');
+            // Create a room automatically if the player has not created/joined one yet.
+            const st = getState();
+            if (!st?.mp?.roomCode && typeof window.createRoom === 'function') {
+              setText('mpStatus', 'Skapar rum...');
+              await window.createRoom();
+              await sleep(400);
+              if (st?.mp?.roomCode && typeof roomRef === 'function') {
+                const snap = await roomRef(st.mp.roomCode).get();
+                st.mp.room = snap.val();
+              }
+            }
+            if (!Array.isArray(st?.songs) || !st.songs.length) {
+              await syncPlaylistForMultiplayer();
+            }
+            return originalStart();
+          };
+          window.startMultiplayerQuiz.__v6Patched = true;
+          try { startMultiplayerQuiz = window.startMultiplayerQuiz; } catch {}
+        }
+
+        applyModeV6(localStorage.getItem('hitster_app_mode_v1') === 'multi' ? 'multi' : 'single');
+      }
+
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindV6);
+      else bindV6();
+      window.addEventListener('pageshow', () => {
+        patchNoHostFunctions();
+        applyModeV6(localStorage.getItem('hitster_app_mode_v1') === 'multi' ? 'multi' : 'single');
+      });
     })();
   </script>
 
