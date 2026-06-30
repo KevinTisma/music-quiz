@@ -5265,5 +5265,85 @@ Jolene;Dolly Parton;1973"></textarea>
     })();
   </script>
 
+
+  <script>
+    // v8: Multiplayer auto-join. Rumskod behövs tekniskt som Firebase-sökväg,
+    // men den är dold och alla använder samma standardrum på GitHub Pages.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+      function setText(id, text) { const el = $(id); if (el) el.textContent = text || ''; }
+      function hasSpotifyToken() {
+        try {
+          const raw = localStorage.getItem('hitster_spotify_token_v3');
+          if (!raw) return false;
+          const token = JSON.parse(raw);
+          return Boolean(token && token.access_token && (!token.expires_at || Number(token.expires_at) > Date.now() + 5000));
+        } catch { return false; }
+      }
+      function getStateSafe() { try { return state; } catch { return null; } }
+      function forceMultiState() {
+        try {
+          const st = getStateSafe();
+          if (st) {
+            st.appMode = 'multi';
+            if (st.mp) st.mp.roomCode = ROOM_NAME;
+          }
+        } catch {}
+        try { localStorage.setItem('hitster_app_mode_v1', 'multi'); } catch {}
+        try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM_NAME); } catch {}
+        const roomInput = $('roomCodeInput');
+        if (roomInput) roomInput.value = ROOM_NAME;
+      }
+      async function autoJoinMultiplayer(reason = '') {
+        forceMultiState();
+        const st = getStateSafe();
+        if (!st) return;
+        if (!hasSpotifyToken()) {
+          setText('mpStatus', 'Logga in med Spotify för att gå med i lobbyn.');
+          return;
+        }
+        try {
+          if (typeof connectFirebase === 'function' && !st.mp?.db) {
+            setText('mpStatus', 'Ansluter till multiplayer...');
+            await connectFirebase();
+          }
+          if (typeof loadSpotifyProfile === 'function' && !st.mp?.player?.id) {
+            setText('mpStatus', 'Hämtar Spotify-profil...');
+            await loadSpotifyProfile();
+          }
+          forceMultiState();
+          if (typeof joinActiveRoom === 'function') {
+            setText('mpStatus', 'Går med i lobbyn...');
+            await joinActiveRoom();
+          }
+        } catch (err) {
+          setText('mpStatus', 'Kunde inte gå med i lobbyn automatiskt: ' + (err?.message || String(err)));
+        }
+      }
+      function bindAutoJoin() {
+        $('multiModeBtn')?.addEventListener('click', () => {
+          setTimeout(() => autoJoinMultiplayer('mode-click'), 150);
+        }, false);
+        $('mpSpotifyLoginBtn')?.addEventListener('click', () => {
+          try { localStorage.setItem('hitster_app_mode_v1', 'multi'); } catch {}
+        }, false);
+        $('mpStartBtn')?.addEventListener('click', () => {
+          setTimeout(() => autoJoinMultiplayer('start-click'), 50);
+        }, false);
+        if (localStorage.getItem('hitster_app_mode_v1') === 'multi') {
+          setTimeout(() => autoJoinMultiplayer('page-load'), 600);
+        }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindAutoJoin);
+      else bindAutoJoin();
+      window.addEventListener('pageshow', () => {
+        if (localStorage.getItem('hitster_app_mode_v1') === 'multi') setTimeout(() => autoJoinMultiplayer('pageshow'), 600);
+      });
+      window.autoJoinMultiplayer = autoJoinMultiplayer;
+    })();
+  </script>
+
 </body>
 </html>
