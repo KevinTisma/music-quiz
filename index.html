@@ -6190,5 +6190,437 @@ Jolene;Dolly Parton;1973"></textarea>
     })();
   </script>
 
+
+
+  <script>
+    // v17: starta om multiplayer helt och skriv första frågan direkt i Firebase.
+    // Detta går runt äldre start/next-logik som kunde använda gammalt currentIndex/currentSong.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      function setMp(text) {
+        const el = $('mpStatus');
+        if (el) el.textContent = text || '';
+      }
+      function cleanObj(value) {
+        if (Array.isArray(value)) return value.map(cleanObj).filter(v => v !== undefined && v !== null);
+        if (value && typeof value === 'object') {
+          const out = {};
+          for (const [k, v] of Object.entries(value)) {
+            if (v === undefined || v === null) continue;
+            out[k] = cleanObj(v);
+          }
+          return out;
+        }
+        return value;
+      }
+      function sanitizeSongV17(song) {
+        try {
+          if (typeof sanitizeMultiplayerSong === 'function') return sanitizeMultiplayerSong(song);
+          if (typeof cleanSong === 'function') return cleanSong(song);
+        } catch {}
+        if (!song) return null;
+        return {
+          title: song.title || song.name || '',
+          artist: song.artist || '',
+          year: Number(song.year) || 0,
+          spotifyUri: song.spotifyUri || song.uri || '',
+          spotifyUrl: song.spotifyUrl || '',
+          albumImageUrl: song.albumImageUrl || song.albumImage || '',
+          albumImage: song.albumImage || song.albumImageUrl || '',
+          releaseDate: song.releaseDate || '',
+          durationMs: Number(song.durationMs) || 0
+        };
+      }
+      function connectedPlayersV17(room) {
+        const players = {};
+        for (const [id, p] of Object.entries(room?.players || {})) {
+          if (!p || p.connected === false) continue;
+          const safeId = p.id || id;
+          players[safeId] = {
+            id: safeId,
+            spotifyId: p.spotifyId || '',
+            name: p.name || 'Spelare',
+            imageUrl: p.imageUrl || '',
+            connected: true,
+            joinedAt: p.joinedAt || ((window.firebase?.database?.ServerValue?.TIMESTAMP) || Date.now()),
+            score: 0,
+            ready: false
+          };
+        }
+        const me = state?.mp?.player || {};
+        if (me.id) {
+          players[me.id] = {
+            id: me.id,
+            spotifyId: me.spotifyId || '',
+            name: me.name || 'Spelare',
+            imageUrl: me.imageUrl || '',
+            connected: true,
+            joinedAt: players[me.id]?.joinedAt || ((window.firebase?.database?.ServerValue?.TIMESTAMP) || Date.now()),
+            score: 0,
+            ready: false
+          };
+        }
+        return players;
+      }
+      async function ensureMpReadyV17() {
+        if (!state?.mp?.db && typeof connectFirebase === 'function') await connectFirebase();
+        if (!state?.mp?.player?.id && typeof loadSpotifyProfile === 'function') await loadSpotifyProfile();
+        if (!state?.mp?.db) throw new Error('Firebase är inte anslutet.');
+        if (!state?.mp?.player?.id) throw new Error('Spotify-profil saknas. Logga in med Spotify först.');
+        state.mp.roomCode = ROOM_NAME;
+        try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM_NAME); } catch {}
+      }
+      async function readRoomV17() {
+        await ensureMpReadyV17();
+        const snap = await roomRef(ROOM_NAME).get();
+        const room = snap.exists() ? snap.val() : null;
+        state.mp.room = room;
+        return room;
+      }
+      async function getSongBankV17(room) {
+        let source = [];
+        if (Array.isArray(room?.songBank) && room.songBank.length) source = room.songBank;
+        else if (Array.isArray(state?.songs) && state.songs.length) source = state.songs;
+        else if (Array.isArray(room?.quiz) && room.quiz.length) source = room.quiz;
+        source = source.map(sanitizeSongV17).filter(s => s && s.title && s.artist && Number(s.year));
+        if (!source.length) {
+          if (typeof fetchFullPlaylistFromSpotify !== 'function') throw new Error('Ingen sparad spellista finns i rummet. Hämta spellistan först.');
+          setMp('Hämtar spellistan eftersom ingen låtbank fanns i rummet...');
+          await fetchFullPlaylistFromSpotify();
+          source = (Array.isArray(state?.songs) ? state.songs : []).map(sanitizeSongV17).filter(s => s && s.title && s.artist && Number(s.year));
+        }
+        if (!source.length) throw new Error('Kunde inte hitta någon spellista att starta från.');
+        state.songs = source;
+        return source;
+      }
+      function makeQuestionV17(quiz, index) {
+        const song = sanitizeSongV17(quiz[index]);
+        if (!song) throw new Error('Kunde inte läsa första låten i nya rundan.');
+        const options = typeof generateMultiplayerOptions === 'function'
+          ? generateMultiplayerOptions(song.year, quiz)
+          : [song.year - 5, song.year, song.year + 5, song.year + 10].sort(() => Math.random() - 0.5);
+        const durationMs = Math.max(30000, Number(song.durationMs) || 30000);
+        return { song, options, durationMs };
+      }
+      async function startFreshMultiplayerV17() {
+        try {
+          setMp('Skapar helt ny runda...');
+          const oldRoom = await readRoomV17();
+          const songBank = await getSongBankV17(oldRoom);
+          const countSetting = String(els?.mpQuestionCountMirror?.value || els?.questionCount?.value || '10');
+          const count = countSetting === 'all' ? songBank.length : Math.min(Number(countSetting) || 10, songBank.length);
+          const quiz = (typeof shuffle === 'function' ? shuffle(songBank) : songBank.slice().sort(() => Math.random() - 0.5))
+            .slice(0, count)
+            .map(sanitizeSongV17)
+            .filter(s => s && s.title && s.artist && Number(s.year));
+          if (!quiz.length) throw new Error('Kunde inte skapa ett nytt set från spellistan.');
+          const first = makeQuestionV17(quiz, 0);
+          const players = connectedPlayersV17(oldRoom);
+          const newQuestionId = typeof randomString === 'function' ? randomString(14) : String(Date.now()) + Math.random().toString(36).slice(2);
+          const now = typeof mpNow === 'function' ? mpNow() : Date.now();
+          const serverNow = (window.firebase?.database?.ServerValue?.TIMESTAMP) || Date.now();
+
+          const newRoom = cleanObj({
+            code: ROOM_NAME,
+            createdAt: oldRoom?.createdAt || serverNow,
+            restartedAt: serverNow,
+            status: 'question',
+            currentIndex: 0,
+            quiz,
+            songBank,
+            currentSong: first.song,
+            options: first.options,
+            questionId: newQuestionId,
+            questionStartedAt: now,
+            questionDurationMs: first.durationMs,
+            resultsShownAt: null,
+            settings: {
+              questionCount: countSetting,
+              difficulty: els?.difficulty?.value || 'normal',
+              playlistId: (typeof getConfiguredPlaylistId === 'function' ? getConfiguredPlaylistId(false) : '') || oldRoom?.settings?.playlistId || ''
+            },
+            players
+          });
+
+          if (state?.mp) {
+            state.mp.lastQuestionId = '';
+            state.mp.room = newRoom;
+          }
+          clearTimeout(state?.mp?.playTimer);
+          clearTimeout(state?.mp?.finishTimer);
+          clearTimeout(state?.mp?.monitorTimer);
+
+          // set() ersätter hela /rooms/active, så gamla fråga 9/currentSong/answers försvinner helt.
+          await roomRef(ROOM_NAME).set(newRoom);
+          if (typeof attachRoomListener === 'function') attachRoomListener(ROOM_NAME);
+          setMp(`Ny runda startad: fråga 1/${quiz.length}.`);
+        } catch (err) {
+          setMp('Kunde inte starta ny runda: ' + (err?.message || String(err)));
+        }
+      }
+      function bindStartV17() {
+        const btn = $('mpStartBtn');
+        if (!btn || btn.__v17Bound) return;
+        const clone = btn.cloneNode(true);
+        clone.__v17Bound = true;
+        btn.replaceWith(clone);
+        try { if (typeof els === 'object') els.mpStartBtn = clone; } catch {}
+        clone.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          startFreshMultiplayerV17();
+        }, true);
+      }
+      function initV17() { bindStartV17(); }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initV17);
+      else initV17();
+      window.addEventListener('pageshow', initV17);
+      window.startFreshMultiplayer = startFreshMultiplayerV17;
+      window.startMultiplayerQuiz = startFreshMultiplayerV17;
+      try { startMultiplayerQuiz = startFreshMultiplayerV17; } catch {}
+    })();
+  </script>
+
+  <script>
+    // v18: multiplayer ska läsa antal frågor från multiplayer-selecten, inte hårdkodat 25/single-player-select.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+
+      // Se till att äldre kod som använder els också hittar multiplayer-fälten.
+      try {
+        if (typeof els === 'object') {
+          els.mpQuestionCountMirror = $('mpQuestionCountMirror');
+          els.mpPlaylistInput = $('mpPlaylistInput');
+          els.mpSyncPlaylistBtn = $('mpSyncPlaylistBtn');
+        }
+      } catch {}
+
+      function setMpStatusV18(text) {
+        const el = $('mpStatus');
+        if (el) el.textContent = text || '';
+      }
+
+      function cleanObjV18(value) {
+        if (Array.isArray(value)) return value.map(cleanObjV18).filter(v => v !== undefined && v !== null);
+        if (value && typeof value === 'object') {
+          const out = {};
+          for (const [k, v] of Object.entries(value)) {
+            if (v === undefined || v === null) continue;
+            out[k] = cleanObjV18(v);
+          }
+          return out;
+        }
+        return value;
+      }
+
+      function sanitizeSongV18(song) {
+        try {
+          if (typeof sanitizeMultiplayerSong === 'function') return sanitizeMultiplayerSong(song);
+          if (typeof cleanSong === 'function') return cleanSong(song);
+        } catch {}
+        if (!song) return null;
+        return {
+          title: song.title || song.name || '',
+          artist: song.artist || '',
+          year: Number(song.year) || 0,
+          spotifyUri: song.spotifyUri || song.uri || '',
+          spotifyUrl: song.spotifyUrl || '',
+          albumImageUrl: song.albumImageUrl || song.albumImage || '',
+          albumImage: song.albumImage || song.albumImageUrl || '',
+          releaseDate: song.releaseDate || '',
+          durationMs: Number(song.durationMs) || 0
+        };
+      }
+
+      function getMpQuestionCountSettingV18() {
+        const mpSelect = $('mpQuestionCountMirror');
+        const singleSelect = $('questionCount');
+        const value = String(mpSelect?.value || singleSelect?.value || '25');
+        return ['10', '25', '50', '100', 'all'].includes(value) ? value : '25';
+      }
+
+      function connectedPlayersV18(room) {
+        const players = {};
+        for (const [id, p] of Object.entries(room?.players || {})) {
+          if (!p || p.connected === false) continue;
+          const safeId = p.id || id;
+          players[safeId] = {
+            id: safeId,
+            spotifyId: p.spotifyId || '',
+            name: p.name || 'Spelare',
+            imageUrl: p.imageUrl || '',
+            connected: true,
+            joinedAt: p.joinedAt || ((window.firebase?.database?.ServerValue?.TIMESTAMP) || Date.now()),
+            score: 0,
+            ready: false
+          };
+        }
+        const me = state?.mp?.player || {};
+        if (me.id) {
+          players[me.id] = {
+            id: me.id,
+            spotifyId: me.spotifyId || '',
+            name: me.name || 'Spelare',
+            imageUrl: me.imageUrl || '',
+            connected: true,
+            joinedAt: players[me.id]?.joinedAt || ((window.firebase?.database?.ServerValue?.TIMESTAMP) || Date.now()),
+            score: 0,
+            ready: false
+          };
+        }
+        return players;
+      }
+
+      async function ensureMpReadyV18() {
+        if (!state?.mp?.db && typeof connectFirebase === 'function') await connectFirebase();
+        if (!state?.mp?.player?.id && typeof loadSpotifyProfile === 'function') await loadSpotifyProfile();
+        if (!state?.mp?.db) throw new Error('Firebase är inte anslutet.');
+        if (!state?.mp?.player?.id) throw new Error('Spotify-profil saknas. Logga in med Spotify först.');
+        state.mp.roomCode = ROOM_NAME;
+        try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM_NAME); } catch {}
+      }
+
+      async function readRoomV18() {
+        await ensureMpReadyV18();
+        const snap = await roomRef(ROOM_NAME).get();
+        const room = snap.exists() ? snap.val() : null;
+        state.mp.room = room;
+        return room;
+      }
+
+      async function getSongBankV18(room) {
+        let source = [];
+        if (Array.isArray(room?.songBank) && room.songBank.length) source = room.songBank;
+        else if (Array.isArray(state?.songs) && state.songs.length) source = state.songs;
+        else if (Array.isArray(room?.quiz) && room.quiz.length) source = room.quiz;
+        source = source.map(sanitizeSongV18).filter(s => s && s.title && s.artist && Number(s.year));
+        if (!source.length) {
+          if (typeof fetchFullPlaylistFromSpotify !== 'function') throw new Error('Ingen sparad spellista finns i rummet. Hämta spellistan först.');
+          setMpStatusV18('Hämtar spellistan eftersom ingen låtbank fanns i rummet...');
+          await fetchFullPlaylistFromSpotify();
+          source = (Array.isArray(state?.songs) ? state.songs : []).map(sanitizeSongV18).filter(s => s && s.title && s.artist && Number(s.year));
+        }
+        if (!source.length) throw new Error('Kunde inte hitta någon spellista att starta från.');
+        state.songs = source;
+        return source;
+      }
+
+      function makeQuestionV18(quiz, index) {
+        const song = sanitizeSongV18(quiz[index]);
+        if (!song) throw new Error('Kunde inte läsa första låten i nya rundan.');
+        const options = typeof generateMultiplayerOptions === 'function'
+          ? generateMultiplayerOptions(song.year, quiz)
+          : [song.year - 5, song.year, song.year + 5, song.year + 10].sort(() => Math.random() - 0.5);
+        const durationMs = Math.max(30000, Number(song.durationMs) || 30000);
+        return { song, options, durationMs };
+      }
+
+      async function startFreshMultiplayerV18() {
+        try {
+          const countSetting = getMpQuestionCountSettingV18();
+          setMpStatusV18(`Skapar ny runda med ${countSetting === 'all' ? 'alla' : countSetting} frågor...`);
+
+          const oldRoom = await readRoomV18();
+          const songBank = await getSongBankV18(oldRoom);
+          const count = countSetting === 'all' ? songBank.length : Math.min(Number(countSetting) || 25, songBank.length);
+          const quiz = (typeof shuffle === 'function' ? shuffle(songBank) : songBank.slice().sort(() => Math.random() - 0.5))
+            .slice(0, count)
+            .map(sanitizeSongV18)
+            .filter(s => s && s.title && s.artist && Number(s.year));
+          if (!quiz.length) throw new Error('Kunde inte skapa ett nytt set från spellistan.');
+
+          const first = makeQuestionV18(quiz, 0);
+          const players = connectedPlayersV18(oldRoom);
+          const newQuestionId = typeof randomString === 'function' ? randomString(14) : String(Date.now()) + Math.random().toString(36).slice(2);
+          const now = typeof mpNow === 'function' ? mpNow() : Date.now();
+          const serverNow = (window.firebase?.database?.ServerValue?.TIMESTAMP) || Date.now();
+
+          const newRoom = cleanObjV18({
+            code: ROOM_NAME,
+            createdAt: oldRoom?.createdAt || serverNow,
+            restartedAt: serverNow,
+            status: 'question',
+            currentIndex: 0,
+            quiz,
+            songBank,
+            currentSong: first.song,
+            options: first.options,
+            questionId: newQuestionId,
+            questionStartedAt: now,
+            questionDurationMs: first.durationMs,
+            resultsShownAt: null,
+            settings: {
+              questionCount: countSetting,
+              difficulty: $('difficulty')?.value || 'normal',
+              playlistId: (typeof getConfiguredPlaylistId === 'function' ? getConfiguredPlaylistId(false) : '') || oldRoom?.settings?.playlistId || ''
+            },
+            players
+          });
+
+          if (state?.mp) {
+            state.mp.lastQuestionId = '';
+            state.mp.room = newRoom;
+          }
+          try { clearTimeout(state?.mp?.playTimer); } catch {}
+          try { clearTimeout(state?.mp?.finishTimer); } catch {}
+          try { clearTimeout(state?.mp?.monitorTimer); } catch {}
+
+          await roomRef(ROOM_NAME).set(newRoom);
+          if (typeof attachRoomListener === 'function') attachRoomListener(ROOM_NAME);
+          setMpStatusV18(`Ny runda startad: fråga 1/${quiz.length}.`);
+        } catch (err) {
+          setMpStatusV18('Kunde inte starta ny runda: ' + (err?.message || String(err)));
+        }
+      }
+
+      function bindStartV18() {
+        const btn = $('mpStartBtn');
+        if (!btn || btn.__v18Bound) return;
+        const clone = btn.cloneNode(true);
+        clone.__v18Bound = true;
+        btn.replaceWith(clone);
+        try { if (typeof els === 'object') els.mpStartBtn = clone; } catch {}
+        clone.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          e.stopImmediatePropagation();
+          startFreshMultiplayerV18();
+        }, true);
+      }
+
+      function bindCountSyncV18() {
+        const mpSelect = $('mpQuestionCountMirror');
+        if (!mpSelect || mpSelect.__v18SyncBound) return;
+        mpSelect.__v18SyncBound = true;
+        mpSelect.addEventListener('change', () => {
+          const val = getMpQuestionCountSettingV18();
+          setMpStatusV18(`Antal frågor för nästa multiplayer-runda: ${val === 'all' ? 'alla laddade låtar' : val}.`);
+        });
+      }
+
+      function initV18() {
+        try {
+          if (typeof els === 'object') {
+            els.mpQuestionCountMirror = $('mpQuestionCountMirror');
+            els.mpPlaylistInput = $('mpPlaylistInput');
+          }
+        } catch {}
+        bindStartV18();
+        bindCountSyncV18();
+      }
+
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initV18);
+      else initV18();
+      window.addEventListener('pageshow', initV18);
+      window.startFreshMultiplayer = startFreshMultiplayerV18;
+      window.startMultiplayerQuiz = startFreshMultiplayerV18;
+      try { startMultiplayerQuiz = startFreshMultiplayerV18; } catch {}
+    })();
+  </script>
+
+
 </body>
 </html>
