@@ -7454,5 +7454,460 @@ Jolene;Dolly Parton;1973"></textarea>
     })();
   </script>
 
+
+  <script>
+    // v22: reliable multiplayer playlist cache + hard mode start/render.
+    (function () {
+      const ROOM_NAME = 'active';
+      const LOCAL_MP_BANKS = 'spotify_year_quiz_mp_playlist_banks_v22';
+      const $ = id => document.getElementById(id);
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+      let hardTimer = null;
+
+      function mpStatus(text) {
+        const el = $('mpStatus');
+        if (el) el.textContent = text || '';
+      }
+      function esc(v) {
+        try { return escapeHtml(v); }
+        catch { return String(v ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+      }
+      function clean(value) {
+        if (Array.isArray(value)) return value.map(clean).filter(v => v !== undefined && v !== null);
+        if (value && typeof value === 'object') {
+          const out = {};
+          for (const [k, v] of Object.entries(value)) {
+            if (v === undefined || v === null) continue;
+            out[k] = clean(v);
+          }
+          return out;
+        }
+        return value;
+      }
+      function normSong(song) {
+        try { return sanitizeMultiplayerSong(song); } catch {}
+        if (!song) return null;
+        return clean({
+          title: song.title || song.name || '',
+          artist: song.artist || '',
+          year: Number(song.year) || 0,
+          spotifyUri: song.spotifyUri || song.uri || '',
+          spotifyUrl: song.spotifyUrl || '',
+          albumImageUrl: song.albumImageUrl || song.albumImage || '',
+          albumImage: song.albumImage || song.albumImageUrl || '',
+          releaseDate: song.releaseDate || '',
+          durationMs: Number(song.durationMs) || 0
+        });
+      }
+      function normText(v) {
+        try { return normalizeText(v); }
+        catch { return String(v || '').toLowerCase().replace(/[^a-z0-9åäö]/gi, ''); }
+      }
+      function localBanks() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(LOCAL_MP_BANKS) || '{}');
+          return raw && typeof raw === 'object' ? raw : {};
+        } catch { return {}; }
+      }
+      function saveLocalBank(id, songs) {
+        try {
+          const banks = localBanks();
+          banks[id] = { savedAt: Date.now(), songs: songs.map(normSong).filter(Boolean) };
+          localStorage.setItem(LOCAL_MP_BANKS, JSON.stringify(banks));
+        } catch {}
+      }
+      function getLocalBank(id) {
+        const bank = localBanks()[id];
+        const songs = Array.isArray(bank?.songs) ? bank.songs.map(normSong).filter(Boolean) : [];
+        return songs.length ? songs : null;
+      }
+      function getPlayerId() {
+        try { return state.mp.player.id || ''; } catch { return ''; }
+      }
+      function getMode() {
+        return $('mpGameModeSelect')?.value === 'hard' ? 'hard' : 'standard';
+      }
+      function getCountSetting() {
+        const v = String($('mpQuestionCountMirror')?.value || '25');
+        return ['10', '25', '50', '100', 'all'].includes(v) ? v : '25';
+      }
+      function getPlaylistId() {
+        const mpRaw = $('mpPlaylistInput')?.value || '';
+        const mainRaw = $('spotifyPlaylistInput')?.value || '';
+        let id = '';
+        try { id = extractSpotifyPlaylistId(mpRaw) || extractSpotifyPlaylistId(mainRaw) || getConfiguredPlaylistId(false); } catch {}
+        if (!id) throw new Error('Klistra in en Spotify-spellista först.');
+        try {
+          $('mpPlaylistInput') && ($('mpPlaylistInput').value = `https://open.spotify.com/playlist/${id}`);
+          $('spotifyPlaylistInput') && ($('spotifyPlaylistInput').value = `https://open.spotify.com/playlist/${id}`);
+          localStorage.setItem('hitster_spotify_playlist_id_v5', id);
+        } catch {}
+        return id;
+      }
+      async function ensureMpReady() {
+        if (!state?.mp?.db && typeof connectFirebase === 'function') await connectFirebase();
+        if (!state?.mp?.player?.id && typeof loadSpotifyProfile === 'function') await loadSpotifyProfile();
+        if (!state?.mp?.db) throw new Error('Firebase är inte anslutet.');
+        if (!state?.mp?.player?.id) throw new Error('Spotify-profil saknas. Logga in med Spotify först.');
+        state.mp.roomCode = ROOM_NAME;
+        try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM_NAME); } catch {}
+      }
+      async function readRoom() {
+        await ensureMpReady();
+        const snap = await roomRef(ROOM_NAME).get();
+        const room = snap.exists() ? snap.val() : null;
+        state.mp.room = room;
+        return room;
+      }
+      function activePlayers(room) {
+        const out = {};
+        for (const [id, p] of Object.entries(room?.players || {})) {
+          if (!p || p.connected === false) continue;
+          const pid = p.id || id;
+          out[pid] = clean({
+            id: pid,
+            spotifyId: p.spotifyId || '',
+            name: p.name || 'Spelare',
+            imageUrl: p.imageUrl || '',
+            connected: true,
+            joinedAt: p.joinedAt || firebase.database.ServerValue.TIMESTAMP,
+            score: 0,
+            correct: 0,
+            answeredCount: 0,
+            ready: false
+          });
+        }
+        const me = state?.mp?.player || {};
+        if (me.id) out[me.id] = clean({ ...(out[me.id] || {}), id: me.id, spotifyId: me.spotifyId || '', name: me.name || 'Spelare', imageUrl: me.imageUrl || '', connected: true, score: 0, correct: 0, answeredCount: 0, ready: false });
+        return out;
+      }
+      function trackFromItem(item) {
+        const t = item?.item || item?.track || item;
+        if (!t || (t.type && t.type !== 'track')) return null;
+        if (t.is_local || !String(t.uri || '').startsWith('spotify:track:')) return null;
+        return t;
+      }
+      function imageFromAlbum(images) {
+        if (!Array.isArray(images) || !images.length) return '';
+        return images.slice().sort((a,b) => Math.abs((a.width || 300)-300) - Math.abs((b.width || 300)-300))[0]?.url || images[0]?.url || '';
+      }
+      function getYearIndex() {
+        try { return defaultYearIndex(); } catch { return { exact: new Map(), titleOnly: new Map() }; }
+      }
+      async function spotifyGet(path, statusText) {
+        for (let attempt = 1; attempt <= 10; attempt++) {
+          try { return await spotifyFetch(path); }
+          catch (err) {
+            if (err?.status !== 429 || attempt === 10) throw err;
+            const wait = Math.max(Number(err.retryAfter) || 0, 8);
+            mpStatus(`${statusText}. Spotify rate limit. Väntar ${wait} sekunder och fortsätter automatiskt...`);
+            await sleep(wait * 1000);
+          }
+        }
+      }
+      async function fetchPlaylistOnce(id) {
+        const fields = 'total,limit,offset,next,items(item(id,name,uri,type,is_local,duration_ms,artists(name),album(release_date,images(url,width,height)),external_urls(spotify)),track(id,name,uri,type,is_local,duration_ms,artists(name),album(release_date,images(url,width,height)),external_urls(spotify)))';
+        const songs = [];
+        const seen = new Set();
+        const yidx = getYearIndex();
+        let offset = 0;
+        let total = null;
+        const limit = 50;
+        for (let page = 0; page < 50; page++) {
+          const path = `/playlists/${id}/items?limit=${limit}&offset=${offset}&fields=${encodeURIComponent(fields)}`;
+          const data = await spotifyGet(path, `Hämtar spellista (${songs.length} låtar sparade)`);
+          const items = Array.isArray(data?.items) ? data.items : [];
+          if (Number.isFinite(Number(data?.total))) total = Number(data.total);
+          if (!items.length) break;
+          for (let i = 0; i < items.length; i++) {
+            const t = trackFromItem(items[i]);
+            if (!t || seen.has(t.uri)) continue;
+            seen.add(t.uri);
+            const artist = (t.artists || []).map(a => a.name).filter(Boolean).join(', ') || 'Okänd artist';
+            const releaseDate = t.album?.release_date || '';
+            let year = parseInt(String(releaseDate).slice(0,4), 10);
+            const exactKey = `${normText(t.name)}|${normText(artist)}`;
+            if (yidx.exact?.has(exactKey)) year = yidx.exact.get(exactKey);
+            else {
+              const titleMatches = yidx.titleOnly?.get(normText(t.name)) || [];
+              if (titleMatches.length === 1) year = titleMatches[0];
+            }
+            if (!Number.isInteger(year)) continue;
+            songs.push(normSong({
+              nr: offset + i + 1,
+              title: t.name,
+              artist,
+              year,
+              spotifyUri: t.uri,
+              spotifyUrl: t.external_urls?.spotify || '',
+              albumImageUrl: imageFromAlbum(t.album?.images),
+              albumImage: imageFromAlbum(t.album?.images),
+              releaseDate,
+              durationMs: Number(t.duration_ms) || 0
+            }));
+          }
+          offset += items.length;
+          mpStatus(`Hämtar spellista... ${offset}${total ? '/' + total : ''} poster lästa, ${songs.length} låtar sparade.`);
+          if (items.length < limit || (total && offset >= total)) break;
+          await sleep(900);
+        }
+        return songs.filter(Boolean);
+      }
+      async function getSongBank({ allowFetch = true, forceFetch = false } = {}) {
+        const id = getPlaylistId();
+        const room = await readRoom();
+        const roomBank = Array.isArray(room?.songBanks?.[id]) ? room.songBanks[id].map(normSong).filter(Boolean) : [];
+        if (!forceFetch && roomBank.length) {
+          mpStatus(`Använder spellistan som redan finns i rummet: ${roomBank.length} låtar.`);
+          state.songs = roomBank;
+          return { playlistId: id, songs: roomBank, source: 'room' };
+        }
+        const currentBank = Array.isArray(room?.songBank) && room?.settings?.playlistId === id ? room.songBank.map(normSong).filter(Boolean) : [];
+        if (!forceFetch && currentBank.length) {
+          await roomRef(ROOM_NAME).child(`songBanks/${id}`).set(clean(currentBank)).catch(() => {});
+          mpStatus(`Använder nuvarande spellista i rummet: ${currentBank.length} låtar.`);
+          state.songs = currentBank;
+          return { playlistId: id, songs: currentBank, source: 'current-room' };
+        }
+        const local = !forceFetch ? getLocalBank(id) : null;
+        if (local?.length) {
+          await roomRef(ROOM_NAME).update({
+            [`songBanks/${id}`]: clean(local),
+            songBank: clean(local),
+            'settings/playlistId': id,
+            playlistLoading: null
+          });
+          mpStatus(`Använder lokalt sparad spellista och lägger den i rummet: ${local.length} låtar.`);
+          state.songs = local;
+          return { playlistId: id, songs: local, source: 'local' };
+        }
+        if (!allowFetch) throw new Error('Spellistan finns inte i rummet än. En spelare behöver hämta den en gång.');
+        if (room?.playlistLoading?.playlistId === id && room.playlistLoading.by !== getPlayerId()) {
+          mpStatus('En annan spelare hämtar spellistan. Väntar...');
+          for (let i = 0; i < 60; i++) {
+            await sleep(1500);
+            const latest = await readRoom();
+            const bank = Array.isArray(latest?.songBanks?.[id]) ? latest.songBanks[id].map(normSong).filter(Boolean) : [];
+            if (bank.length) return { playlistId: id, songs: bank, source: 'room-after-wait' };
+            if (!latest?.playlistLoading || latest.playlistLoading.playlistId !== id) break;
+          }
+        }
+        await roomRef(ROOM_NAME).update({ playlistLoading: { playlistId: id, by: getPlayerId(), startedAt: firebase.database.ServerValue.TIMESTAMP } });
+        try {
+          mpStatus('Hämtar spellistan från Spotify. Gör detta bara en gång per ny spellista.');
+          const songs = await fetchPlaylistOnce(id);
+          if (!songs.length) throw new Error('Spotify returnerade inga användbara låtar. Kontrollera att spellistan är läsbar och innehåller vanliga låtar.');
+          saveLocalBank(id, songs);
+          await roomRef(ROOM_NAME).update({
+            [`songBanks/${id}`]: clean(songs),
+            songBank: clean(songs),
+            'settings/playlistId': id,
+            playlistLoadedAt: firebase.database.ServerValue.TIMESTAMP,
+            playlistLoading: null
+          });
+          mpStatus(`Spellistan är hämtad och sparad: ${songs.length} låtar.`);
+          state.songs = songs;
+          return { playlistId: id, songs, source: 'spotify' };
+        } catch (err) {
+          await roomRef(ROOM_NAME).update({ playlistLoading: null }).catch(() => {});
+          throw err;
+        }
+      }
+      function generateOptions(song, quiz) {
+        try { return generateMultiplayerOptions(song.year, quiz); }
+        catch { return [song.year, song.year - 3, song.year + 3, song.year + 8].filter(Number.isFinite).sort(() => Math.random() - .5); }
+      }
+      async function startRoundV22() {
+        try {
+          const mode = getMode();
+          const countSetting = getCountSetting();
+          const { playlistId, songs } = await getSongBank({ allowFetch: true, forceFetch: false });
+          const count = countSetting === 'all' ? songs.length : Math.min(Number(countSetting) || 25, songs.length);
+          const shuffled = (typeof shuffle === 'function' ? shuffle(songs) : songs.slice().sort(() => Math.random() - .5));
+          const quiz = shuffled.slice(0, count).map(normSong).filter(Boolean);
+          if (!quiz.length) throw new Error('Kunde inte skapa quiz från spellistan.');
+          const oldRoom = await readRoom();
+          const players = activePlayers(oldRoom);
+          const first = quiz[0];
+          const started = (typeof mpNow === 'function' ? mpNow() : Date.now());
+          const room = clean({
+            code: ROOM_NAME,
+            createdAt: oldRoom?.createdAt || firebase.database.ServerValue.TIMESTAMP,
+            restartedAt: firebase.database.ServerValue.TIMESTAMP,
+            status: 'question',
+            currentIndex: 0,
+            quiz,
+            songBank: songs.map(normSong).filter(Boolean),
+            songBanks: { ...(oldRoom?.songBanks || {}), [playlistId]: songs.map(normSong).filter(Boolean) },
+            currentSong: first,
+            options: generateOptions(first, quiz),
+            questionId: (typeof randomString === 'function' ? randomString(14) : String(Date.now())),
+            questionStartedAt: started,
+            questionDurationMs: Math.max(30000, Number(first.durationMs) || 30000),
+            resultsShownAt: null,
+            playlistLoading: null,
+            settings: { playlistId, questionCount: countSetting, mpMode: mode, mode, difficulty: $('difficulty')?.value || 'normal' },
+            mpMode: mode,
+            players
+          });
+          state.mp.lastQuestionId = '';
+          state.mp.room = room;
+          await roomRef(ROOM_NAME).set(room);
+          if (typeof attachRoomListener === 'function') attachRoomListener(ROOM_NAME);
+          mpStatus(`Ny ${mode === 'hard' ? 'hard' : 'standard'}-runda startad: fråga 1/${quiz.length}.`);
+        } catch (err) {
+          mpStatus('Kunde inte starta multiplayer: ' + (err?.message || String(err)));
+        }
+      }
+      async function syncPlaylistV22() {
+        try {
+          const res = await getSongBank({ allowFetch: true, forceFetch: false });
+          mpStatus(`Spellistan är redo i multiplayer-rummet: ${res.songs.length} låtar (${res.source}).`);
+        } catch (err) {
+          mpStatus('Kunde inte byta spellista: ' + (err?.message || String(err)));
+        }
+      }
+      function roomMode(room) {
+        const m = room?.settings?.mpMode || room?.settings?.mode || room?.mpMode || getMode();
+        return m === 'hard' ? 'hard' : 'standard';
+      }
+      function nowMs() { try { return mpNow(); } catch { return Date.now(); } }
+      function reveal(room) {
+        if (roomMode(room) !== 'hard') return { hard: false, title: true, artist: true, cover: true, elapsed: 0 };
+        const elapsed = Math.max(0, nowMs() - (Number(room?.questionStartedAt) || nowMs()));
+        return { hard: true, elapsed, artist: elapsed >= 10000, title: elapsed >= 20000, cover: elapsed >= 30000 };
+      }
+      function hardHelp(room, answered) {
+        const r = reveal(room);
+        if (!r.hard) return '';
+        const sec = Math.floor(r.elapsed / 1000);
+        let next = `Artist avslöjas om ${Math.max(0, 10 - sec)}s.`;
+        if (r.artist && !r.title) next = `Titel avslöjas om ${Math.max(0, 20 - sec)}s.`;
+        else if (r.title && !r.cover) next = `Albumomslag avslöjas om ${Math.max(0, 30 - sec)}s.`;
+        else if (r.cover) next = 'All information är avslöjad.';
+        return `<div class="hardRevealBox"><strong>Hard mode</strong><br><span class="small">${answered ? 'Du har svarat.' : next} Poängen straffas hårdare ju längre du väntar.</span></div>`;
+      }
+      function scheduleHard(room) {
+        if (hardTimer) clearTimeout(hardTimer);
+        hardTimer = null;
+        if (!room || room.status !== 'question' || roomMode(room) !== 'hard') return;
+        hardTimer = setTimeout(() => {
+          try { if (state?.mp?.room?.questionId === room.questionId) renderQuestionV22(state.mp.room); } catch {}
+        }, 1000);
+      }
+      function renderQuestionV22(room) {
+        const song = normSong(room?.currentSong);
+        if (!song) return;
+        const r = reveal(room);
+        const hard = r.hard;
+        state.mp.room = room;
+        state.quiz = [song];
+        state.currentIndex = 0;
+        state.options = room.options || [];
+        state.mode = 'quiz';
+        const player = room?.players?.[state?.mp?.player?.id] || {};
+        const answered = Boolean(player.answer);
+        state.answered = answered;
+        state.selectedYear = player.answer?.year || null;
+        $('practicePanel')?.classList.add('hidden');
+        if (els?.options) els.options.innerHTML = '';
+        if (els?.songTitle) els.songTitle.textContent = hard && !r.title ? 'Titel dold' : song.title;
+        if (els?.songArtist) els.songArtist.textContent = hard && !r.artist ? 'Artist dold' : song.artist;
+        if (els?.trackMeta) els.trackMeta.textContent = hard ? 'Hard mode: information avslöjas med tiden.' : '';
+        if (hard && !r.cover) {
+          if (els?.albumCover) { els.albumCover.classList.add('hidden'); els.albumCover.removeAttribute('src'); }
+          document.documentElement.style.setProperty('--album-glow-opacity', '.10');
+        } else {
+          try { updateSongVisual(song); } catch {}
+        }
+        if (els?.spotifyPlayBtn) els.spotifyPlayBtn.disabled = !song.spotifyUri;
+        if (els?.searchBtn) els.searchBtn.disabled = false;
+        if (els?.score) els.score.textContent = Number(player.score) || 0;
+        if (els?.qnum) els.qnum.textContent = `${Number(room.currentIndex || 0) + 1}/${room.quiz?.length || 0}`;
+        if (els?.percent) els.percent.textContent = hard ? 'HARD' : 'MP';
+        if (els?.bar) els.bar.style.width = room.quiz?.length ? `${((Number(room.currentIndex || 0)+1)/(room.quiz.length))*100}%` : '0%';
+        for (const year of (room.options || [])) {
+          const btn = document.createElement('button');
+          btn.className = 'option';
+          btn.textContent = year;
+          btn.disabled = answered;
+          btn.addEventListener('click', () => submitMultiplayerAnswer(year));
+          if (answered) {
+            if (Number(year) === Number(song.year)) btn.classList.add('correct');
+            if (Number(year) === Number(player.answer?.year) && Number(year) !== Number(song.year)) btn.classList.add('wrong');
+          }
+          els.options?.appendChild(btn);
+        }
+        if (els?.feedback) {
+          if (answered) {
+            const a = player.answer || {};
+            els.feedback.innerHTML = `Du svarade ${esc(a.year)}. ${Number(a.delta) === 0 ? '<strong class="ok">Exakt rätt.</strong>' : `Du var <strong>${esc(a.delta)}</strong> år fel.`} Poäng: <strong>${esc(a.points)}</strong>. Du är automatiskt redo.${hardHelp(room, true)}`;
+          } else {
+            els.feedback.innerHTML = `Svara så snabbt du kan. Rundan går vidare när alla har svarat.${hardHelp(room, false)}`;
+          }
+        }
+        if (els?.nextBtn) els.nextBtn.disabled = true;
+        if (els?.mpReadyBtn) els.mpReadyBtn.disabled = true;
+        scheduleHard(room);
+      }
+      function pointsV22(guess, correctYear, answerMs, durationMs) {
+        const delta = Math.abs(Number(guess) - Number(correctYear));
+        const hard = roomMode(state?.mp?.room) === 'hard';
+        let base = 0;
+        if (delta === 0) base = hard ? 1700 : 1200;
+        else if (delta === 1) base = hard ? 950 : 850;
+        else if (delta === 2) base = hard ? 600 : 600;
+        else if (delta === 3) base = hard ? 320 : 400;
+        else if (delta <= 5) base = hard ? 120 : 220;
+        else if (delta <= 10) base = hard ? 25 : Math.max(0, 120 - (delta - 6) * 18);
+        else base = 0;
+        const t = Math.max(0, Number(answerMs) || 0) / 1000;
+        if (hard) {
+          const factor = t < 10 ? 1 : t < 20 ? 0.55 : t < 30 ? 0.25 : 0.08;
+          const bonus = delta === 0 ? Math.max(0, Math.round(450 * (1 - Math.min(t, 15) / 15))) : delta <= 2 ? Math.max(0, Math.round(150 * (1 - Math.min(t, 12) / 12))) : 0;
+          return Math.max(0, Math.round(base * factor + bonus));
+        }
+        const windowMs = Math.max(10000, Math.min(Number(durationMs) || 30000, 60000));
+        const speed = 1 - Math.min(Math.max(Number(answerMs) || 0, 0), windowMs) / windowMs;
+        const acc = delta === 0 ? 1 : delta === 1 ? .75 : delta === 2 ? .55 : delta <= 5 ? .3 : 0;
+        return Math.max(0, Math.round(base + 350 * speed * acc));
+      }
+      function bindV22() {
+        window.startMultiplayerQuiz = startRoundV22;
+        window.startFreshMultiplayer = startRoundV22;
+        window.syncPlaylistForMultiplayer = syncPlaylistV22;
+        window.renderMultiplayerQuestion = renderQuestionV22;
+        window.calculateMultiplayerPoints = pointsV22;
+        try { startMultiplayerQuiz = startRoundV22; } catch {}
+        try { renderMultiplayerQuestion = renderQuestionV22; } catch {}
+        try { calculateMultiplayerPoints = pointsV22; } catch {}
+        const start = $('mpStartBtn');
+        if (start && !start.__v22Bound) {
+          const clone = start.cloneNode(true);
+          clone.__v22Bound = true;
+          start.replaceWith(clone);
+          try { if (typeof els === 'object') els.mpStartBtn = clone; } catch {}
+          clone.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); startRoundV22(); }, true);
+        }
+        const sync = $('mpSyncPlaylistBtn');
+        if (sync && !sync.__v22Bound) {
+          const clone = sync.cloneNode(true);
+          clone.__v22Bound = true;
+          sync.replaceWith(clone);
+          try { if (typeof els === 'object') els.mpSyncPlaylistBtn = clone; } catch {}
+          clone.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); syncPlaylistV22(); }, true);
+        }
+        const mode = $('mpGameModeSelect');
+        if (mode && !mode.__v22Bound) {
+          mode.__v22Bound = true;
+          mode.addEventListener('change', () => mpStatus(`Mode för nästa runda: ${getMode() === 'hard' ? 'Hard' : 'Standard'}.`));
+        }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindV22);
+      else bindV22();
+      window.addEventListener('pageshow', bindV22);
+    })();
+  </script>
+
 </body>
 </html>
