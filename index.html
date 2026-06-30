@@ -2370,6 +2370,9 @@ Jolene;Dolly Parton;1973"></textarea>
       mp: { app: null, db: null, roomCode: '', unsubscribe: null, player: null, room: null, lastQuestionId: '', playTimer: null, finishTimer: null, monitorTimer: null, serverOffset: 0 }
     };
 
+    // v31 fix: gör state åtkomligt för senare patch-script.
+    window.state = state;
+
     function safeJsonParse(value, fallback) {
       try { return JSON.parse(value); } catch { return fallback; }
     }
@@ -4801,6 +4804,81 @@ Jolene;Dolly Parton;1973"></textarea>
         </div>
       `;
       els.mpNextBtn.disabled = true;
+    }
+
+
+    // v31 fix: dessa funktioner saknades i filen men används av knapparna nedan.
+    // Utan dem stoppas huvudscriptet innan init() körs.
+    function importSongs() {
+      const box = els.importBox;
+      const msg = els.importMsg;
+      const text = String(box?.value || '').trim();
+      if (!text) {
+        if (msg) msg.textContent = 'Klistra in låtar först.';
+        return;
+      }
+      const rows = text.split(/\r?\n/).map(x => x.trim()).filter(Boolean);
+      const parsed = [];
+      for (const row of rows) {
+        const parts = row.split(';').map(x => x.trim());
+        if (parts.length < 3) continue;
+        const [title, artist, yearRaw, spotifyUri = '', albumImageUrl = ''] = parts;
+        const year = Number(String(yearRaw).match(/\d{4}/)?.[0] || yearRaw);
+        const song = cleanSong({ title, artist, year, spotifyUri, albumImageUrl });
+        if (song) parsed.push(song);
+      }
+      if (!parsed.length) {
+        if (msg) msg.textContent = 'Kunde inte läsa några låtar. Format: Titel;Artist;År';
+        return;
+      }
+      const current = getImportedSongs();
+      const merged = mergeSongs(current, parsed);
+      writeLocal(LS.imports, merged);
+      if (box) box.value = '';
+      loadSongs();
+      updateDataStatus();
+      if (msg) msg.textContent = `Importerade ${parsed.length} låtar. Totalt importerade: ${merged.length}.`;
+    }
+
+    function resetImports() {
+      localStorage.removeItem(LS.imports);
+      loadSongs();
+      updateDataStatus();
+      if (els.importMsg) els.importMsg.textContent = 'Importerade låtar är rensade.';
+    }
+
+    function exportData() {
+      const data = {
+        exportedAt: new Date().toISOString(),
+        playlistCache: readLocal(LS.playlistCache, null),
+        imports: getImportedSongs(),
+        history: readLocal(LS.history, []),
+        settings: readLocal(LS.settings, null)
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'spotify-artalsquiz-data.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearLocalData() {
+      if (!confirm('Rensa lokal quizdata i den här webbläsaren? Spotify-login och Firebase-rum påverkas inte.')) return;
+      [LS.playlistCache, LS.imports, LS.history, LS.session, LS.practiceSet, LS.learningStats].forEach(k => localStorage.removeItem(k));
+      state.quiz = [];
+      state.currentIndex = -1;
+      state.score = 0;
+      state.answered = false;
+      loadSongs();
+      updateStats();
+      updateHistory();
+      updateDataStatus();
+      updatePracticeSetStatus();
+      if (els.feedback) els.feedback.textContent = 'Lokal quizdata är rensad.';
     }
 
     function spotifyLogout() {
@@ -9577,167 +9655,184 @@ Jolene;Dolly Parton;1973"></textarea>
 </script>
 
 
-
 <script>
-  // v30: robust Firebase playlist import fix.
-  // Purpose: make the "Hämta och spara i Firebase" button actually write visible data early,
-  // show clear errors, and save under rooms/active/savedPlaylists + songBank + songBanks/<id>.
+  // v31: Robust Firebase playlist import. Kör oberoende av window.state och default Firebase-app.
   (function () {
     const ROOM = 'active';
+    const APP_NAME = 'hitster-multiplayer';
+    const DEFAULT_DB_URL = 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app';
+    const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
     const $ = id => document.getElementById(id);
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    function status(text) {
-      const el = $('mpStatus') || $('appModeStatus');
-      if (el) el.textContent = text || '';
+    function setStatus(text) {
+      const mp = $('mpStatus');
+      const sp = $('spotifyStatus');
+      if (mp) mp.textContent = text || '';
+      if (sp) sp.textContent = text || '';
       try { console.log('[playlist-import]', text); } catch {}
     }
 
-    function clean(value) {
-      if (Array.isArray(value)) return value.map(clean).filter(v => v !== undefined && v !== null);
+    function cleanForFirebase(value) {
+      if (Array.isArray(value)) return value.map(cleanForFirebase).filter(v => v !== undefined);
       if (value && typeof value === 'object') {
         const out = {};
         for (const [k, v] of Object.entries(value)) {
-          if (v === undefined || v === null) continue;
-          out[k] = clean(v);
+          if (v === undefined) continue;
+          out[k] = cleanForFirebase(v);
         }
         return out;
       }
-      return value;
+      return value === undefined ? null : value;
     }
 
-    function validYear(y) {
-      return Number.isInteger(Number(y)) && Number(y) >= 1900 && Number(y) <= 2100;
-    }
-
-    function normalizeTextSafe(text) {
-      try { return normalizeText(text); }
+    function parseFirebaseConfigDirect() {
+      const input = $('firebaseConfigInput');
+      let raw = String(input?.value || localStorage.getItem('hitster_firebase_config_v1') || '').trim();
+      if (!raw) raw = JSON.stringify({ databaseURL: DEFAULT_DB_URL });
+      const match = raw.match(/firebaseConfig\s*=\s*(\{[\s\S]*?\})\s*;?$/);
+      if (match) raw = match[1];
+      let cfg;
+      try { cfg = JSON.parse(raw); }
       catch {
-        return String(text || '')
-          .toLowerCase()
-          .normalize('NFKD')
-          .replace(/[\u0300-\u036f]/g, '')
-          .replace(/[^a-z0-9åäö]/gi, '');
+        try { cfg = Function('"use strict"; return (' + raw + ');')(); }
+        catch { cfg = { databaseURL: DEFAULT_DB_URL }; }
       }
+      if (!cfg.databaseURL) cfg.databaseURL = DEFAULT_DB_URL;
+      if (input) input.value = JSON.stringify(cfg, null, 2);
+      localStorage.setItem('hitster_firebase_config_v1', JSON.stringify(cfg, null, 2));
+      return cfg;
     }
 
-    function yearIndexSafe() {
-      try { return defaultYearIndex(); }
-      catch { return { exact: new Map(), titleOnly: new Map() }; }
+    function getDb() {
+      if (!window.firebase?.initializeApp) throw new Error('Firebase SDK är inte laddat.');
+      const cfg = parseFirebaseConfigDirect();
+      let app = firebase.apps.find(a => a.name === APP_NAME);
+      if (!app) app = firebase.initializeApp(cfg, APP_NAME);
+      const db = firebase.database(app);
+      try {
+        if (window.state?.mp) {
+          window.state.mp.app = app;
+          window.state.mp.db = db;
+          window.state.mp.roomCode = ROOM;
+        }
+      } catch {}
+      return db;
     }
 
     function playlistIdFromInput(raw) {
       raw = String(raw || '').trim();
-      let id = '';
-      try { if (typeof extractSpotifyPlaylistId === 'function') id = extractSpotifyPlaylistId(raw); } catch {}
-      if (!id) {
-        const url = raw.match(/open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/);
-        const uri = raw.match(/spotify:playlist:([A-Za-z0-9]+)/);
-        id = url?.[1] || uri?.[1] || (/^[A-Za-z0-9]{15,}$/.test(raw) ? raw : '');
-      }
+      const url = raw.match(/open\.spotify\.com\/playlist\/([A-Za-z0-9]+)/);
+      const uri = raw.match(/spotify:playlist:([A-Za-z0-9]+)/);
+      const id = url?.[1] || uri?.[1] || (/^[A-Za-z0-9]{15,}$/.test(raw) ? raw : '');
       if (!id) throw new Error('Klistra in en Spotify-spellista URL eller ID först.');
       return id;
     }
 
+    function readToken() {
+      try { return JSON.parse(localStorage.getItem('hitster_spotify_token_v3') || 'null'); }
+      catch { return null; }
+    }
+
+    async function spotifyFetchDirect(path) {
+      if (typeof spotifyFetch === 'function') return spotifyFetch(path);
+      const token = readToken();
+      if (!token?.access_token) throw new Error('Du är inte inloggad med Spotify. Klicka Logga in Spotify först.');
+      const res = await fetch('https://api.spotify.com/v1' + path, { headers: { Authorization: 'Bearer ' + token.access_token } });
+      if (res.status === 429) {
+        const err = new Error('Spotify rate limit');
+        err.status = 429;
+        err.retryAfter = Number(res.headers.get('Retry-After')) || 8;
+        throw err;
+      }
+      if (!res.ok) {
+        let text = await res.text();
+        try { const json = JSON.parse(text); text = json.error?.message || text; } catch {}
+        throw new Error('Spotify API-fel: ' + text);
+      }
+      return res.json();
+    }
+
+    async function spotifyGet(path, label) {
+      for (let attempt = 1; attempt <= 4; attempt++) {
+        try { return await spotifyFetchDirect(path); }
+        catch (err) {
+          if (err?.status !== 429 || attempt === 4) throw err;
+          const wait = Math.max(Number(err.retryAfter) || 0, 8);
+          setStatus(`${label}. Spotify rate limit. Väntar ${wait} sekunder och fortsätter...`);
+          await sleep(wait * 1000);
+        }
+      }
+    }
+
+    function validYear(y) { return Number.isInteger(Number(y)) && Number(y) >= 1800 && Number(y) <= new Date().getFullYear() + 1; }
+    function norm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9åäö ]/gi, ' ').replace(/\s+/g, ' ').trim(); }
     function imageFrom(images) {
       const arr = Array.isArray(images) ? images.filter(x => x && x.url) : [];
       if (!arr.length) return '';
       return arr.slice().sort((a, b) => Math.abs((a.width || 300) - 300) - Math.abs((b.width || 300) - 300))[0]?.url || arr[0].url || '';
     }
 
-    function getTrack(item) {
-      const t = item?.track || item?.item || item;
-      if (!t) return null;
-      if (t.type && t.type !== 'track') return null;
-      if (t.is_local) return null;
-      if (!String(t.uri || '').startsWith('spotify:track:')) return null;
-      return t;
-    }
-
-    async function ensureFirebase() {
-      // OBS: den gamla appens `state` är deklarerad med const och finns därför inte som window.state.
-      // Använd de globala funktionerna som redan har tillgång till rätt state via sin egen closure.
-      try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM); } catch {}
-
-      if (typeof connectFirebase === 'function') {
-        await connectFirebase();
-      }
-
-      if (typeof roomRef === 'function') {
-        try {
-          return roomRef(ROOM);
-        } catch (err) {
-          // Fallback nedan om roomRef ännu inte har fått state.mp.db.
+    function buildYearIndex() {
+      const exact = new Map();
+      const titleOnly = new Map();
+      try {
+        const list = Array.isArray(DEFAULT_SONGS) ? DEFAULT_SONGS : [];
+        for (const s of list) {
+          if (!validYear(s.year)) continue;
+          const title = norm(s.title);
+          const artist = norm(s.artist);
+          if (title && artist) exact.set(title + '|' + artist, Number(s.year));
+          if (title) {
+            const arr = titleOnly.get(title) || [];
+            if (!arr.includes(Number(s.year))) arr.push(Number(s.year));
+            titleOnly.set(title, arr);
+          }
         }
-      }
-
-      // Fallback: hämta den namngivna Firebase-appen direkt.
-      // Din app initieras som 'hitster-multiplayer', inte som [DEFAULT].
-      const app = firebase.apps.find(a => a.name === 'hitster-multiplayer');
-      if (!app) throw new Error('Firebase är inte anslutet. connectFirebase kunde inte skapa appen hitster-multiplayer.');
-      const db = firebase.database(app);
-      return db.ref('rooms/' + ROOM);
-    }
-
-    async function spotifyGet(path, label) {
-      if (typeof spotifyFetch !== 'function') throw new Error('Spotify är inte initierat. Logga in med Spotify först.');
-      for (let attempt = 1; attempt <= 4; attempt++) {
-        try { return await spotifyFetch(path); }
-        catch (err) {
-          if (err?.status !== 429 || attempt === 4) throw err;
-          const wait = Math.max(Number(err.retryAfter) || 0, 8);
-          status(`${label}. Spotify rate limit. Väntar ${wait} sekunder och fortsätter automatiskt...`);
-          await sleep(wait * 1000);
-        }
-      }
+      } catch {}
+      return { exact, titleOnly };
     }
 
     async function fetchPlaylistName(playlistId) {
       try {
         const data = await spotifyGet(`/playlists/${playlistId}?fields=${encodeURIComponent('name')}`, 'Hämtar spellistans namn');
         return data?.name || playlistId;
-      } catch {
-        return playlistId;
-      }
+      } catch { return playlistId; }
     }
 
     async function fetchPlaylistSongs(playlistId) {
-      const yidx = yearIndexSafe();
+      const yidx = buildYearIndex();
       const songs = [];
       const seen = new Set();
-      const limit = 100;
       let offset = 0;
       let total = 0;
+      const limit = 100;
       const fields = 'total,items(track(type,is_local,uri,name,duration_ms,external_urls.spotify,album(release_date,images),artists(name))),next';
-
       while (true) {
         const data = await spotifyGet(`/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}&fields=${encodeURIComponent(fields)}`, 'Hämtar spellistan');
         total = Number(data?.total) || total;
         const items = Array.isArray(data?.items) ? data.items : [];
         if (!items.length) break;
-
-        for (let i = 0; i < items.length; i++) {
-          const t = getTrack(items[i]);
-          if (!t || seen.has(t.uri)) continue;
+        for (const item of items) {
+          const t = item?.track || item?.item || item;
+          if (!t || t.type !== 'track' || t.is_local || !String(t.uri || '').startsWith('spotify:track:') || seen.has(t.uri)) continue;
           seen.add(t.uri);
-
           const title = t.name || '';
           const artist = (t.artists || []).map(a => a.name).filter(Boolean).join(', ') || 'Okänd artist';
           const releaseDate = t.album?.release_date || '';
           let year = Number(String(releaseDate).slice(0, 4));
-          const exactKey = `${normalizeTextSafe(title)}|${normalizeTextSafe(artist)}`;
-          if (yidx.exact?.has(exactKey)) year = yidx.exact.get(exactKey);
+          const exactKey = norm(title) + '|' + norm(artist);
+          if (yidx.exact.has(exactKey)) year = yidx.exact.get(exactKey);
           else {
-            const titleMatches = yidx.titleOnly?.get(normalizeTextSafe(title)) || [];
+            const titleMatches = yidx.titleOnly.get(norm(title)) || [];
             if (titleMatches.length === 1) year = titleMatches[0];
           }
           if (!validYear(year)) continue;
-
           songs.push({
             nr: songs.length + 1,
             title,
             artist,
-            year,
+            year: Number(year),
             spotifyUri: t.uri,
             spotifyUrl: t.external_urls?.spotify || '',
             albumImageUrl: imageFrom(t.album?.images),
@@ -9746,47 +9841,38 @@ Jolene;Dolly Parton;1973"></textarea>
             durationMs: Number(t.duration_ms) || 0
           });
         }
-
         offset += items.length;
-        status(`Importerar Spotify-spellista... ${offset}${total ? '/' + total : ''} poster lästa, ${songs.length} låtar sparade.`);
+        setStatus(`Importerar Spotify-spellista... ${offset}${total ? '/' + total : ''} poster lästa, ${songs.length} låtar sparade.`);
         if (items.length < limit || (total && offset >= total)) break;
         await sleep(250);
       }
-
       return songs;
     }
 
-    async function robustImportSpotifyPlaylistToFirebase() {
-      const ref = await ensureFirebase();
+    async function importPlaylistV31() {
+      const db = getDb();
+      const ref = db.ref('rooms/' + ROOM);
       const raw = $('mpSpotifyImportInput')?.value || $('mpPlaylistInput')?.value || $('spotifyPlaylistInput')?.value || '';
       const playlistId = playlistIdFromInput(raw);
 
-      try {
-        await ref.child('playlistImportDebug').set({
-          playlistId,
-          status: 'started',
-          startedAt: firebase.database.ServerValue.TIMESTAMP
-        });
-      } catch (err) {
-        throw new Error(`Firebase-write misslyckades direkt: ${err?.message || String(err)}`);
-      }
+      await ref.child('playlistImportDebug').set({
+        playlistId,
+        status: 'started',
+        startedAt: firebase.database.ServerValue.TIMESTAMP
+      });
 
-      status('Import startad. Hämtar spellistan från Spotify...');
-      const [name, songs] = await Promise.all([
-        fetchPlaylistName(playlistId),
-        fetchPlaylistSongs(playlistId)
-      ]);
-
-      if (!songs.length) throw new Error('Spotify returnerade 0 användbara låtar. Kontrollera att spellistan innehåller vanliga låtar och att du är inloggad med rätt Spotify-konto.');
+      setStatus('Import startad. Hämtar spellistan från Spotify...');
+      const [name, songs] = await Promise.all([fetchPlaylistName(playlistId), fetchPlaylistSongs(playlistId)]);
+      if (!songs.length) throw new Error('Spotify returnerade 0 användbara låtar. Kontrollera att spellistan innehåller vanliga låtar.');
 
       const oldSnap = await ref.get();
       const oldRoom = oldSnap.exists() ? oldSnap.val() : {};
+      const cleanSongs = cleanForFirebase(songs);
       const players = oldRoom?.players || {};
-      const player = window.state?.mp?.player;
+      const player = window.state?.mp?.player || null;
       if (player?.id) players[player.id] = { ...(players[player.id] || {}), ...player, connected: true, ready: false, answer: null };
 
-      const cleanSongs = clean(songs);
-      await ref.update(clean({
+      await ref.update(cleanForFirebase({
         [`savedPlaylists/${playlistId}`]: {
           id: playlistId,
           name,
@@ -9827,40 +9913,40 @@ Jolene;Dolly Parton;1973"></textarea>
 
       try { if (typeof refreshSavedPlaylistDropdown === 'function') await refreshSavedPlaylistDropdown(); } catch {}
       if ($('firebasePlaylistSelect')) $('firebasePlaylistSelect').value = playlistId;
-      status(`Sparat i Firebase: ${name} (${songs.length} låtar).`);
+      setStatus(`Sparat i Firebase: ${name} (${songs.length} låtar).`);
     }
 
-    function bindRobustImport() {
+    function bindImportButtonV31() {
       const btn = $('importSpotifyPlaylistBtn');
-      if (!btn || btn.__v30Bound) return;
+      if (!btn || btn.dataset.v31Bound === '1') return;
       const clone = btn.cloneNode(true);
-      clone.__v27Bound = true;
-      clone.__v30Bound = true;
+      clone.dataset.v31Bound = '1';
       clone.textContent = 'Hämta och spara i Firebase';
       btn.replaceWith(clone);
-      clone.addEventListener('click', async e => {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
+      clone.addEventListener('click', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
         clone.disabled = true;
-        try { await robustImportSpotifyPlaylistToFirebase(); }
+        try { await importPlaylistV31(); }
         catch (err) {
           const msg = err?.message || String(err);
-          status(`Kunde inte spara spellistan: ${msg}`);
-          try { console.error('[playlist-import]', err); } catch {}
+          setStatus('Kunde inte spara spellistan: ' + msg);
+          console.error('[playlist-import-v31]', err);
         }
         finally { clone.disabled = false; }
       }, true);
     }
 
-    window.importSpotifyPlaylistToFirebase = robustImportSpotifyPlaylistToFirebase;
-    window.robustImportSpotifyPlaylistToFirebase = robustImportSpotifyPlaylistToFirebase;
+    window.importSpotifyPlaylistToFirebase = importPlaylistV31;
+    window.robustImportSpotifyPlaylistToFirebase = importPlaylistV31;
 
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindRobustImport);
-    else bindRobustImport();
-    window.addEventListener('pageshow', bindRobustImport);
-    setTimeout(bindRobustImport, 300);
-    setTimeout(bindRobustImport, 1200);
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindImportButtonV31);
+    else bindImportButtonV31();
+    window.addEventListener('pageshow', bindImportButtonV31);
+    setTimeout(bindImportButtonV31, 300);
+    setTimeout(bindImportButtonV31, 1200);
+    setTimeout(bindImportButtonV31, 2500);
   })();
 </script>
 
