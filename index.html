@@ -4525,10 +4525,12 @@ Jolene;Dolly Parton;1973"></textarea>
         const count = countSetting === 'all' ? state.songs.length : Math.min(Number(countSetting) || 10, state.songs.length);
         const quiz = shuffle(state.songs).slice(0, count).map(sanitizeMultiplayerSong).filter(Boolean);
         if (!quiz.length) throw new Error('Kunde inte skapa quiz med laddade låtar.');
+        const songBank = state.songs.map(sanitizeMultiplayerSong).filter(Boolean);
         const updates = {
           status: 'lobby',
           currentIndex: -1,
           quiz,
+          songBank,
           currentSong: null,
           options: null,
           questionId: null,
@@ -5494,9 +5496,15 @@ Jolene;Dolly Parton;1973"></textarea>
           return true;
         }
         if (room.status === 'finished') {
-          if (typeof renderMultiplayerFinished === 'function') renderMultiplayerFinished(room);
-          setMp('Spelet är klart. Klicka Starta / starta om om ni vill skapa en ny runda från spellistan.');
-          return true;
+          // Starta / starta om ska skapa en ny runda, inte bara visa slutskärmen igen.
+          // Använd den sparade låtbanken i rummet om den finns. Annars faller vi tillbaka
+          // till förra quizlistan så spelet åtminstone kan starta om utan ny Spotify-hämtning.
+          const source = Array.isArray(room.songBank) && room.songBank.length ? room.songBank : room.quiz;
+          if (st && Array.isArray(source) && source.length) {
+            st.songs = source.map(song => (typeof sanitizeMultiplayerSong === 'function' ? sanitizeMultiplayerSong(song) : song)).filter(Boolean);
+          }
+          setMp('Startar en ny runda från spellistan som redan finns i rummet...');
+          return false;
         }
         return false;
       }
@@ -5944,6 +5952,84 @@ Jolene;Dolly Parton;1973"></textarea>
       else initV12();
       window.addEventListener('pageshow', initV12);
       window.switchModeV12 = switchModeV12;
+    })();
+  </script>
+
+
+  <script>
+    // v15: restart finished multiplayer games correctly and keep a shared song bank in Firebase.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      function setMp(text) { const el = $('mpStatus'); if (el) el.textContent = text || ''; }
+      function getStateSafe() { try { return state; } catch { return null; } }
+      function sanitizeSafe(song) {
+        try { return typeof sanitizeMultiplayerSong === 'function' ? sanitizeMultiplayerSong(song) : song; }
+        catch { return song; }
+      }
+      async function getFreshRoomV15() {
+        const st = getStateSafe();
+        if (!st?.mp?.db) {
+          if (typeof connectFirebase === 'function') await connectFirebase();
+        }
+        if (!st?.mp?.player?.id && typeof loadSpotifyProfile === 'function') await loadSpotifyProfile();
+        if (st?.mp && !st.mp.roomCode) st.mp.roomCode = ROOM_NAME;
+        if (!st?.mp?.db) return null;
+        const snap = await roomRef(st.mp.roomCode || ROOM_NAME).get();
+        const room = snap.exists() ? snap.val() : null;
+        if (room && st?.mp) st.mp.room = room;
+        return room;
+      }
+      async function resetFinishedRoomV15(room) {
+        const st = getStateSafe();
+        const source = Array.isArray(room?.songBank) && room.songBank.length ? room.songBank : (Array.isArray(room?.quiz) ? room.quiz : []);
+        if (!source.length) return false;
+        if (st) st.songs = source.map(sanitizeSafe).filter(Boolean);
+        setMp('Startar om spelet från den sparade spellistan...');
+        return true;
+      }
+      function patchStart() {
+        const previous = window.startMultiplayerQuiz;
+        if (typeof previous !== 'function' || previous.__v15Patched) return;
+        async function patchedStartMultiplayerQuizV15() {
+          try {
+            let room = await getFreshRoomV15();
+            if (room?.status === 'finished') await resetFinishedRoomV15(room);
+            await previous.apply(this, arguments);
+            // Efter att ny runda skapats: säkerställ att hela låtbanken finns kvar i rummet.
+            const st = getStateSafe();
+            room = st?.mp?.room || await getFreshRoomV15();
+            if (st?.mp?.db && st?.mp?.roomCode && Array.isArray(st.songs) && st.songs.length) {
+              const cleanBank = st.songs.map(sanitizeSafe).filter(Boolean);
+              const snap = await roomRef(st.mp.roomCode).child('songBank').get();
+              if (!snap.exists() || !Array.isArray(snap.val()) || snap.val().length < cleanBank.length) {
+                await roomRef(st.mp.roomCode).child('songBank').set(cleanBank);
+              }
+            }
+          } catch (err) {
+            setMp('Kunde inte starta om multiplayer: ' + (err?.message || String(err)));
+          }
+        }
+        patchedStartMultiplayerQuizV15.__v15Patched = true;
+        window.startMultiplayerQuiz = patchedStartMultiplayerQuizV15;
+        try { startMultiplayerQuiz = patchedStartMultiplayerQuizV15; } catch {}
+      }
+      function bindStartButton() {
+        const btn = $('mpStartBtn');
+        if (!btn || btn.__v15Bound) return;
+        btn.__v15Bound = true;
+        // Capture: stoppa äldre start-handlers som fastnar på finished-läget.
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          patchStart();
+          window.startMultiplayerQuiz();
+        }, true);
+      }
+      function init() { patchStart(); bindStartButton(); }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+      else init();
+      window.addEventListener('pageshow', init);
     })();
   </script>
 
