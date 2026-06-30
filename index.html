@@ -560,6 +560,197 @@
       .ownTimelineDock .tlYear{font-size:.63rem!important;}
     }
 
+
+    /* v27: tydligare luckor vid drag + cover-only egen tidslinje */
+    :root{--ownH:178px!important;}
+    body.playingMode{padding-bottom:calc(var(--ownH) + 16px)!important;}
+
+    body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot),
+    body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot).selected,
+    body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot):hover{
+      width:24px!important;
+      min-width:24px!important;
+      height:134px!important;
+      min-height:134px!important;
+      margin:0 2px!important;
+      padding:0!important;
+      opacity:1!important;
+      display:grid!important;
+      place-items:center!important;
+      border:1px dashed rgba(var(--active-player-rgb,125,211,252),.42)!important;
+      border-radius:14px!important;
+      background:rgba(var(--active-player-rgb,125,211,252),.055)!important;
+      box-shadow:none!important;
+      transform:none!important;
+      overflow:hidden!important;
+      transition:width .14s ease,min-width .14s ease,background .14s ease,border-color .14s ease!important;
+    }
+    body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot)::after{
+      content:''!important;
+      display:block!important;
+      width:3px!important;
+      height:52%!important;
+      border-radius:999px!important;
+      background:rgba(var(--active-player-rgb,125,211,252),.62)!important;
+    }
+    body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot).active{
+      width:58px!important;
+      min-width:58px!important;
+      border-color:rgba(var(--active-player-rgb,125,211,252),.96)!important;
+      background:rgba(var(--active-player-rgb,125,211,252),.20)!important;
+      box-shadow:0 14px 34px rgba(0,0,0,.22)!important;
+    }
+    body.draggingTimelineCard .activeTimelineArea .tlCard:not(.dragging){
+      transform:translateY(-1px)!important;
+      transition:transform .14s ease!important;
+    }
+
+    .ownTimelineDock{
+      height:var(--ownH)!important;
+      min-height:var(--ownH)!important;
+      padding:10px 150px 18px!important;
+      overflow:hidden!important;
+    }
+    .ownTimelineDock .timelineHeader{
+      display:grid!important;
+      place-items:center!important;
+      justify-content:center!important;
+      text-align:center!important;
+      width:100%!important;
+      margin:0 0 8px!important;
+      padding:0!important;
+    }
+    .ownTimelineDock .timelineHeader>div,
+    .ownTimelineDock .timelineHeader h2{
+      width:100%!important;
+      max-width:none!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+      text-align:center!important;
+    }
+    .ownTimelineDock .timelineHeader h2{font-size:1.04rem!important;line-height:1.1!important;}
+    .ownTimelineDock .timeline{
+      height:132px!important;
+      min-height:132px!important;
+      padding:0!important;
+      gap:10px!important;
+      overflow:hidden!important;
+      scrollbar-width:none!important;
+      justify-content:center!important;
+      align-items:center!important;
+      flex-wrap:nowrap!important;
+    }
+    .ownTimelineDock .timeline::-webkit-scrollbar{display:none!important;}
+    .ownTimelineDock .tlCard{
+      position:relative!important;
+      flex:1 1 0!important;
+      width:auto!important;
+      min-width:74px!important;
+      max-width:132px!important;
+      height:132px!important;
+      min-height:132px!important;
+      border-radius:16px!important;
+      padding:0!important;
+      overflow:hidden!important;
+      background:#101827!important;
+      border:1px solid rgba(255,255,255,.18)!important;
+      box-shadow:0 12px 30px rgba(0,0,0,.24)!important;
+    }
+    .ownTimelineDock .tlCard .cover{
+      display:block!important;
+      position:absolute!important;
+      inset:0!important;
+      z-index:0!important;
+      width:100%!important;
+      height:100%!important;
+      min-height:100%!important;
+      border-radius:inherit!important;
+      border:0!important;
+    }
+    .ownTimelineDock .tlCard .cover img{
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      display:block!important;
+    }
+    .ownTimelineDock .tlTag,
+    .ownTimelineDock .tlCardTitle,
+    .ownTimelineDock .tlArtist,
+    .ownTimelineDock .legend{
+      display:none!important;
+    }
+    .ownTimelineDock .tlYear,
+    .ownTimelineDock .tlYear.yearHidden{
+      position:absolute!important;
+      left:0!important;
+      right:0!important;
+      bottom:0!important;
+      z-index:2!important;
+      height:45%!important;
+      margin:0!important;
+      padding:28px 0 9px!important;
+      display:flex!important;
+      align-items:flex-end!important;
+      justify-content:center!important;
+      border:0!important;
+      border-radius:0!important;
+      background:linear-gradient(to top,rgba(8,13,25,.92) 0%,rgba(8,13,25,.58) 48%,rgba(8,13,25,0) 100%)!important;
+      color:#fff!important;
+      font-size:.92rem!important;
+      font-weight:950!important;
+      letter-spacing:-.02em!important;
+      text-shadow:0 2px 8px rgba(0,0,0,.85)!important;
+    }
+
+    @media(max-width:920px){
+      :root{--ownH:156px!important;}
+      .ownTimelineDock{padding-left:10px!important;padding-right:10px!important;height:var(--ownH)!important;min-height:var(--ownH)!important;}
+      .ownTimelineDock .timelineHeader{margin-bottom:6px!important;}
+      .ownTimelineDock .timelineHeader h2{font-size:.96rem!important;}
+      .ownTimelineDock .timeline{height:112px!important;min-height:112px!important;gap:6px!important;overflow:hidden!important;justify-content:center!important;}
+      .ownTimelineDock .tlCard{max-width:112px!important;min-width:0!important;height:112px!important;min-height:112px!important;border-radius:14px!important;}
+      .ownTimelineDock .tlYear,.ownTimelineDock .tlYear.yearHidden{font-size:.78rem!important;padding-bottom:7px!important;}
+      body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot){height:116px!important;min-height:116px!important;width:20px!important;min-width:20px!important;}
+      body.draggingTimelineCard .activeTimelineArea .dropSlot:not(.emptySlot).active{width:48px!important;min-width:48px!important;}
+    }
+
+    @media(max-width:560px){
+      .ownTimelineDock .timeline{gap:4px!important;}
+      .ownTimelineDock .tlCard{max-width:96px!important;min-width:0!important;}
+      .ownTimelineDock .tlYear,.ownTimelineDock .tlYear.yearHidden{font-size:.70rem!important;}
+    }
+
+
+    /* v28: begränsa väldigt långa låttitlar så layouten inte går sönder */
+    .drawCard:not(.cardNoTitle) .trackTitle{
+      display:-webkit-box!important;
+      -webkit-box-orient:vertical!important;
+      -webkit-line-clamp:3!important;
+      overflow:hidden!important;
+      overflow-wrap:anywhere!important;
+      word-break:break-word!important;
+      max-height:3.1em!important;
+    }
+    .activeTimelineArea .tlCardTitle,
+    .resultTimeline .tlCardTitle{
+      display:-webkit-box!important;
+      -webkit-box-orient:vertical!important;
+      -webkit-line-clamp:2!important;
+      overflow:hidden!important;
+      overflow-wrap:anywhere!important;
+      word-break:break-word!important;
+      max-height:2.1em!important;
+      min-height:0!important;
+    }
+    .activeTimelineArea .tlCard > div,
+    .resultTimeline .tlCard > div{
+      min-height:0!important;
+    }
+    .activeTimelineArea .tlCard .cover,
+    .resultTimeline .tlCard .cover{
+      flex:0 0 auto!important;
+    }
+
   </style>
 </head>
 <body>
@@ -569,7 +760,7 @@
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div></div><div class="timeline" id="ownTimeline"></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton" id="profileButton" type="button"><span class="avatarDot"></span><span><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in med Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v26</span></div></div>
+  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v28</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -578,7 +769,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v26';
+  const VERSION = 'timeline-game-v28';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
@@ -1029,7 +1220,7 @@
       div.className='playerTile'+(p.id===roomData?.game?.turnPlayerId?' active':'')+(roomData?.game?.winnerId===p.id?' winner':'')+(p.id===viewedTimelinePlayerId?' viewing':'');
       div.style.setProperty('--player-rgb', playerRgb(p.id));
       div.title='Visa '+(p.name||'spelarens')+' tidslinje';
-      div.innerHTML='<div class="playerName">'+esc(p.name||'Spelare')+'</div><div class="playerScore">'+lockedCount(p)+'<span class="scoreLabel"> / '+WIN_SCORE+'</span></div><div class="small">'+pendingCount(p)+' gula kort riskeras</div>';
+      div.innerHTML='<div class="playerName">'+esc(p.name||'Spelare')+'</div><div class="playerScore">'+lockedCount(p)+'<span class="scoreLabel"> / '+WIN_SCORE+'</span></div>';
       div.addEventListener('click',()=>{ viewedTimelinePlayerId=p.id; localStorage.setItem(VIEWED_TIMELINE_KEY,p.id); renderPlayers(); renderOwnTimeline(); });
       els.playerStrip.appendChild(div);
     });
