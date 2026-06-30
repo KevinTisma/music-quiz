@@ -2213,7 +2213,7 @@ Jolene;Dolly Parton;1973"></textarea>
   }
 ];
 
-    const DEFAULT_PLAYLIST_ID = 'https://open.spotify.com/playlist/5FWRrXmyfLrg2Z9T7F1XfU?si=46d766045c5d47a8';
+    const DEFAULT_PLAYLIST_ID = '6AkPSXrefOXADb7onndgvp';
 
     // Fyll i ditt Spotify Client ID här om du vill att sidan alltid ska ha det förifyllt.
     // Lägg INTE in Client Secret här. Client Secret ska aldrig ligga i en publik HTML-fil.
@@ -2910,6 +2910,64 @@ Jolene;Dolly Parton;1973"></textarea>
       }
       while (options.size < 4) {
         options.add(correctYear + Math.floor(Math.random() * 15) - 7);
+      }
+      return shuffle([...options]);
+    }
+
+    function generateMultiplayerOptions(correctYear, sourceSongs = []) {
+      const year = Number(correctYear);
+      const allYears = [...new Set((sourceSongs.length ? sourceSongs : state.songs)
+        .map(s => Number(s.year))
+        .filter(y => Number.isInteger(y) && y >= 1900 && y <= 2100))]
+        .sort((a, b) => a - b);
+
+      const options = new Set([year]);
+      const addIfValid = (candidate) => {
+        const y = Number(candidate);
+        if (Number.isInteger(y) && y >= 1900 && y <= 2100 && y !== year) options.add(y);
+      };
+
+      if (year >= 2000) {
+        // Moderna låtar ska kännas svårare: alternativen ligger nära varandra.
+        const closeFromPlaylist = allYears
+          .filter(y => y !== year && Math.abs(y - year) <= 4)
+          .sort((a, b) => Math.abs(a - year) - Math.abs(b - year) || a - b);
+        for (const y of closeFromPlaylist) {
+          if (options.size >= 4) break;
+          options.add(y);
+        }
+        const offsets = shuffle([-1, 1, -2, 2, -3, 3, -4, 4, -5, 5]);
+        for (const offset of offsets) {
+          if (options.size >= 4) break;
+          addIfValid(year + offset);
+        }
+      } else {
+        // Äldre låtar får mer luft mellan alternativen så de inte blir onödigt petiga.
+        const spacedFromPlaylist = allYears
+          .filter(y => y !== year)
+          .filter(y => {
+            const diff = Math.abs(y - year);
+            return diff >= 4 && diff <= 18;
+          })
+          .sort((a, b) => Math.abs(Math.abs(a - year) - 9) - Math.abs(Math.abs(b - year) - 9) || a - b);
+        for (const y of spacedFromPlaylist) {
+          if (options.size >= 4) break;
+          options.add(y);
+        }
+        const offsets = shuffle([-5, 5, -7, 7, -9, 9, -12, 12, -15, 15, -18, 18]);
+        for (const offset of offsets) {
+          if (options.size >= 4) break;
+          addIfValid(year + offset);
+        }
+      }
+
+      // Sista fallback om spellistan har få unika årtal.
+      let guard = 0;
+      while (options.size < 4 && guard < 200) {
+        guard++;
+        const range = year >= 2000 ? 5 : 20;
+        const offset = Math.floor(Math.random() * (range * 2 + 1)) - range;
+        if (offset !== 0) addIfValid(year + offset);
       }
       return shuffle([...options]);
     }
@@ -3977,13 +4035,30 @@ Jolene;Dolly Parton;1973"></textarea>
         } catch (err) {
           if (err.status !== 429 || attempt === 5) throw err;
           const waitSeconds = Math.max(err.retryAfter || 0, 8);
-          setSpotifyStatus(`${actionText}. Spotify rate limit. Väntar ${waitSeconds} sekunder och fortsätter automatiskt...`);
+          setSpotifyStatus(`${actionText}. Spotify rate limit. Väntar ${waitSeconds} sekunder och fortsätter automatiskt. Det här är normalt om flera hämtningar gjorts nyss.`);
           await sleep(waitSeconds * 1000);
         }
       }
     }
 
-    async function fetchFullPlaylistFromSpotify() {
+    function getUsablePlaylistCache(playlistId) {
+      const cache = readLocal(LS.playlistCache, null);
+      if (!cache || !Array.isArray(cache.songs) || !cache.songs.length) return null;
+      if (playlistId && cache.playlistId && String(cache.playlistId) !== String(playlistId)) return null;
+      const usableSongs = cache.songs.filter(s => s && s.spotifyUri && Number.isInteger(Number(s.year)));
+      if (!usableSongs.length) return null;
+      return { ...cache, songs: usableSongs };
+    }
+
+    function usePlaylistCacheForSinglePlayer(cache, statusPrefix = 'Använder sparad spellista') {
+      writeLocal(LS.playlistCache, { ...cache, fetchedAt: cache.fetchedAt || Date.now() });
+      loadSongs();
+      patchCurrentQuizFromLoadedSongs();
+      setSpotifyStatus(`${statusPrefix}: ${cache.songs.length} låtar finns lokalt. Starta nytt quiz så används listan.`);
+      return cache;
+    }
+
+    async function fetchFullPlaylistFromSpotify(forceRefresh = false) {
       try {
         setSpotifyStatus('Hämtar spellistan från Spotify...');
         els.syncPlaylistBtn.disabled = true;
@@ -3991,10 +4066,16 @@ Jolene;Dolly Parton;1973"></textarea>
         if (!playlistId) return;
         localStorage.setItem(LS.playlistId, playlistId);
 
+        const cached = getUsablePlaylistCache(playlistId);
+        if (cached && !forceRefresh && cached.songs.length >= 25) {
+          usePlaylistCacheForSinglePlayer(cached, 'Spellistan var redan sparad');
+          return;
+        }
+
         const fetched = [];
         const seenTrackUris = new Set();
         const seenPageSignatures = new Set();
-        const pageLimit = 10; // Spotify accepterar 10 säkert i nya Web API-läget.
+        const pageLimit = 50; // Playlist Items tillåter 50. Färre sid-anrop minskar risken för rate limit.
         let offset = 0;
         let total = null;
         let pages = 0;
@@ -4058,6 +4139,7 @@ Jolene;Dolly Parton;1973"></textarea>
           offset += items.length;
           const totalText = total && total > offset ? ` av ${total}` : '';
           setSpotifyStatus(`Hämtar spellistan från Spotify... ${offset}${totalText} poster lästa, ${fetched.length} låtar sparade.`);
+          await sleep(250);
 
           // Spara delresultat så inget tappas om token/rate limit strular mitt i.
           if (pages % 5 === 0) {
@@ -4501,7 +4583,7 @@ Jolene;Dolly Parton;1973"></textarea>
         }
         const song = sanitizeMultiplayerSong(quiz[nextIndex]);
         if (!song) throw new Error('Kunde inte läsa nästa låt i multiplayer-listan.');
-        const options = generateOptions(song.year);
+        const options = generateMultiplayerOptions(song.year, quiz);
         const durationMs = Math.max(30000, Number(song.durationMs) || 30000);
         const startAt = mpNow();
         const updates = {
@@ -4529,7 +4611,7 @@ Jolene;Dolly Parton;1973"></textarea>
       if (!song) return;
       state.quiz = [song];
       state.currentIndex = 0;
-      state.options = room.options || generateOptions(song.year);
+      state.options = room.options || generateMultiplayerOptions(song.year, room.quiz || []);
       state.mode = 'quiz';
       const player = room.players?.[state.mp.player?.id] || {};
       const answered = Boolean(player.answer);
@@ -4574,10 +4656,23 @@ Jolene;Dolly Parton;1973"></textarea>
 
     function calculateMultiplayerPoints(guess, correctYear, answerMs, durationMs) {
       const delta = Math.abs(Number(guess) - Number(correctYear));
-      const yearPoints = Math.max(0, 800 - delta * 80);
       const speedWindow = Math.max(10000, Math.min(Number(durationMs) || 30000, 60000));
-      const speedPoints = Math.max(0, Math.round(200 * (1 - Math.min(answerMs, speedWindow) / speedWindow)));
-      return Math.round(yearPoints + speedPoints);
+      const speedRatio = 1 - Math.min(Math.max(Number(answerMs) || 0, 0), speedWindow) / speedWindow;
+
+      // Mer dramatisk poängkurva: nära svar premieras hårt, stora missar ger nästan inget.
+      let accuracyPoints = 0;
+      if (delta === 0) accuracyPoints = 1200;
+      else if (delta === 1) accuracyPoints = 850;
+      else if (delta === 2) accuracyPoints = 600;
+      else if (delta === 3) accuracyPoints = 400;
+      else if (delta <= 5) accuracyPoints = 250 - (delta - 4) * 60;
+      else if (delta <= 10) accuracyPoints = 120 - (delta - 6) * 18;
+      else if (delta <= 15) accuracyPoints = 25;
+      else accuracyPoints = 0;
+
+      const accuracyFactor = delta === 0 ? 1 : delta === 1 ? 0.75 : delta === 2 ? 0.55 : delta <= 5 ? 0.3 : 0;
+      const speedPoints = Math.round(350 * speedRatio * accuracyFactor);
+      return Math.max(0, Math.round(accuracyPoints + speedPoints));
     }
 
     async function submitMultiplayerAnswer(year) {
@@ -5038,7 +5133,7 @@ Jolene;Dolly Parton;1973"></textarea>
   <script>
     // Multiplayer layout and no-host patch v6
     (function () {
-      const DEFAULT_PLAYLIST_ID_V6 = 'https://open.spotify.com/playlist/5FWRrXmyfLrg2Z9T7F1XfU?si=29585c6c43da4ac9';
+      const DEFAULT_PLAYLIST_ID_V6 = '6AkPSXrefOXADb7onndgvp';
       const DEFAULT_FIREBASE_TEXT_V6 = JSON.stringify({ databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' }, null, 2);
       function $(id) { return document.getElementById(id); }
       function setHidden(el, hidden) { if (el) el.classList.toggle('hidden', Boolean(hidden)); }
