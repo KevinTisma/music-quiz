@@ -26,22 +26,26 @@
     .rulesFooter{position:static;transform:none;width:min(920px,100%);margin:0 auto;text-align:center;color:var(--muted);font-size:.72rem;line-height:1.22}.profileArea{position:fixed;left:12px;bottom:14px;z-index:50}.profileButton{display:flex;align-items:center;gap:10px;min-width:126px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);padding:9px 12px;box-shadow:var(--shadow)}.profileButton.active{border-color:rgba(125,211,252,.8)}.profileButton b{display:block;font-size:.88rem}.profileButton small{display:block;color:var(--muted);font-size:.72rem}.avatarDot{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 0 0 3px rgba(255,255,255,.08)}.profileMenu{position:absolute;left:0;bottom:56px;width:310px;background:rgba(19,26,43,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:22px;padding:14px;box-shadow:var(--shadow);display:none}.profileMenu.open{display:block}.profileMenu h3{margin:0 0 4px}.playlistArea{position:fixed;right:12px;bottom:14px;z-index:50}.playlistButton{display:flex;align-items:center;gap:10px;min-width:150px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);padding:9px 12px;box-shadow:var(--shadow)}.playlistButton b{display:block;font-size:.88rem}.playlistButton small{display:block;color:var(--muted);font-size:.72rem}.playlistIcon{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ok),var(--accent));box-shadow:0 0 0 3px rgba(255,255,255,.08);display:grid;place-items:center;color:#07111d;font-weight:950}.playlistMenu{position:absolute;right:0;bottom:56px;width:360px;background:rgba(19,26,43,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:22px;padding:14px;box-shadow:var(--shadow);display:none}.playlistMenu.open{display:block}.playlistMenu h3{margin:0 0 4px}.playlistMenu .setupGrid{grid-template-columns:1fr}.playlistMenu .actions{margin-top:10px}.playerBoard,.boardGrid{display:none!important}
     @media(max-width:920px){:root{--dockH:214px;--ownH:170px}.appTop{position:static;transform:none;width:auto;margin:14px;display:block}.setupPanel{width:auto;margin-top:12px}.gameShell{padding-top:20px}.ownTimelineDock{padding:10px 12px;bottom:var(--dockH)}.bottomDock{padding:10px 10px 12px}.playerStrip{grid-template-columns:repeat(2,minmax(0,1fr))}.rulesFooter{width:calc(100vw - 20px)}.profileArea{bottom:14px}.profileMenu{bottom:56px}.playlistArea{right:12px;bottom:14px}.playlistMenu{right:0;bottom:56px;width:min(360px,calc(100vw - 24px))}}
 
+    /* v4 layout and interaction refinements */
+    .appTop{display:none!important}
+    .gameShell{padding-top:24px}
+    .drawCard{touch-action:none;user-select:none;will-change:transform,left,top}.drawCard.dragging{opacity:1!important;transform:scale(.88) rotate(var(--drag-rot,0deg))!important;transition:transform 90ms linear, box-shadow .12s ease!important;box-shadow:0 34px 90px rgba(0,0,0,.62);cursor:grabbing}.drawCard.wrongReveal{border-color:rgba(255,107,107,.95)!important;background:linear-gradient(145deg,rgba(255,107,107,.34),rgba(255,107,107,.18) 48%,rgba(255,255,255,.05))!important;animation:wrongShake .42s ease-in-out 0s 2;box-shadow:0 0 0 4px rgba(255,107,107,.18),0 34px 90px rgba(0,0,0,.55)}@keyframes wrongShake{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-10px) rotate(-2deg)}40%{transform:translateX(9px) rotate(2deg)}60%{transform:translateX(-7px) rotate(-1.4deg)}80%{transform:translateX(5px) rotate(1deg)}}
+    .resultActions #playSpotifyBtn{display:none!important}
+    .settingChecks{display:grid;gap:8px;margin:12px 0}.checkLine{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:.9rem}.checkLine input{width:auto}.playlistMenu .startRow{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}.playlistMenu .startRow button{width:100%}.startRow .danger{background:rgba(255,107,107,.18);border-color:rgba(255,107,107,.5)}
+    .tlCard{width:148px;min-width:148px;min-height:218px;border-radius:22px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(145deg,rgba(125,211,252,.16),rgba(192,132,252,.10) 48%,rgba(255,255,255,.04));overflow:hidden}.tlCard .cover{border-radius:15px}.tlCardTitle{font-size:.86rem;line-height:1.02;margin-top:8px;padding-right:0}.tlArtist{font-size:.72rem;line-height:1.12}.tlYear{font-size:.9rem;margin-top:7px}.tlTag{left:8px;right:auto;top:8px;z-index:2}.activeTimelineArea .tlCard{width:162px;min-width:162px;min-height:236px}.ownTimelineDock .tlCard{width:132px;min-width:132px;min-height:198px}.ownTimelineDock .tlCardTitle{font-size:.76rem}.ownTimelineDock .tlArtist{font-size:.68rem}.dropSlot{width:34px;min-width:34px}.dropSlot.active,.dropSlot:hover,.dropSlot.selected{width:162px}
+    .cardNoCover .cover{display:none}.cardNoTitle .trackTitle,.cardNoTitle .tlCardTitle{display:none}.cardNoArtist .trackArtist,.cardNoArtist .tlArtist{display:none}
+    @media(max-width:700px){.currentCardZone{min-height:270px}.drawCard,.deckBack{width:min(240px,80vw);min-height:292px}.trackTitle{font-size:1.25rem}.activeTimelineArea .tlCard{width:136px;min-width:136px;min-height:205px}.ownTimelineDock .tlCard{width:122px;min-width:122px;min-height:184px}.dropSlot.active,.dropSlot:hover,.dropSlot.selected{width:136px}}
+
   </style>
 </head>
 <body>
 
-  <div class="appTop">
-    <div class="logoBlock">
-      <h1>Music Timeline</h1>
-      <p>Lägg låten på rätt plats i tidslinjen. Fortsätt för fler poäng eller lås in innan du riskerar allt.</p>
-    </div>
-
-  </div>
-  <main class="gameShell"><div class="centerStage"><div class="turnTitle"><div class="eyebrow">Aktiv spelare</div><div class="bigMessage" id="turnTitle">Ingen runda startad</div><p class="small" id="turnSub">Välj spellista och starta spelet.</p></div><div class="currentCardZone" id="drawCardWrap"></div><div class="resultActions"><button class="secondary" id="drawCardBtn">Dra nytt kort</button><button class="secondary" id="playSpotifyBtn">Spela i Spotify</button><button class="primary" id="confirmPlacementBtn">Godkänn placering</button><button class="success" id="lockInBtn">Lås kort</button></div><p class="status" id="gameStatus"></p><section class="activeTimelineArea"><div class="timelineHeader"><div><h2 id="activeTimelineTitle">Aktiv spelares tidslinje</h2><p class="tiny">Dra kortet till en lucka. Korten flyttar sig visuellt när platsen skapas.</p></div><span class="pill" id="roundPill">Runda: 0 kort riskeras</span></div><div class="timeline" id="activeTimeline"></div></section></div></main>
+  <div class="appTop" aria-hidden="true"></div>
+  <main class="gameShell"><div class="centerStage"><div class="turnTitle"><div class="eyebrow">Aktiv spelare</div><div class="bigMessage" id="turnTitle">Ingen runda startad</div><p class="small" id="turnSub">Välj spellista och starta spelet.</p></div><div class="currentCardZone" id="drawCardWrap"></div><div class="resultActions"><button class="secondary" id="drawCardBtn">Dra nytt kort</button><button class="primary" id="confirmPlacementBtn">Godkänn placering</button><button class="success" id="lockInBtn">Lås kort</button></div><p class="status" id="gameStatus"></p><section class="activeTimelineArea"><div class="timelineHeader"><div><h2 id="activeTimelineTitle">Aktiv spelares tidslinje</h2><p class="tiny">Dra kortet till en lucka. Korten flyttar sig visuellt när platsen skapas.</p></div><span class="pill" id="roundPill">Runda: 0 kort riskeras</span></div><div class="timeline" id="activeTimeline"></div></section></div></main>
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></div><div class="timeline" id="ownTimeline"></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
-  <div class="profileArea"><button class="profileButton" id="profileButton" type="button"><span class="avatarDot"></span><span><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button><button class="secondary" id="readyBtn">Redo</button></div><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">♪</span><span><b>Spellista</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spotify-spellista</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select></div></div><div class="actions"><button class="primary" id="importPlaylistBtn">Hämta</button><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary" id="selectPlaylistBtn">Använd</button><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v3</span></div></div>
+  <div class="profileArea"><button class="profileButton" id="profileButton" type="button"><span class="avatarDot"></span><span><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
+  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select></div></div><div class="actions"><button class="primary" id="importPlaylistBtn">Hämta</button><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v4</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -50,22 +54,24 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v3';
+  const VERSION = 'timeline-game-v4';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
   const ROOM_ID = 'active';
   const WIN_SCORE = 7;
   const LS = {
-    token:'hitster_spotify_token_v3', verifier:'hitster_spotify_pkce_verifier_v3', oauthState:'hitster_spotify_oauth_state_v3', oauthPayload:'hitster_spotify_oauth_payload_v4', playerId:'timeline_player_id_v1', playerName:'timeline_player_name_v1', rateLimitUntil:'hitster_spotify_rate_limit_until_v1'
+    token:'hitster_spotify_token_v3', verifier:'hitster_spotify_pkce_verifier_v3', oauthState:'hitster_spotify_oauth_state_v3', oauthPayload:'hitster_spotify_oauth_payload_v4', playerId:'timeline_player_id_v1', playerName:'timeline_player_name_v1', rateLimitUntil:'hitster_spotify_rate_limit_until_v1', autoplay:'timeline_autoplay_spotify_v1'
   };
 
   let app = null, db = null, roomData = {}, unsubscribeRoom = null;
   let player = { id:getPlayerId(), name:localStorage.getItem(LS.playerName) || 'Spelare', ready:false };
   let dragCardId = null;
+  let lastAutoplayCardId = null;
+  let wrongRevealTimeout = null;
 
   const $ = id => document.getElementById(id);
   const els = {
-    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), readyBtn:$('readyBtn'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub')
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle')
   };
 
   function redirectUri(){ return window.location.origin + window.location.pathname; }
@@ -82,6 +88,20 @@
   function isMeActive(){ return roomData?.game?.turnPlayerId === player.id && roomData?.game?.status === 'playing'; }
   function activePlayer(){ return roomData?.players?.[roomData?.game?.turnPlayerId] || null; }
   function currentCard(){ return roomData?.game?.currentCard || null; }
+  function cardVisibility(){
+    return roomData?.game?.cardVisibility || {cover:true,artist:true,title:true};
+  }
+  function cardVisibilityClass(){
+    const v = cardVisibility();
+    return (v.cover===false?' cardNoCover':'') + (v.artist===false?' cardNoArtist':'') + (v.title===false?' cardNoTitle':'');
+  }
+  function readVisibilityToggles(){
+    return {cover:!!els.showCoverToggle?.checked, artist:!!els.showArtistToggle?.checked, title:!!els.showTitleToggle?.checked};
+  }
+  function isWrongRevealActive(){
+    const wr = roomData?.game?.wrongReveal;
+    return !!(wr && Number(wr.until || 0) > Date.now());
+  }
   function proposedIndex(){ const n = roomData?.game?.proposedIndex; return Number.isInteger(n) ? n : null; }
   function cardId(card){ return card?.id || card?.uri || (card?.title + '-' + card?.artist + '-' + card?.year); }
 
@@ -218,7 +238,7 @@
     const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
     const updates={};
     allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; });
-    updates.game={status:'playing',startedAt:firebase.database.ServerValue.TIMESTAMP,turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null};
+    updates.game={status:'playing',startedAt:firebase.database.ServerValue.TIMESTAMP,turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
     await roomRef().update(updates);
   }
   async function drawCard(){
@@ -228,7 +248,7 @@
     const deck=Array.isArray(game.deck)?[...game.deck]:[];
     if(!deck.length){ status(els.gameStatus,'Kortleken är slut. Lås in eller starta om.','warn'); return; }
     const card=deck.shift();
-    await roomRef('game').update({deck,currentCard:card,proposedIndex:null,message:'Dra kortet till rätt plats i tidslinjen.'});
+    await roomRef('game').update({deck,currentCard:card,proposedIndex:null,wrongReveal:null,message:'Dra kortet till rätt plats i tidslinjen.'});
     playCurrentSpotify(false);
   }
   async function setProposedIndex(index){
@@ -271,8 +291,16 @@
       const locked=timeline.filter(c=>c.status==='locked');
       const returnCards=[...pending,card].map(c=>{ const x={...c}; delete x.status; return x; });
       const deck=[...(Array.isArray(game.deck)?game.deck:[]),...shuffle(returnCards)];
-      await roomRef().update({['players/'+player.id+'/timeline']:locked,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/turnPlayerId':nextPlayerId(player.id),'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
-      status(els.gameStatus,'Fel. Du förlorade gula kort från rundan.','bad');
+      const nextId = nextPlayerId(player.id);
+      const until = Date.now() + 5000;
+      await roomRef('game').update({wrongReveal:{card:{...card,status:'wrong'},playerId:player.id,until,year:card.year},message:'Fel placering. Rätt år var '+card.year+'. Nästa spelares tur om 5 sekunder.'});
+      status(els.gameStatus,'Fel. Rätt år var '+card.year+'. Du förlorar gula kort från rundan.','bad');
+      setTimeout(async()=>{
+        const snap = await roomRef('game/wrongReveal').get();
+        const wr = snap.val();
+        if(!wr || wr.until !== until) return;
+        await roomRef().update({['players/'+player.id+'/timeline']:locked,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
+      }, 5000);
     }
   }
   async function lockIn(){
@@ -298,6 +326,15 @@
       if(showStatus) status(els.gameStatus,'Spelar aktuell låt i Spotify.','ok');
     }catch(err){ console.error(err); if(showStatus) status(els.gameStatus,'Kunde inte spela i Spotify: '+err.message,'bad'); }
   }
+  async function endGame(){
+    connectFirebase();
+    const updates = {'game':null,'songBank':null,'selectedPlaylistId':null,'playlistImportDebug':null};
+    const players = roomData.players || {};
+    Object.keys(players).forEach(id => { updates['players/'+id+'/timeline'] = []; updates['players/'+id+'/score'] = 0; updates['players/'+id+'/ready'] = false; });
+    await roomRef().update(updates);
+    status(els.playlistStatus,'Spelet är avslutat och sessionens låtdata är rensad.','ok');
+  }
+
   async function resetRoom(){
     connectFirebase();
     if(!confirm('Resetta rummet? Detta tar bort spel, spelare och sparade spellistor i rooms/active.')) return;
@@ -308,7 +345,7 @@
     setText(els.redirectUriText, redirectUri());
     els.playerNameInput.value = player.name;
     refreshPlaylistsFromRoom();
-    renderTurn(); renderPlayers(); renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); renderProfile(); renderBoards(); updateButtons();
+    renderTurn(); renderPlayers(); renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); renderProfile(); renderBoards(); updateButtons(); handleAutoplay(); scheduleWrongRevealAdvance();
   }
   function refreshPlaylistsFromRoom(){
     const playlists=roomData.savedPlaylists||{};
@@ -319,6 +356,23 @@
     keys.forEach(k=>{ const p=playlists[k]; const opt=document.createElement('option'); opt.value=k; opt.textContent=(p.name||k)+' ('+(p.songCount || (p.songs?Object.keys(p.songs).length:0))+' låtar)'; els.savedPlaylistSelect.appendChild(opt); });
     if(current && playlists[current]) els.savedPlaylistSelect.value=current; else if(roomData.selectedPlaylistId && playlists[roomData.selectedPlaylistId]) els.savedPlaylistSelect.value=roomData.selectedPlaylistId;
   }
+  function handleAutoplay(){
+    const card = currentCard();
+    if(!card || isWrongRevealActive()) return;
+    if(!els.autoPlaySpotifyToggle?.checked) return;
+    const id = card.drawId || cardId(card);
+    if(id === lastAutoplayCardId) return;
+    lastAutoplayCardId = id;
+    playCurrentSpotify(false);
+  }
+  function scheduleWrongRevealAdvance(){
+    const wr = roomData?.game?.wrongReveal;
+    if(wrongRevealTimeout){ clearTimeout(wrongRevealTimeout); wrongRevealTimeout = null; }
+    if(!wr || !wr.until) return;
+    const ms = Number(wr.until) - Date.now();
+    if(ms > 0){ wrongRevealTimeout = setTimeout(()=>render(), ms + 80); }
+  }
+
   function renderTurn(){
     const game=roomData.game||{}, ap=activePlayer();
     if(game.status==='finished'){
@@ -342,7 +396,7 @@
   }
 
   function bindCardPointerDrag(cardEl, card){
-    let startX=0,startY=0,offsetX=0,offsetY=0,dragging=false,original={};
+    let offsetX=0,offsetY=0,dragging=false,lastX=0,rot=0,original={};
     function clearActiveSlots(){ document.querySelectorAll('.dropSlot').forEach(s=>s.classList.remove('active')); }
     function slotAt(x,y){
       const oldPointer = cardEl.style.pointerEvents;
@@ -352,11 +406,11 @@
       return el?.closest?.('.dropSlot');
     }
     cardEl.addEventListener('pointerdown', e=>{
-      if(!isMeActive() || !currentCard()) return;
+      if(!isMeActive() || !currentCard() || isWrongRevealActive()) return;
       e.preventDefault();
       const rect=cardEl.getBoundingClientRect();
-      startX=e.clientX; startY=e.clientY; offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top;
-      original={position:cardEl.style.position,left:cardEl.style.left,top:cardEl.style.top,width:cardEl.style.width,zIndex:cardEl.style.zIndex,pointerEvents:cardEl.style.pointerEvents,transition:cardEl.style.transition};
+      offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top; lastX=e.clientX; rot=0;
+      original={position:cardEl.style.position,left:cardEl.style.left,top:cardEl.style.top,width:cardEl.style.width,zIndex:cardEl.style.zIndex,pointerEvents:cardEl.style.pointerEvents,transition:cardEl.style.transition,transform:cardEl.style.transform};
       cardEl.setPointerCapture?.(e.pointerId);
       cardEl.classList.add('dragging');
       cardEl.style.position='fixed';
@@ -364,15 +418,19 @@
       cardEl.style.top=rect.top+'px';
       cardEl.style.width=rect.width+'px';
       cardEl.style.zIndex='9999';
-      cardEl.style.transition='none';
+      cardEl.style.transition='transform 90ms linear, box-shadow .12s ease';
+      cardEl.style.setProperty('--drag-rot','0deg');
       dragCardId=cardId(card);
       dragging=true;
     });
     cardEl.addEventListener('pointermove', e=>{
       if(!dragging) return;
       e.preventDefault();
+      const dx=e.clientX-lastX; lastX=e.clientX;
+      rot = Math.max(-6, Math.min(6, rot*0.72 + dx*0.18));
       cardEl.style.left=(e.clientX-offsetX)+'px';
       cardEl.style.top=(e.clientY-offsetY)+'px';
+      cardEl.style.setProperty('--drag-rot', rot.toFixed(2)+'deg');
       clearActiveSlots();
       const slot=slotAt(e.clientX,e.clientY);
       if(slot){ slot.classList.add('active'); }
@@ -385,6 +443,7 @@
       clearActiveSlots();
       dragCardId=null; dragging=false;
       cardEl.classList.remove('dragging');
+      cardEl.style.removeProperty('--drag-rot');
       Object.assign(cardEl.style, original);
     }
     cardEl.addEventListener('pointerup', end);
@@ -396,9 +455,11 @@
     if(!card){
       els.drawCardWrap.innerHTML='<div class="deckBack"><div>Inget draget kort<br><span class="tiny">Aktiv spelare klickar Dra kort.</span></div></div>'; return;
     }
-    const canDrag=isMeActive();
-    const div=document.createElement('div'); div.className='drawCard'; div.draggable=false; div.dataset.cardId=cardId(card);
-    div.innerHTML='<div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">Årtal dolt</span></div>';
+    const wrong = isWrongRevealActive();
+    const canDrag=isMeActive() && !wrong;
+    const div=document.createElement('div'); div.className='drawCard'+cardVisibilityClass()+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
+    const yearText = wrong ? ('Fel placering · '+esc(card.year)) : 'Årtal dolt';
+    div.innerHTML='<div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
     els.drawCardWrap.innerHTML=''; els.drawCardWrap.appendChild(div);
   }
@@ -429,10 +490,10 @@
     return slot;
   }
   function makeTimelineCard(card){
-    const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked');
-    const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':'Låst';
+    const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked')+cardVisibilityClass();
+    const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
-    div.innerHTML='<span class="tlTag">'+tag+'</span><div class="tlCardTitle">'+esc(card.title)+'</div><div class="tlArtist">'+esc(card.artist)+'</div><div class="tlYear">'+esc(year)+'</div>';
+    div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
     return div;
   }
   function renderOwnTimeline(){
@@ -469,12 +530,14 @@
     });
   }
   function updateButtons(){
-    const connected=!!db, playing=roomData?.game?.status==='playing', meActive=isMeActive(), hasCurrent=!!currentCard(), hasProposal=proposedIndex()!==null, me=roomData.players?.[player.id];
-    els.drawCardBtn.disabled=!meActive || hasCurrent || roomData?.game?.status==='finished';
-    els.confirmPlacementBtn.disabled=!meActive || !hasCurrent || !hasProposal;
-    els.lockInBtn.disabled=!meActive || hasCurrent || !pendingCount(me) || roomData?.game?.status==='finished';
-    els.playSpotifyBtn.disabled=!hasCurrent;
+    const connected=!!db, playing=roomData?.game?.status==='playing', meActive=isMeActive(), hasCurrent=!!currentCard(), hasProposal=proposedIndex()!==null, me=roomData.players?.[player.id], wrong=isWrongRevealActive();
+    els.drawCardBtn.disabled=!meActive || hasCurrent || wrong || roomData?.game?.status==='finished';
+    els.confirmPlacementBtn.disabled=!meActive || !hasCurrent || !hasProposal || wrong;
+    els.lockInBtn.disabled=!meActive || hasCurrent || wrong || !pendingCount(me) || roomData?.game?.status==='finished';
+    if(els.playSpotifyBtn) els.playSpotifyBtn.disabled=!hasCurrent;
     els.startGameBtn.disabled=!connected;
+    if(roomData?.game?.status==='playing'){ els.startGameBtn.textContent='Avsluta spel'; els.startGameBtn.className='danger'; }
+    else { els.startGameBtn.textContent='Starta'; els.startGameBtn.className='primary'; }
   }
   function esc(s){ return String(s ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
 
@@ -487,20 +550,20 @@
     els.connectFirebaseBtn.onclick=()=>{ connectFirebase(); status(els.connectionStatus,'Firebase anslutet.','ok'); };
     els.resetRoomBtn.onclick=resetRoom;
     els.saveNameBtn.onclick=async()=>{ player.name=(els.playerNameInput.value||'Spelare').slice(0,32); localStorage.setItem(LS.playerName,player.name); await upsertPlayer(); };
-    els.readyBtn.onclick=async()=>{ player.ready=!player.ready; await upsertPlayer({ready:player.ready}); };
+    if(els.autoPlaySpotifyToggle){ els.autoPlaySpotifyToggle.checked = localStorage.getItem(LS.autoplay)==='1'; els.autoPlaySpotifyToggle.onchange=()=>localStorage.setItem(LS.autoplay, els.autoPlaySpotifyToggle.checked?'1':'0'); }
     els.importPlaylistBtn.onclick=importPlaylist;
     els.createDemoBtn.onclick=createDemo;
     els.refreshPlaylistsBtn.onclick=refreshPlaylists;
     els.selectPlaylistBtn.onclick=selectPlaylist;
-    els.startGameBtn.onclick=startGame;
+    els.startGameBtn.onclick=()=>{ if(roomData?.game?.status==='playing') endGame(); else startGame(); };
     els.drawCardBtn.onclick=drawCard;
     els.confirmPlacementBtn.onclick=confirmPlacement;
     els.lockInBtn.onclick=lockIn;
-    els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
+    if(els.playSpotifyBtn) els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
   }
 
   async function init(){
-    window.musicTimelineDebug={VERSION,connectFirebase,roomRef,createDemo,startGame,drawCard,confirmPlacement,lockIn,get room(){return roomData},get player(){return player}};
+    window.musicTimelineDebug={VERSION,connectFirebase,roomRef,createDemo,startGame,endGame,drawCard,confirmPlacement,lockIn,get room(){return roomData},get player(){return player}};
     bind();
     try{ await handleSpotifyCallback(); }catch(err){ console.error(err); status(els.connectionStatus,err.message,'bad'); }
     connectFirebase();
