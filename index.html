@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hitster årtalsquiz med Spotify</title>
+  <title>Spotify Årtalsquiz</title>
   <style>
     :root {
       --bg: #10131a;
@@ -181,13 +181,22 @@
     /* Multiplayer v7: no visible room-code/connect section. Active room is automatic. */
     #createRoomBtn, #joinRoomBtn, #leaveRoomBtn { display:none !important; }
 
+
+    /* v19 cleanup and multiplayer hard mode UI */
+    #sourcePill, #savePill { display:none !important; }
+    body[data-app-mode="multi"] header h1 { text-align:center; }
+    .mpBigNext { width:100%; justify-content:center; font-size:1.18rem; padding:16px 18px; margin-top:14px; border-radius:18px; }
+    .hardRevealBox { margin-top:10px; padding:10px 12px; border-radius:14px; background:rgba(251,191,36,.10); border:1px solid rgba(251,191,36,.25); color:var(--text); }
+    .hardHiddenText { opacity:.85; font-style:italic; }
+    .mpAnswerItem .tiny { opacity:.85; }
+
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>Hitster årtalsquiz</h1>
-      <p>Gissa vilket år låten kom ut. Den här versionen kan hämta hela Spotify-spellistan, spara den lokalt och spela rätt låt via Spotify Connect.</p>
+      <h1>Spotify Årtalsquiz</h1>
+      <p>Gissa vilket år låten kom ut. Spela själv eller tillsammans online med Spotify.</p>
       <div class="row">
         <span class="pill" id="sourcePill">Källa: laddar...</span>
         <span class="pill" id="savePill">Sparas lokalt i webbläsaren</span>
@@ -349,6 +358,13 @@
                 <option value="50">50 frågor</option>
                 <option value="100">100 frågor</option>
                 <option value="all">Alla laddade låtar</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="mpGameModeSelect">Mode</label>
+              <select id="mpGameModeSelect">
+                <option value="standard" selected>Standard</option>
+                <option value="hard">Hard</option>
               </select>
             </div>
           </div>
@@ -6621,6 +6637,297 @@ Jolene;Dolly Parton;1973"></textarea>
     })();
   </script>
 
+
+
+  <script>
+    // v19: multiplayer polish: hard mode, no auto-timeout, correct-count standings, bigger next button.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      let hardRevealTimer = null;
+
+      function setMp(text) { const el = $('mpStatus'); if (el) el.textContent = text || ''; }
+      function nowMs() { try { return mpNow(); } catch { return Date.now(); } }
+      function htmlEscape(value) { try { return escapeHtml(value); } catch { return String(value ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); } }
+      function players(room) {
+        try { return playersArray(room).filter(p => p && p.connected !== false); }
+        catch { return Object.entries(room?.players || {}).map(([id,p]) => ({ id, ...p })).filter(p => p && p.connected !== false); }
+      }
+      function cleanSong19(song) {
+        try { return sanitizeMultiplayerSong(song); }
+        catch { return song || null; }
+      }
+      function getMpMode() {
+        return $('mpGameModeSelect')?.value === 'hard' ? 'hard' : 'standard';
+      }
+      function clearHardRevealTimer() {
+        if (hardRevealTimer) clearTimeout(hardRevealTimer);
+        hardRevealTimer = null;
+      }
+      function revealState(room) {
+        const mode = room?.settings?.mpMode || room?.settings?.mode || 'standard';
+        if (mode !== 'hard') return { mode, artist: true, title: true, cover: true, elapsed: 0, stage: 3 };
+        const started = Number(room.questionStartedAt) || nowMs();
+        const elapsed = Math.max(0, nowMs() - started);
+        return {
+          mode,
+          elapsed,
+          stage: elapsed >= 20000 ? 2 : elapsed >= 10000 ? 1 : 0,
+          artist: elapsed >= 10000,
+          title: elapsed >= 20000,
+          cover: elapsed >= 30000
+        };
+      }
+      function renderHardRevealInfo(room, song, answered) {
+        const r = revealState(room);
+        if (r.mode !== 'hard') return '';
+        const next = r.stage === 0 ? 'Artist avslöjas om ' + Math.max(0, 10 - Math.floor(r.elapsed / 1000)) + 's.'
+          : r.stage === 1 ? 'Titel avslöjas om ' + Math.max(0, 20 - Math.floor(r.elapsed / 1000)) + 's.'
+          : r.cover ? 'All information är avslöjad.' : 'Albumomslag avslöjas om ' + Math.max(0, 30 - Math.floor(r.elapsed / 1000)) + 's.';
+        return `<div class="hardRevealBox"><strong>Hard mode</strong><br><span class="small">${answered ? 'Du har svarat.' : next} Ju längre du väntar, desto mer minskar poängen.</span></div>`;
+      }
+      function scheduleHardRevealRefresh(room) {
+        clearHardRevealTimer();
+        if ((room?.settings?.mpMode || room?.settings?.mode) !== 'hard' || room?.status !== 'question') return;
+        hardRevealTimer = setTimeout(() => {
+          try { if (state?.mp?.room?.questionId === room.questionId) window.renderMultiplayerQuestion?.(state.mp.room); }
+          catch {}
+        }, 1000);
+      }
+
+      // Make source/save pills disappear even if older code updates the text.
+      function cleanupHeader() {
+        const sp = $('sourcePill'); if (sp) sp.style.display = 'none';
+        const sv = $('savePill'); if (sv) sv.style.display = 'none';
+        const h = document.querySelector('header h1'); if (h) h.textContent = 'Spotify Årtalsquiz';
+        document.title = 'Spotify Årtalsquiz';
+      }
+
+      // Hard mode scoring: still rewards close answers, but waiting is punished much harder.
+      window.calculateMultiplayerPoints = function calculateMultiplayerPointsV19(guess, correctYear, answerMs, durationMs) {
+        const delta = Math.abs(Number(guess) - Number(correctYear));
+        const mode = state?.mp?.room?.settings?.mpMode || getMpMode();
+        let base = 0;
+        if (delta === 0) base = mode === 'hard' ? 1600 : 1200;
+        else if (delta === 1) base = mode === 'hard' ? 950 : 850;
+        else if (delta === 2) base = mode === 'hard' ? 620 : 600;
+        else if (delta === 3) base = mode === 'hard' ? 360 : 400;
+        else if (delta <= 5) base = mode === 'hard' ? Math.max(80, 240 - (delta - 4) * 80) : 250 - (delta - 4) * 60;
+        else if (delta <= 10) base = mode === 'hard' ? Math.max(0, 80 - (delta - 6) * 20) : 120 - (delta - 6) * 18;
+        else base = 0;
+        const t = Math.max(0, Number(answerMs) || 0) / 1000;
+        if (mode === 'hard') {
+          const timeFactor = t <= 10 ? 1 : t <= 20 ? 0.62 : t <= 30 ? 0.34 : 0.12;
+          const speedBonus = delta === 0 ? Math.max(0, Math.round(450 * Math.max(0, 1 - t / 18))) : delta <= 2 ? Math.max(0, Math.round(200 * Math.max(0, 1 - t / 16))) : 0;
+          return Math.max(0, Math.round(base * timeFactor + speedBonus));
+        }
+        const speedWindow = Math.max(10000, Math.min(Number(durationMs) || 30000, 60000));
+        const speedRatio = 1 - Math.min(Math.max(Number(answerMs) || 0, 0), speedWindow) / speedWindow;
+        const accuracyFactor = delta === 0 ? 1 : delta === 1 ? 0.75 : delta === 2 ? 0.55 : delta <= 5 ? 0.3 : 0;
+        return Math.max(0, Math.round(base + 350 * speedRatio * accuracyFactor));
+      };
+      try { calculateMultiplayerPoints = window.calculateMultiplayerPoints; } catch {}
+
+      // Override question render to support hard mode hiding and big next button after answer/result.
+      window.renderMultiplayerQuestion = function renderMultiplayerQuestionV19(room) {
+        const song = cleanSong19(room.currentSong);
+        if (!song) return;
+        state.quiz = [song];
+        state.currentIndex = 0;
+        state.options = room.options || (typeof generateMultiplayerOptions === 'function' ? generateMultiplayerOptions(song.year, room.quiz || []) : []);
+        state.mode = 'quiz';
+        const player = room.players?.[state.mp.player?.id] || {};
+        const answered = Boolean(player.answer);
+        state.answered = answered;
+        state.selectedYear = player.answer?.year || null;
+        $('practicePanel')?.classList.add('hidden');
+        if (els.options) els.options.innerHTML = '';
+        const r = revealState(room);
+        const titleText = r.title || answered ? song.title : 'Titel dold';
+        const artistText = r.artist || answered ? song.artist : 'Artist dold';
+        if (els.songTitle) els.songTitle.textContent = titleText;
+        if (els.songArtist) els.songArtist.textContent = artistText;
+        if (els.trackMeta) els.trackMeta.textContent = '';
+        if (els.spotifyPlayBtn) els.spotifyPlayBtn.disabled = !song.spotifyUri;
+        if (els.searchBtn) els.searchBtn.disabled = false;
+        try { updateSongVisual((r.cover || answered || r.mode !== 'hard') ? song : null); } catch {}
+        if (els.score) els.score.textContent = Number(player.score) || 0;
+        if (els.qnum) els.qnum.textContent = `${Number(room.currentIndex) + 1}/${room.quiz?.length || 0}`;
+        if (els.percent) els.percent.textContent = room.settings?.mpMode === 'hard' ? 'HARD' : 'MP';
+        if (els.bar) els.bar.style.width = room.quiz?.length ? `${((Number(room.currentIndex)+1)/(room.quiz.length))*100}%` : '0%';
+        for (const year of (room.options || [])) {
+          const btn = document.createElement('button');
+          btn.className = 'option';
+          btn.textContent = year;
+          btn.disabled = answered;
+          btn.addEventListener('click', () => submitMultiplayerAnswer(year));
+          if (answered) {
+            if (Number(year) === Number(song.year)) btn.classList.add('correct');
+            if (Number(year) === Number(player.answer?.year) && Number(year) !== Number(song.year)) btn.classList.add('wrong');
+          }
+          els.options.appendChild(btn);
+        }
+        if (answered) {
+          const a = player.answer;
+          const wait = room.settings?.mpMode === 'hard' ? `<br><span class="small">Svarstid: ${Math.round((Number(a.answerMs)||0)/1000)}s. I hard mode straffas sena svar hårdare.</span>` : '';
+          els.feedback.innerHTML = `Du svarade ${a.year}. ${a.delta === 0 ? '<strong class="ok">Exakt rätt.</strong>' : `Du var <strong>${a.delta}</strong> år fel.`} Poäng: <strong>${a.points}</strong>. Du är automatiskt redo.${wait}${renderHardRevealInfo(room, song, true)}`;
+        } else {
+          els.feedback.innerHTML = `Svara så snabbt du kan. Rundan går vidare när alla har svarat.${renderHardRevealInfo(room, song, false)}`;
+        }
+        if (els.nextBtn) els.nextBtn.disabled = true;
+        if (els.mpReadyBtn) els.mpReadyBtn.disabled = true;
+        scheduleHardRevealRefresh(room);
+      };
+      try { renderMultiplayerQuestion = window.renderMultiplayerQuestion; } catch {}
+
+      // No time limit / no automatic unanswered result after 30 seconds.
+      window.maybeFinishMultiplayerRound = async function maybeFinishMultiplayerRoundV19() {
+        try {
+          const room = state.mp.room;
+          if (!room || room.status !== 'question') return;
+          const ps = players(room);
+          const allDone = ps.length && ps.every(p => p.answer && p.ready);
+          if (!allDone) return;
+          const updates = { status: 'results', resultsShownAt: firebase.database.ServerValue.TIMESTAMP };
+          for (const p of ps) {
+            const points = Number(p.answer?.points) || 0;
+            const exact = Number(p.answer?.delta) === 0 ? 1 : 0;
+            updates[`players/${p.id}/score`] = (Number(p.score) || 0) + points;
+            updates[`players/${p.id}/correct`] = (Number(p.correct) || 0) + exact;
+            updates[`players/${p.id}/answeredCount`] = (Number(p.answeredCount) || 0) + (p.answer ? 1 : 0);
+          }
+          await roomRef().update(updates);
+        } catch (err) { setMultiplayerStatus(err.message); }
+      };
+      try { maybeFinishMultiplayerRound = window.maybeFinishMultiplayerRound; } catch {}
+
+      // Override playback scheduling so only playback starts; no timeout that ends the question.
+      window.scheduleMultiplayerPlayback = function scheduleMultiplayerPlaybackV19(room) {
+        try { clearTimeout(state.mp.playTimer); clearTimeout(state.mp.finishTimer); } catch {}
+        const delay = Math.max(0, (Number(room.questionStartedAt) || nowMs()) - nowMs());
+        if (room.currentSong?.spotifyUri) state.mp.playTimer = setTimeout(() => playCurrentSpotify(), delay);
+      };
+      try { scheduleMultiplayerPlayback = window.scheduleMultiplayerPlayback; } catch {}
+
+      window.renderMultiplayerResults = function renderMultiplayerResultsV19(room) {
+        const song = cleanSong19(room.currentSong);
+        if (!song) return;
+        clearHardRevealTimer();
+        state.quiz = [song]; state.currentIndex = 0;
+        if (els.songTitle) els.songTitle.textContent = song.title;
+        if (els.songArtist) els.songArtist.textContent = `${song.artist} · Rätt år: ${song.year}`;
+        try { updateSongVisual(song); } catch {}
+        if (els.options) els.options.innerHTML = '';
+        $('practicePanel')?.classList.add('hidden');
+        if (els.nextBtn) els.nextBtn.disabled = true;
+        const ps = players(room).sort((a,b) => (Number(b.answer?.points)||0) - (Number(a.answer?.points)||0));
+        els.feedback.innerHTML = `
+          <strong>Resultat för frågan</strong>
+          <div class="mpAnswerList">
+            ${ps.map(p => {
+              const a = p.answer;
+              if (!a) return `<div class="mpAnswerItem"><span>${htmlEscape(p.name || 'Spelare')}</span><span>Inget svar · 0p</span></div>`;
+              return `<div class="mpAnswerItem"><span>${htmlEscape(p.name || 'Spelare')}: <b>${a.year}</b> (${a.delta} år fel)</span><span><b>${a.points}p</b></span></div>`;
+            }).join('')}
+          </div>
+          <button class="primary mpBigNext" id="mpBigNextInline" type="button">Nästa låt</button>
+        `;
+        const big = $('mpBigNextInline');
+        if (big) big.addEventListener('click', e => { e.preventDefault(); try { nextMultiplayerQuestion(); } catch {} });
+        if (els.mpNextBtn) els.mpNextBtn.disabled = false;
+      };
+      try { renderMultiplayerResults = window.renderMultiplayerResults; } catch {}
+
+      window.renderMultiplayerFinished = function renderMultiplayerFinishedV19(room) {
+        clearHardRevealTimer();
+        const ps = players(room).sort((a,b) => (Number(b.score)||0) - (Number(a.score)||0));
+        const total = Array.isArray(room?.quiz) ? room.quiz.length : 0;
+        if (els.songTitle) els.songTitle.textContent = 'Spotify Årtalsquiz klart';
+        if (els.songArtist) els.songArtist.textContent = ps[0] ? `${ps[0].name} vann med ${ps[0].score || 0} poäng.` : 'Inga spelare.';
+        if (els.options) els.options.innerHTML = '';
+        $('practicePanel')?.classList.add('hidden');
+        try { updateSongVisual(null); } catch {}
+        els.feedback.innerHTML = `
+          <strong>Slutresultat</strong>
+          <div class="mpAnswerList">
+            ${ps.map((p, i) => `<div class="mpAnswerItem"><span>${i + 1}. ${htmlEscape(p.name || 'Spelare')}</span><span><b>${Number(p.score)||0}p</b><br><span class="tiny">${Number(p.correct)||0}/${total} exakt rätt</span></span></div>`).join('')}
+          </div>
+          <button class="primary mpBigNext" id="mpRestartInline" type="button">Starta ny runda</button>
+        `;
+        const restart = $('mpRestartInline');
+        if (restart) restart.addEventListener('click', e => { e.preventDefault(); try { window.startMultiplayerQuiz(); } catch {} });
+        if (els.mpNextBtn) els.mpNextBtn.disabled = true;
+      };
+      try { renderMultiplayerFinished = window.renderMultiplayerFinished; } catch {}
+
+      // Patch submit to store exact-right flag; points function reads mode from room.
+      window.submitMultiplayerAnswer = async function submitMultiplayerAnswerV19(year) {
+        try {
+          const room = state.mp.room;
+          if (!room?.currentSong || room.status !== 'question') return;
+          const song = cleanSong19(room.currentSong);
+          const answerMs = Math.max(0, nowMs() - (Number(room.questionStartedAt) || nowMs()));
+          const delta = Math.abs(Number(year) - Number(song.year));
+          const points = window.calculateMultiplayerPoints(year, song.year, answerMs, room.questionDurationMs);
+          await roomRef().child(`players/${state.mp.player.id}`).update({
+            answer: { year, correctYear: song.year, delta, points, answerMs, exact: delta === 0, at: firebase.database.ServerValue.TIMESTAMP },
+            ready: true
+          });
+          setTimeout(() => window.maybeFinishMultiplayerRound(), 50);
+        } catch (err) { setMultiplayerStatus(err.message); }
+      };
+      try { submitMultiplayerAnswer = window.submitMultiplayerAnswer; } catch {}
+
+      // Patch startFresh to include mpMode and correct counters by overriding after v18 has bound the button.
+      function patchStartForMode() {
+        const previous = window.startFreshMultiplayer || window.startMultiplayerQuiz;
+        if (typeof previous !== 'function' || previous.__v19Patched) return;
+        async function wrappedStartV19() {
+          // Use the existing start, then immediately update settings/counters if needed via room once created.
+          await previous.apply(this, arguments);
+          try {
+            const mode = getMpMode();
+            const snap = await roomRef(ROOM_NAME).get();
+            const room = snap.exists() ? snap.val() : null;
+            const updates = { 'settings/mpMode': mode };
+            for (const p of players(room)) {
+              updates[`players/${p.id}/correct`] = 0;
+              updates[`players/${p.id}/answeredCount`] = 0;
+            }
+            await roomRef(ROOM_NAME).update(updates);
+            setMp(`Ny ${mode === 'hard' ? 'hard' : 'standard'}-runda startad.`);
+          } catch {}
+        }
+        wrappedStartV19.__v19Patched = true;
+        window.startFreshMultiplayer = wrappedStartV19;
+        window.startMultiplayerQuiz = wrappedStartV19;
+        try { startMultiplayerQuiz = wrappedStartV19; } catch {}
+        const btn = $('mpStartBtn');
+        if (btn && !btn.__v19Rebound) {
+          const clone = btn.cloneNode(true);
+          clone.__v19Rebound = true;
+          btn.replaceWith(clone);
+          try { if (typeof els === 'object') els.mpStartBtn = clone; } catch {}
+          clone.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); wrappedStartV19(); }, true);
+        }
+      }
+
+      function initV19() {
+        cleanupHeader();
+        // Hide old small Ready button; answering already makes you ready.
+        const ready = $('mpReadyBtn'); if (ready) ready.style.display = 'none';
+        patchStartForMode();
+        const modeSel = $('mpGameModeSelect');
+        if (modeSel && !modeSel.__v19Bound) {
+          modeSel.__v19Bound = true;
+          modeSel.addEventListener('change', () => setMp(`Mode för nästa runda: ${getMpMode() === 'hard' ? 'Hard' : 'Standard'}.`));
+        }
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initV19);
+      else initV19();
+      window.addEventListener('pageshow', initV19);
+    })();
+  </script>
 
 </body>
 </html>
