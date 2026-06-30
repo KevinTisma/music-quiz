@@ -379,6 +379,7 @@
             <button class="primary" id="mpStartBtn" type="button">Starta / starta om</button>
             <button class="secondary" id="mpNextBtn" type="button">Nästa låt</button>
             <button class="secondary" id="mpReadyBtn" type="button">Redo</button>
+            <button class="secondary danger" id="leaveRoomBtn" type="button">Lämna rum</button>
           </div>
           <p class="small mpStatusLine" id="mpStatus"></p>
           <div class="mpPlayers" id="mpPlayers"></div>
@@ -4372,7 +4373,7 @@ Jolene;Dolly Parton;1973"></textarea>
     }
 
     function playersArray(room = state.mp.room) {
-      return Object.values(room?.players || {}).filter(Boolean);
+      return Object.values(room?.players || {}).filter(p => p && p.connected !== false);
     }
 
     function onRoomUpdate(room) {
@@ -4562,8 +4563,8 @@ Jolene;Dolly Parton;1973"></textarea>
       const msLeft = Math.max(0, Math.round(((room.questionStartedAt || mpNow()) + (room.questionDurationMs || 30000) - mpNow()) / 1000));
       if (answered) {
         const a = player.answer;
-        els.feedback.innerHTML = `Du svarade ${a.year}. ${a.delta === 0 ? '<strong class="ok">Exakt rätt.</strong>' : `Du var <strong>${a.delta}</strong> år fel.`} Poäng: <strong>${a.points}</strong>. Tryck Redo när du är klar.`;
-        els.mpReadyBtn.disabled = false;
+        els.feedback.innerHTML = `Du svarade ${a.year}. ${a.delta === 0 ? '<strong class="ok">Exakt rätt.</strong>' : `Du var <strong>${a.delta}</strong> år fel.`} Poäng: <strong>${a.points}</strong>. Du är automatiskt redo.`;
+        els.mpReadyBtn.disabled = true;
       } else {
         const startsIn = Math.ceil(((room.questionStartedAt || mpNow()) - mpNow()) / 1000);
         els.feedback.textContent = startsIn > 0 ? `Låten startar strax. Alla svarar samtidigt.` : `Svara så snabbt du kan. Rundan slutar när alla är redo eller om cirka ${msLeft} sekunder.`;
@@ -4589,7 +4590,7 @@ Jolene;Dolly Parton;1973"></textarea>
         const points = calculateMultiplayerPoints(year, song.year, answerMs, room.questionDurationMs);
         await roomRef().child(`players/${state.mp.player.id}`).update({
           answer: { year, correctYear: song.year, delta, points, answerMs, at: firebase.database.ServerValue.TIMESTAMP },
-          ready: false
+          ready: true
         });
       } catch (err) {
         setMultiplayerStatus(err.message);
@@ -5342,6 +5343,512 @@ Jolene;Dolly Parton;1973"></textarea>
         if (localStorage.getItem('hitster_app_mode_v1') === 'multi') setTimeout(() => autoJoinMultiplayer('pageshow'), 600);
       });
       window.autoJoinMultiplayer = autoJoinMultiplayer;
+    })();
+  </script>
+
+
+  <script>
+    // v10: Multiplayer playlist is shared through Firebase.
+    // Only the first player needs to fetch/build the playlist. Other players use room.quiz/currentSong.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      function setMp(text) { const el = $('mpStatus'); if (el) el.textContent = text || ''; }
+      function getStateSafe() { try { return state; } catch { return null; } }
+      async function getFreshRoomV10() {
+        const st = getStateSafe();
+        if (!st?.mp?.db) return null;
+        if (!st.mp.roomCode) st.mp.roomCode = ROOM_NAME;
+        try {
+          const snap = await roomRef(st.mp.roomCode).get();
+          const room = snap.exists() ? snap.val() : null;
+          if (room) st.mp.room = room;
+          return room;
+        } catch {
+          return st.mp.room || null;
+        }
+      }
+      async function ensureJoinedV10() {
+        const st = getStateSafe();
+        if (!st) return;
+        try { localStorage.setItem('hitster_app_mode_v1', 'multi'); } catch {}
+        st.appMode = 'multi';
+        if (st.mp) st.mp.roomCode = ROOM_NAME;
+        const roomInput = $('roomCodeInput');
+        if (roomInput) roomInput.value = ROOM_NAME;
+        if (typeof window.autoJoinMultiplayer === 'function') {
+          await window.autoJoinMultiplayer('v10-start');
+        } else {
+          if (typeof connectFirebase === 'function' && !st.mp?.db) await connectFirebase();
+          if (typeof loadSpotifyProfile === 'function' && !st.mp?.player?.id) await loadSpotifyProfile();
+          if (typeof joinActiveRoom === 'function') await joinActiveRoom();
+        }
+      }
+      async function useExistingRoomQuizV10(room) {
+        const st = getStateSafe();
+        if (!room || !Array.isArray(room.quiz) || !room.quiz.length) return false;
+        if (st) st.mp.room = room;
+        setMp('Använder spellistan som redan är sparad i multiplayer-rummet.');
+        if (room.status === 'lobby' || room.status === 'results') {
+          await nextMultiplayerQuestion();
+          return true;
+        }
+        if (room.status === 'question') {
+          if (typeof renderMultiplayerQuestion === 'function') renderMultiplayerQuestion(room);
+          if (typeof scheduleMultiplayerPlayback === 'function') scheduleMultiplayerPlayback(room);
+          return true;
+        }
+        if (room.status === 'finished') {
+          if (typeof renderMultiplayerFinished === 'function') renderMultiplayerFinished(room);
+          setMp('Spelet är klart. Klicka Starta / starta om om ni vill skapa en ny runda från spellistan.');
+          return true;
+        }
+        return false;
+      }
+      const previousStart = window.startMultiplayerQuiz;
+      async function startMultiplayerQuizV10() {
+        try {
+          await ensureJoinedV10();
+          let room = await getFreshRoomV10();
+          // If another player has already created the quiz list, do not fetch Spotify again.
+          if (await useExistingRoomQuizV10(room)) return;
+
+          const st = getStateSafe();
+          if (!Array.isArray(st?.songs) || !st.songs.length) {
+            setMp('Hämtar spellistan och sparar den i multiplayer-rummet. Bara en spelare behöver göra detta.');
+            if (typeof fetchFullPlaylistFromSpotify !== 'function') throw new Error('Kunde inte hämta spellistan: funktionen saknas. Uppdatera sidan med Ctrl+F5.');
+            await fetchFullPlaylistFromSpotify();
+          }
+          if (typeof previousStart === 'function') await previousStart();
+          room = await getFreshRoomV10();
+          if (room?.quiz?.length) setMp(`Spellistan är sparad i rummet: ${room.quiz.length} låtar. Alla spelare använder samma låtlista.`);
+        } catch (err) {
+          setMp('Kunde inte starta multiplayer: ' + (err?.message || String(err)));
+        }
+      }
+      window.startMultiplayerQuiz = startMultiplayerQuizV10;
+      try { startMultiplayerQuiz = startMultiplayerQuizV10; } catch {}
+
+      function bindV10() {
+        const btn = $('mpStartBtn');
+        if (!btn || btn.__v10Bound) return;
+        btn.__v10Bound = true;
+        btn.addEventListener('click', function (e) {
+          e.preventDefault();
+          e.stopImmediatePropagation();
+          startMultiplayerQuizV10();
+        }, true);
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bindV10);
+      else bindV10();
+      window.addEventListener('pageshow', bindV10);
+    })();
+  </script>
+
+
+  <script>
+    // v11: clearer playlist status + visible leave room + automatic leave on close.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      function setText(id, text) { const el = $(id); if (el) el.textContent = text || ''; }
+      function getStateSafe() { try { return state; } catch { return null; } }
+      function getPlayerPath() {
+        const st = getStateSafe();
+        const playerId = st?.mp?.player?.id;
+        if (!st?.mp?.db || !playerId) return null;
+        const roomCode = st.mp.roomCode || ROOM_NAME;
+        try { return roomRef(roomCode).child(`players/${playerId}`); } catch { return null; }
+      }
+      function makeLeaveButtonVisible() {
+        let btn = $('leaveRoomBtn');
+        const actions = $('mpStartBtn')?.parentElement;
+        if (!btn && actions) {
+          btn = document.createElement('button');
+          btn.className = 'secondary danger';
+          btn.id = 'leaveRoomBtn';
+          btn.type = 'button';
+          btn.textContent = 'Lämna rum';
+          actions.appendChild(btn);
+        }
+        if (btn) {
+          btn.style.setProperty('display', 'inline-flex', 'important');
+          btn.hidden = false;
+          btn.classList.remove('hidden');
+        }
+        const styleId = 'mpLeaveRoomV11Style';
+        if (!$(styleId)) {
+          const style = document.createElement('style');
+          style.id = styleId;
+          style.textContent = `
+            body[data-app-mode="multi"] #leaveRoomBtn { display:inline-flex !important; }
+            body[data-app-mode="single"] #leaveRoomBtn { display:none !important; }
+            #leaveRoomBtn.danger { border-color: rgba(255,107,107,.45); }
+          `;
+          document.head.appendChild(style);
+        }
+      }
+      async function removeCurrentPlayer(reason = 'leave') {
+        const st = getStateSafe();
+        const ref = getPlayerPath();
+        try { if (st?.mp?.unsubscribe) st.mp.unsubscribe(); } catch {}
+        try { if (ref) await ref.remove(); }
+        catch {
+          try { await ref?.child('connected').set(false); } catch {}
+        }
+        try {
+          if (st?.mp) {
+            st.mp.room = null;
+            st.mp.roomCode = '';
+            st.mp.lastQuestionId = '';
+          }
+        } catch {}
+        try { localStorage.removeItem('hitster_multiplayer_room_v1'); } catch {}
+        const players = $('mpPlayers');
+        if (players) players.innerHTML = '<p class="small">Du har lämnat rummet.</p>';
+        setText('mpStatus', reason === 'close' ? 'Du lämnade rummet.' : 'Du har lämnat rummet. Välj Multiplayer igen för att gå med automatiskt.');
+      }
+      function leaveOnCloseBestEffort() {
+        const ref = getPlayerPath();
+        try { ref?.remove(); } catch {}
+      }
+      function patchJoinOnDisconnect() {
+        const original = window.joinActiveRoom;
+        if (typeof original !== 'function' || original.__v11Patched) return;
+        async function patchedJoinActiveRoom() {
+          const result = await original.apply(this, arguments);
+          const ref = getPlayerPath();
+          try { ref?.onDisconnect().remove(); } catch {}
+          return result;
+        }
+        patchedJoinActiveRoom.__v11Patched = true;
+        window.joinActiveRoom = patchedJoinActiveRoom;
+        try { joinActiveRoom = patchedJoinActiveRoom; } catch {}
+      }
+      function patchPlayersArray() {
+        const original = window.playersArray;
+        if (typeof original !== 'function' || original.__v11Patched) return;
+        function patchedPlayersArray(room) {
+          return original(room).filter(p => p && p.connected !== false);
+        }
+        patchedPlayersArray.__v11Patched = true;
+        window.playersArray = patchedPlayersArray;
+        try { playersArray = patchedPlayersArray; } catch {}
+      }
+      function patchFetchPlaylistStatus() {
+        const original = window.fetchFullPlaylistFromSpotify;
+        if (typeof original !== 'function' || original.__v11Patched) return;
+        async function patchedFetchFullPlaylistFromSpotify() {
+          setText('mpStatus', 'Hämtar spellistan till multiplayer...');
+          const result = await original.apply(this, arguments);
+          const st = getStateSafe();
+          const count = Array.isArray(st?.songs) ? st.songs.length : 0;
+          const roomCount = Array.isArray(st?.mp?.room?.quiz) ? st.mp.room.quiz.length : 0;
+          if (count) {
+            setText('mpStatus', `Spellistan är hämtad: ${count} låtar. Klicka Starta / starta om för att skapa multiplayer-rundan.`);
+          } else if (roomCount) {
+            setText('mpStatus', `Spellistan finns redan i rummet: ${roomCount} låtar.`);
+          } else {
+            setText('mpStatus', 'Spellistehämtningen blev klar, men inga låtar sparades. Kontrollera spellistelänken.');
+          }
+          return result;
+        }
+        patchedFetchFullPlaylistFromSpotify.__v11Patched = true;
+        window.fetchFullPlaylistFromSpotify = patchedFetchFullPlaylistFromSpotify;
+        try { fetchFullPlaylistFromSpotify = patchedFetchFullPlaylistFromSpotify; } catch {}
+      }
+      function bindLeave() {
+        makeLeaveButtonVisible();
+        const btn = $('leaveRoomBtn');
+        if (btn && !btn.__v11Bound) {
+          btn.__v11Bound = true;
+          btn.addEventListener('click', async e => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            await removeCurrentPlayer('leave');
+          }, true);
+        }
+        window.addEventListener('pagehide', leaveOnCloseBestEffort);
+        window.addEventListener('beforeunload', leaveOnCloseBestEffort);
+      }
+      function initV11() {
+        makeLeaveButtonVisible();
+        patchJoinOnDisconnect();
+        patchPlayersArray();
+        patchFetchPlaylistStatus();
+        bindLeave();
+      }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initV11);
+      else initV11();
+      window.addEventListener('pageshow', initV11);
+    })();
+  </script>
+
+
+
+  <script>
+    // v12: clean separation between single-player and multiplayer.
+    // - Single-player never listens to or renders multiplayer-room updates.
+    // - Disconnected players are filtered out everywhere.
+    // - Single-player has no Ready/lobby UI.
+    // - Local data/import UI is hidden.
+    (function () {
+      const ROOM_NAME = 'active';
+      const $ = id => document.getElementById(id);
+      const body = () => document.body;
+      const LS_APP_MODE = 'hitster_app_mode_v1';
+
+      function hideElement(el, hidden = true) {
+        if (!el) return;
+        el.classList.toggle('hidden', hidden);
+        el.hidden = hidden;
+        el.style.setProperty('display', hidden ? 'none' : '', hidden ? 'important' : '');
+      }
+
+      function closestControl(id) {
+        const el = $(id);
+        return el?.closest('.control') || el?.parentElement || el;
+      }
+
+      function hideSectionByHeading(text) {
+        const headings = Array.from(document.querySelectorAll('aside.side h2'));
+        const h = headings.find(el => (el.textContent || '').trim().toLowerCase() === text.toLowerCase());
+        if (!h) return;
+        let node = h.previousElementSibling;
+        if (node && node.tagName === 'HR') hideElement(node, true);
+        node = h;
+        while (node) {
+          const next = node.nextElementSibling;
+          hideElement(node, true);
+          if (next && next.tagName === 'HR') break;
+          node = next;
+        }
+      }
+
+      function hideRemovedSingleUi() {
+        hideSectionByHeading('Lokal data');
+        hideSectionByHeading('Historik');
+        hideElement(closestControl('importBox'), true);
+        hideElement($('importBtn'), true);
+        hideElement($('resetImportsBtn'), true);
+        hideElement($('importMsg'), true);
+      }
+
+      function clearMultiplayerTimers() {
+        try {
+          if (state?.mp) {
+            clearTimeout(state.mp.playTimer);
+            clearTimeout(state.mp.finishTimer);
+            clearTimeout(state.mp.monitorTimer);
+          }
+        } catch {}
+      }
+
+      async function detachFromMultiplayerRoom(removePlayer) {
+        try {
+          clearMultiplayerTimers();
+          if (state?.mp?.unsubscribe) {
+            try { state.mp.unsubscribe(); } catch {}
+            state.mp.unsubscribe = null;
+          }
+          if (removePlayer && state?.mp?.db && state?.mp?.player?.id) {
+            const code = state.mp.roomCode || ROOM_NAME;
+            try { await roomRef(code).child(`players/${state.mp.player.id}`).remove(); }
+            catch { try { await roomRef(code).child(`players/${state.mp.player.id}/connected`).set(false); } catch {} }
+          }
+          if (state?.mp) {
+            state.mp.room = null;
+            state.mp.lastQuestionId = '';
+          }
+        } catch {}
+      }
+
+      function clearMultiplayerUi() {
+        const players = $('mpPlayers');
+        if (players) players.innerHTML = '';
+        const status = $('mpStatus');
+        if (status) status.textContent = '';
+        const ready = $('mpReadyBtn');
+        if (ready) ready.disabled = true;
+      }
+
+      function showSingleUi() {
+        body().setAttribute('data-app-mode', 'single');
+        try { state.appMode = 'single'; } catch {}
+        try { localStorage.setItem(LS_APP_MODE, 'single'); } catch {}
+        $('singleModeBtn')?.classList.add('active');
+        $('multiModeBtn')?.classList.remove('active');
+        hideElement($('multiplayerPanel'), true);
+        const aside = document.querySelector('aside.side');
+        if (aside) {
+          aside.hidden = false;
+          aside.style.removeProperty('display');
+          aside.classList.remove('hidden');
+        }
+        const mainActions = document.querySelector('main.main > .actions');
+        if (mainActions) {
+          mainActions.hidden = false;
+          mainActions.style.removeProperty('display');
+          mainActions.classList.remove('hidden');
+        }
+        hideRemovedSingleUi();
+        clearMultiplayerUi();
+        const appStatus = $('appModeStatus');
+        if (appStatus) appStatus.textContent = 'Single-player valt. Multiplayer är frånkopplat i den här vyn.';
+      }
+
+      function showMultiUi() {
+        body().setAttribute('data-app-mode', 'multi');
+        try { state.appMode = 'multi'; } catch {}
+        try { localStorage.setItem(LS_APP_MODE, 'multi'); } catch {}
+        $('multiModeBtn')?.classList.add('active');
+        $('singleModeBtn')?.classList.remove('active');
+        hideElement($('multiplayerPanel'), false);
+        const aside = document.querySelector('aside.side');
+        if (aside) {
+          aside.hidden = true;
+          aside.style.setProperty('display', 'none', 'important');
+        }
+        const mainActions = document.querySelector('main.main > .actions');
+        if (mainActions) {
+          mainActions.hidden = true;
+          mainActions.style.setProperty('display', 'none', 'important');
+        }
+        const ready = $('mpReadyBtn');
+        if (ready) hideElement(ready, true); // answers now auto-ready
+        const appStatus = $('appModeStatus');
+        if (appStatus) appStatus.textContent = 'Multiplayer valt. Alla som öppnar sidan går med i samma lobby automatiskt.';
+      }
+
+      async function switchModeV12(mode) {
+        if (mode === 'multi') {
+          showMultiUi();
+          try {
+            if (typeof autoJoinMultiplayer === 'function') await autoJoinMultiplayer('mode-switch');
+            else if (typeof joinActiveRoom === 'function') await joinActiveRoom();
+          } catch (err) {
+            const status = $('mpStatus');
+            if (status) status.textContent = 'Kunde inte ansluta multiplayer automatiskt: ' + (err?.message || String(err));
+          }
+        } else {
+          await detachFromMultiplayerRoom(false);
+          showSingleUi();
+          try {
+            // Re-render a normal single-player question instead of leaving multiplayer text on screen.
+            if (typeof renderQuestion === 'function') renderQuestion();
+          } catch {}
+        }
+      }
+
+      function filteredPlayers(room) {
+        return Object.values(room?.players || {}).filter(p => p && p.connected !== false);
+      }
+
+      function patchCoreFunctions() {
+        // Filter disconnected players even if older functions call playersArray internally.
+        if (typeof window.playersArray === 'function' && !window.playersArray.__v12Patched) {
+          const patched = function(room) { return filteredPlayers(room || (typeof state !== 'undefined' ? state.mp?.room : null)); };
+          patched.__v12Patched = true;
+          window.playersArray = patched;
+          try { playersArray = patched; } catch {}
+        }
+
+        if (typeof window.onRoomUpdate === 'function' && !window.onRoomUpdate.__v12Patched) {
+          const original = window.onRoomUpdate;
+          const patched = function(room) {
+            try {
+              if (state?.appMode !== 'multi' && document.body.getAttribute('data-app-mode') !== 'multi') return;
+            } catch { return; }
+            return original.apply(this, arguments);
+          };
+          patched.__v12Patched = true;
+          window.onRoomUpdate = patched;
+          try { onRoomUpdate = patched; } catch {}
+        }
+
+        if (typeof window.renderMultiplayerRoom === 'function' && !window.renderMultiplayerRoom.__v12Patched) {
+          const original = window.renderMultiplayerRoom;
+          const patched = function(room) {
+            if (document.body.getAttribute('data-app-mode') !== 'multi') return;
+            if (room?.players) {
+              room = { ...room, players: Object.fromEntries(filteredPlayers(room).map(p => [p.id, p])) };
+            }
+            return original.call(this, room);
+          };
+          patched.__v12Patched = true;
+          window.renderMultiplayerRoom = patched;
+          try { renderMultiplayerRoom = patched; } catch {}
+        }
+
+        for (const name of ['renderMultiplayerResults', 'renderMultiplayerFinished']) {
+          const fn = window[name];
+          if (typeof fn === 'function' && !fn.__v12Patched) {
+            const patched = function(room) {
+              if (document.body.getAttribute('data-app-mode') !== 'multi') return;
+              if (room?.players) room = { ...room, players: Object.fromEntries(filteredPlayers(room).map(p => [p.id, p])) };
+              return fn.call(this, room);
+            };
+            patched.__v12Patched = true;
+            window[name] = patched;
+            try { if (name === 'renderMultiplayerResults') renderMultiplayerResults = patched; } catch {}
+            try { if (name === 'renderMultiplayerFinished') renderMultiplayerFinished = patched; } catch {}
+          }
+        }
+      }
+
+      function injectV12Css() {
+        if ($('v12CleanModeStyle')) return;
+        const style = document.createElement('style');
+        style.id = 'v12CleanModeStyle';
+        style.textContent = `
+          body[data-app-mode="single"] #multiplayerPanel,
+          body[data-app-mode="single"] #mpPlayers,
+          body[data-app-mode="single"] #mpStatus,
+          body[data-app-mode="single"] #mpReadyBtn,
+          body[data-app-mode="single"] #leaveRoomBtn { display:none !important; }
+          body[data-app-mode="multi"] aside.side,
+          body[data-app-mode="multi"] main.main > .actions,
+          body[data-app-mode="multi"] #mpReadyBtn { display:none !important; }
+          body[data-app-mode="multi"] #multiplayerPanel { display:block !important; }
+        `;
+        document.head.appendChild(style);
+      }
+
+      function bindModeButtons() {
+        const single = $('singleModeBtn');
+        const multi = $('multiModeBtn');
+        if (single && !single.__v12Bound) {
+          single.__v12Bound = true;
+          single.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            switchModeV12('single');
+          }, true);
+        }
+        if (multi && !multi.__v12Bound) {
+          multi.__v12Bound = true;
+          multi.addEventListener('click', e => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            switchModeV12('multi');
+          }, true);
+        }
+      }
+
+      function initV12() {
+        injectV12Css();
+        patchCoreFunctions();
+        bindModeButtons();
+        hideRemovedSingleUi();
+        const saved = (() => { try { return localStorage.getItem(LS_APP_MODE); } catch { return null; } })();
+        if (saved === 'multi') showMultiUi();
+        else showSingleUi();
+      }
+
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initV12);
+      else initV12();
+      window.addEventListener('pageshow', initV12);
+      window.switchModeV12 = switchModeV12;
     })();
   </script>
 
