@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Music Timeline Quiz</title>
+  <title>Music Timeline</title>
   <style>
 
     :root{--bg:#080d19;--panel:#131a2b;--panel2:#1c263c;--panel3:#26324d;--text:#f5f7fb;--muted:#aeb8cc;--accent:#7dd3fc;--accent2:#c084fc;--ok:#40d98b;--bad:#ff6b6b;--warn:#fbbf24;--border:rgba(255,255,255,.13);--shadow:0 22px 70px rgba(0,0,0,.38);--gold:#facc15;--dockH:158px;--ownH:182px}
@@ -14,17 +14,17 @@
     .hidden{display:none!important}.small{font-size:.88rem;color:var(--muted)}.tiny{font-size:.76rem;color:var(--muted)}.pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:rgba(255,255,255,.06);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:.82rem}
     .primary,.secondary,.danger,.success{padding:12px 16px;border-radius:14px;border:1px solid var(--border);font-weight:800}.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#08111b}.secondary{background:var(--panel2)}.danger{background:rgba(255,107,107,.14)}.success{background:rgba(64,217,139,.18);border-color:rgba(64,217,139,.45)}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
     .status{min-height:22px;margin-top:10px;color:var(--muted)}.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}code{background:rgba(255,255,255,.06);border:1px solid var(--border);border-radius:8px;padding:2px 6px;overflow-wrap:anywhere}
-    .appTop{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;width:min(1180px,calc(100vw - 28px));display:flex;justify-content:center;gap:12px;align-items:flex-start;pointer-events:none}.logoBlock{pointer-events:auto}.logoBlock h1{margin:0;font-size:clamp(1.8rem,3.4vw,3.8rem);letter-spacing:-.07em;line-height:.85}.logoBlock p{margin:6px 0 0;color:var(--muted);max-width:520px}.setupPanel{display:none!important;pointer-events:auto;width:min(460px,48vw);background:rgba(19,26,43,.86);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:22px;padding:12px;box-shadow:var(--shadow)}.setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .appTop{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:30;width:min(1180px,calc(100vw - 28px));display:flex;justify-content:center;gap:12px;align-items:flex-start;pointer-events:none}.logoBlock{pointer-events:auto}.logoBlock h1{margin:0;font-size:clamp(1.8rem,3.4vw,3.8rem);letter-spacing:-.07em;line-height:.85}.logoBlock p{margin:6px 0 0;color:var(--muted);max-width:520px}.setupPanel{display:none!important;pointer-events:auto;width:min(460px,48vw);background:rgba(19,26,43,.86);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:22px;padding:12px;box-shadow:var(--shadow)}.setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fullWidthAction{width:100%;margin-top:8px;justify-content:center}.playlistMenu .tiny{margin:7px 0 0}
     .gameShell{min-height:calc(100vh - var(--dockH) - var(--ownH) - 24px);display:grid;place-items:center;padding:140px 16px 24px}.centerStage{width:min(980px,100%);display:grid;place-items:center;gap:18px}.turnTitle{text-align:center}.turnTitle .eyebrow{color:var(--muted);font-size:.86rem}.bigMessage{font-size:clamp(1.35rem,3.2vw,2.8rem);font-weight:950;letter-spacing:-.06em;line-height:.9}
     .currentCardZone{display:grid;place-items:center;min-height:320px;width:100%}.drawCard{width:min(300px,76vw);min-height:350px;border-radius:30px;border:1px solid rgba(255,255,255,.22);background:linear-gradient(145deg,rgba(125,211,252,.24),rgba(192,132,252,.18) 48%,rgba(255,255,255,.05));box-shadow:0 26px 70px rgba(0,0,0,.46);padding:16px;display:flex;flex-direction:column;justify-content:space-between;transition:transform .2s ease,box-shadow .2s ease,opacity .2s ease}.drawCard[draggable=true]{cursor:grab}.drawCard[draggable=true]:hover{transform:translateY(-6px) rotate(-1deg);box-shadow:0 34px 80px rgba(0,0,0,.52)}.drawCard[draggable=true]:active{cursor:grabbing}.drawCard.dragging{opacity:1;transform:scale(1.02);box-shadow:0 42px 100px rgba(0,0,0,.62);z-index:9999}.dragGhost{position:fixed;z-index:9999;pointer-events:none;opacity:1;transform:scale(1.02);box-shadow:0 42px 100px rgba(0,0,0,.62)}
     .cover{aspect-ratio:1/1;border-radius:22px;background:rgba(255,255,255,.08);border:1px solid var(--border);overflow:hidden}.cover img{width:100%;height:100%;object-fit:cover;display:block}.trackTitle{font-size:1.55rem;font-weight:950;line-height:1.02;letter-spacing:-.05em;margin-top:14px}.trackArtist{color:var(--muted);margin-top:6px}.yearHidden{display:inline-flex;margin-top:12px;border-radius:999px;padding:7px 11px;border:1px solid var(--border);background:rgba(0,0,0,.18);color:var(--muted);font-size:.85rem;font-weight:850}.deckBack{width:min(300px,76vw);min-height:350px;border:1px dashed rgba(255,255,255,.24);background:repeating-linear-gradient(45deg,rgba(125,211,252,.08),rgba(125,211,252,.08) 12px,rgba(192,132,252,.08) 12px,rgba(192,132,252,.08) 24px);display:grid;place-items:center;text-align:center;border-radius:30px;color:var(--muted);font-weight:850}
     .activeTimelineArea{width:min(1040px,100%);padding:0 8px}.timelineHeader{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}.timelineHeader h2{margin:0;font-size:1.04rem}.legend{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.legendItem{display:inline-flex;align-items:center;gap:5px;color:var(--muted);font-size:.8rem}.dot{width:10px;height:10px;border-radius:999px}.dot.locked{background:var(--ok)}.dot.pending{background:var(--gold)}.dot.current{background:var(--accent)}
-    .timeline{display:flex;align-items:stretch;gap:10px;overflow-x:auto;padding:12px 4px 20px;scrollbar-color:rgba(255,255,255,.25) transparent;min-height:174px}.tlCard{width:154px;min-width:154px;min-height:136px;border-radius:18px;padding:11px;border:1px solid var(--border);background:var(--panel2);transition:transform .2s ease,box-shadow .2s ease,opacity .2s ease;position:relative}.tlCard.locked{border-color:rgba(64,217,139,.65);background:linear-gradient(180deg,rgba(64,217,139,.14),rgba(255,255,255,.035)),var(--panel2)}.tlCard.pending{border-color:rgba(250,204,21,.85);background:linear-gradient(180deg,rgba(250,204,21,.20),rgba(255,255,255,.035)),var(--panel2);box-shadow:0 0 0 2px rgba(250,204,21,.10) inset}.tlCard.proposed{border-color:rgba(125,211,252,.95);box-shadow:0 0 0 3px rgba(125,211,252,.18),0 18px 40px rgba(0,0,0,.28);transform:translateY(-7px)}.tlCardTitle{font-weight:850;line-height:1.08;font-size:.96rem;white-space:normal;overflow:visible;word-break:break-word;padding-right:38px}.tlArtist{color:var(--muted);font-size:.78rem;margin-top:5px;white-space:normal;overflow:visible;word-break:break-word}.tlYear{margin-top:8px;font-size:1.15rem;font-weight:950}.tlTag{position:absolute;right:8px;top:8px;font-size:.68rem;font-weight:900;border-radius:999px;padding:3px 6px;background:rgba(255,255,255,.08);color:var(--muted)}.tlCard.pending .tlTag{color:#221a00;background:var(--gold)}.tlCard.locked .tlTag{color:#06130c;background:var(--ok)}
+    .timeline{display:flex;align-items:stretch;gap:10px;overflow-x:auto;padding:12px 4px 20px;scrollbar-color:rgba(255,255,255,.25) transparent;min-height:174px}.tlCard{width:154px;min-width:154px;min-height:136px;border-radius:18px;padding:11px;border:1px solid var(--border);background:var(--panel2);transition:transform .2s ease,box-shadow .2s ease,opacity .2s ease;position:relative}.tlCard.locked{border-color:rgba(64,217,139,.65);background:linear-gradient(180deg,rgba(64,217,139,.14),rgba(255,255,255,.035)),var(--panel2)}.tlCard.pending{border-color:rgba(250,204,21,.85);background:linear-gradient(180deg,rgba(250,204,21,.20),rgba(255,255,255,.035)),var(--panel2);box-shadow:0 0 0 2px rgba(250,204,21,.10) inset}.tlCard.proposed{border-color:rgba(125,211,252,.95);box-shadow:0 0 0 3px rgba(125,211,252,.18),0 18px 40px rgba(0,0,0,.28);transform:translateY(-7px);cursor:grab}.tlCard.proposed:active{cursor:grabbing}.tlCard.dragging{opacity:1;transform:scale(.94) rotate(var(--drag-rot,0deg));box-shadow:0 42px 100px rgba(0,0,0,.62);z-index:9999}.tlCardTitle{font-weight:850;line-height:1.08;font-size:.96rem;white-space:normal;overflow:visible;word-break:break-word;padding-right:38px}.tlArtist{color:var(--muted);font-size:.78rem;margin-top:5px;white-space:normal;overflow:visible;word-break:break-word}.tlYear{margin-top:8px;font-size:1.15rem;font-weight:950}.tlTag{position:absolute;right:8px;top:8px;font-size:.68rem;font-weight:900;border-radius:999px;padding:3px 6px;background:rgba(255,255,255,.08);color:var(--muted)}.tlCard.pending .tlTag{color:#221a00;background:var(--gold)}.tlCard.locked .tlTag{color:#06130c;background:var(--ok)}
     .dropSlot{width:30px;min-width:30px;border-radius:16px;border:1px dashed rgba(255,255,255,.18);background:rgba(255,255,255,.025);display:grid;place-items:center;color:transparent;transition:width .2s ease,background .2s ease,border-color .2s ease,transform .2s ease}.dropSlot::after{content:'+';font-weight:950;color:rgba(255,255,255,.22)}.dropSlot.active,.dropSlot:hover{width:166px;background:rgba(125,211,252,.16);border-color:rgba(125,211,252,.75);transform:translateY(-4px)}.dropSlot.selected{width:166px;background:rgba(125,211,252,.24);border-color:rgba(125,211,252,.95)}.resultActions{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
-    .ownTimelineDock{position:fixed;left:0;right:0;bottom:var(--dockH);z-index:25;background:linear-gradient(180deg,rgba(8,13,25,.30),rgba(8,13,25,.96));backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:10px 160px;min-height:var(--ownH)}.ownTimelineDock .timeline{min-height:126px;padding:8px 0 8px}.ownTimelineDock .tlCard{width:138px;min-width:138px;min-height:116px;border-radius:15px;padding:9px}.ownTimelineDock .tlYear{font-size:1rem}.ownTimelineDock .tlCardTitle{font-size:.82rem}
-    .bottomDock{position:fixed;left:0;right:0;bottom:0;z-index:35;min-height:var(--dockH);background:rgba(10,15,29,.96);backdrop-filter:blur(18px);border-top:1px solid var(--border);box-shadow:0 -18px 50px rgba(0,0,0,.35);padding:10px 150px 12px;display:grid;grid-template-rows:auto auto;gap:8px;align-items:start}.playerStrip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;width:100%;max-width:980px;margin:0 auto}.playerTile{border:1px solid var(--border);background:rgba(255,255,255,.045);border-radius:18px;padding:10px;position:relative;overflow:hidden;min-height:72px}.playerTile.active{border-color:rgba(125,211,252,.85);box-shadow:0 0 0 2px rgba(125,211,252,.16) inset}.playerTile.winner{border-color:rgba(64,217,139,.85);background:rgba(64,217,139,.10)}.playerName{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playerScore{font-size:1.45rem;font-weight:950;letter-spacing:-.05em}.scoreLabel{font-size:.75rem;color:var(--muted)}
+    .ownTimelineDock{position:fixed;left:0;right:0;bottom:var(--dockH);z-index:25;background:linear-gradient(180deg,rgba(8,13,25,.30),rgba(8,13,25,.96));backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:10px 160px;min-height:var(--ownH);transition:min-height .22s ease,padding .22s ease}.ownTimelineDock .timelineHeader{justify-content:center;text-align:center}.ownTimelineDock .timelineHeader>div{display:grid;place-items:center}.ownTimelineDock .legend{justify-content:center}.ownTimelineDock .timeline{min-height:126px;padding:8px 0 8px;justify-content:center}.ownTimelineDock .timeline .tiny,.ownTimelineDock .timeline .small{text-align:center;width:100%}.ownTimelineDock .tlCard{width:138px;min-width:138px;min-height:116px;border-radius:15px;padding:9px}.ownTimelineDock .tlYear{font-size:1rem}.ownTimelineDock .tlCardTitle{font-size:.82rem}.ownTimelineToggle{position:absolute;right:18px;top:12px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);font-size:.82rem;font-weight:850}body.ownCollapsed{--ownH:54px}body.ownCollapsed .ownTimelineDock{padding-top:10px;padding-bottom:8px}body.ownCollapsed .ownTimelineDock .timeline,body.ownCollapsed .ownTimelineDock .legend{display:none}body.ownCollapsed .ownTimelineDock .timelineHeader{margin-bottom:0}body.ownCollapsed .ownTimelineToggle{top:9px}
+    .bottomDock{position:fixed;left:0;right:0;bottom:0;z-index:35;min-height:var(--dockH);background:rgba(10,15,29,.96);backdrop-filter:blur(18px);border-top:1px solid var(--border);box-shadow:0 -18px 50px rgba(0,0,0,.35);padding:10px 150px 12px;display:grid;grid-template-rows:auto auto;gap:8px;align-items:start}.playerStrip{display:flex;justify-content:center;align-items:stretch;gap:10px;width:100%;max-width:980px;margin:0 auto;flex-wrap:nowrap}.playerTile{border:1px solid var(--border);background:rgba(255,255,255,.045);border-radius:18px;padding:10px;position:relative;overflow:hidden;min-height:72px;flex:0 1 184px;max-width:184px;min-width:132px}.playerTile.active{border-color:rgba(125,211,252,.85);box-shadow:0 0 0 2px rgba(125,211,252,.16) inset}.playerTile.winner{border-color:rgba(64,217,139,.85);background:rgba(64,217,139,.10)}.playerName{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.playerScore{font-size:1.45rem;font-weight:950;letter-spacing:-.05em}.scoreLabel{font-size:.75rem;color:var(--muted)}
     .rulesFooter{position:static;transform:none;width:min(920px,100%);margin:0 auto;text-align:center;color:var(--muted);font-size:.72rem;line-height:1.22}.profileArea{position:fixed;left:12px;bottom:14px;z-index:50}.profileButton{display:flex;align-items:center;gap:10px;min-width:126px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);padding:9px 12px;box-shadow:var(--shadow)}.profileButton.active{border-color:rgba(125,211,252,.8)}.profileButton b{display:block;font-size:.88rem}.profileButton small{display:block;color:var(--muted);font-size:.72rem}.avatarDot{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 0 0 3px rgba(255,255,255,.08)}.profileMenu{position:absolute;left:0;bottom:56px;width:310px;background:rgba(19,26,43,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:22px;padding:14px;box-shadow:var(--shadow);display:none}.profileMenu.open{display:block}.profileMenu h3{margin:0 0 4px}.playlistArea{position:fixed;right:12px;bottom:14px;z-index:50}.playlistButton{display:flex;align-items:center;gap:10px;min-width:150px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--border);padding:9px 12px;box-shadow:var(--shadow)}.playlistButton b{display:block;font-size:.88rem}.playlistButton small{display:block;color:var(--muted);font-size:.72rem}.playlistIcon{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--ok),var(--accent));box-shadow:0 0 0 3px rgba(255,255,255,.08);display:grid;place-items:center;color:#07111d;font-weight:950}.playlistMenu{position:absolute;right:0;bottom:56px;width:360px;background:rgba(19,26,43,.96);backdrop-filter:blur(18px);border:1px solid var(--border);border-radius:22px;padding:14px;box-shadow:var(--shadow);display:none}.playlistMenu.open{display:block}.playlistMenu h3{margin:0 0 4px}.playlistMenu .setupGrid{grid-template-columns:1fr}.playlistMenu .actions{margin-top:10px}.playerBoard,.boardGrid{display:none!important}
-    @media(max-width:920px){:root{--dockH:214px;--ownH:170px}.appTop{position:static;transform:none;width:auto;margin:14px;display:block}.setupPanel{width:auto;margin-top:12px}.gameShell{padding-top:20px}.ownTimelineDock{padding:10px 12px;bottom:var(--dockH)}.bottomDock{padding:10px 10px 12px}.playerStrip{grid-template-columns:repeat(2,minmax(0,1fr))}.rulesFooter{width:calc(100vw - 20px)}.profileArea{bottom:14px}.profileMenu{bottom:56px}.playlistArea{right:12px;bottom:14px}.playlistMenu{right:0;bottom:56px;width:min(360px,calc(100vw - 24px))}}
+    @media(max-width:920px){:root{--dockH:214px;--ownH:170px}.appTop{position:static;transform:none;width:auto;margin:14px;display:block}.setupPanel{width:auto;margin-top:12px}.gameShell{padding-top:20px}.ownTimelineDock{padding:10px 12px;bottom:var(--dockH)}.bottomDock{padding:10px 10px 12px}.playerStrip{flex-wrap:wrap}.playerTile{flex-basis:calc(50% - 8px);max-width:220px}.rulesFooter{width:calc(100vw - 20px)}.profileArea{bottom:14px}.profileMenu{bottom:56px}.playlistArea{right:12px;bottom:14px}.playlistMenu{right:0;bottom:56px;width:min(360px,calc(100vw - 24px))}}
 
     /* v4 layout and interaction refinements */
     .appTop{display:none!important}
@@ -36,16 +36,18 @@
     .cardNoCover .cover{display:none}.cardNoTitle .trackTitle,.cardNoTitle .tlCardTitle{display:none}.cardNoArtist .trackArtist,.cardNoArtist .tlArtist{display:none}
     @media(max-width:700px){.currentCardZone{min-height:270px}.drawCard,.deckBack{width:min(240px,80vw);min-height:292px}.trackTitle{font-size:1.25rem}.activeTimelineArea .tlCard{width:136px;min-width:136px;min-height:205px}.ownTimelineDock .tlCard{width:122px;min-width:122px;min-height:184px}.dropSlot.active,.dropSlot:hover,.dropSlot.selected{width:136px}}
 
+  
+    /* v5: timeline cards always show full info; only active draw card respects card visibility toggles. */
   </style>
 </head>
 <body>
 
   <div class="appTop" aria-hidden="true"></div>
   <main class="gameShell"><div class="centerStage"><div class="turnTitle"><div class="eyebrow">Aktiv spelare</div><div class="bigMessage" id="turnTitle">Ingen runda startad</div><p class="small" id="turnSub">Välj spellista och starta spelet.</p></div><div class="currentCardZone" id="drawCardWrap"></div><div class="resultActions"><button class="secondary" id="drawCardBtn">Dra nytt kort</button><button class="primary" id="confirmPlacementBtn">Godkänn placering</button><button class="success" id="lockInBtn">Lås kort</button></div><p class="status" id="gameStatus"></p><section class="activeTimelineArea"><div class="timelineHeader"><div><h2 id="activeTimelineTitle">Aktiv spelares tidslinje</h2><p class="tiny">Dra kortet till en lucka. Korten flyttar sig visuellt när platsen skapas.</p></div><span class="pill" id="roundPill">Runda: 0 kort riskeras</span></div><div class="timeline" id="activeTimeline"></div></section></div></main>
-  <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></div><div class="timeline" id="ownTimeline"></div></section>
+  <section class="ownTimelineDock"><button class="ownTimelineToggle" id="ownTimelineToggle" type="button">Minimera</button><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></div><div class="timeline" id="ownTimeline"></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton" id="profileButton" type="button"><span class="avatarDot"></span><span><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select></div></div><div class="actions"><button class="primary" id="importPlaylistBtn">Hämta</button><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v4</span></div></div>
+  <div class="playlistArea"><button class="playlistButton" id="playlistButton" type="button"><span class="playlistIcon">⚙</span><span><b>Spelinställningar</b><small id="playlistButtonSub">Välj musik</small></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v7</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -54,13 +56,13 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v4';
+  const VERSION = 'timeline-game-v7';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
   const ROOM_ID = 'active';
   const WIN_SCORE = 7;
   const LS = {
-    token:'hitster_spotify_token_v3', verifier:'hitster_spotify_pkce_verifier_v3', oauthState:'hitster_spotify_oauth_state_v3', oauthPayload:'hitster_spotify_oauth_payload_v4', playerId:'timeline_player_id_v1', playerName:'timeline_player_name_v1', rateLimitUntil:'hitster_spotify_rate_limit_until_v1', autoplay:'timeline_autoplay_spotify_v1'
+    token:'hitster_spotify_token_v3', verifier:'hitster_spotify_pkce_verifier_v3', oauthState:'hitster_spotify_oauth_state_v3', oauthPayload:'hitster_spotify_oauth_payload_v4', playerId:'timeline_player_id_v1', playerName:'timeline_player_name_v1', rateLimitUntil:'hitster_spotify_rate_limit_until_v1', autoplay:'timeline_autoplay_spotify_v1', ownCollapsed:'timeline_own_collapsed_v1'
   };
 
   let app = null, db = null, roomData = {}, unsubscribeRoom = null;
@@ -71,7 +73,7 @@
 
   const $ = id => document.getElementById(id);
   const els = {
-    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle')
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle')
   };
 
   function redirectUri(){ return window.location.origin + window.location.pathname; }
@@ -229,15 +231,26 @@
   }
 
   function getSongs(){ const s=roomData.songBank; return Array.isArray(s)?s:Object.values(s||{}); }
+  async function songsFromSelectedPlaylist(){
+    const id=els.savedPlaylistSelect?.value;
+    if(!id) return null;
+    const snap=await roomRef('savedPlaylists/'+id+'/songs').get();
+    let songs=snap.val();
+    if(!Array.isArray(songs)) songs=Object.values(songs||{});
+    if(!songs.length) return null;
+    await roomRef().update({selectedPlaylistId:id,songBank:songs});
+    return songs;
+  }
   async function startGame(){
     connectFirebase();
-    const songs=getSongs(); if(!songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
+    const selectedSongs = await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
+    const songs=selectedSongs || getSongs(); if(!songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
     const players=sortPlayers(roomData.players).slice(0,5);
     if(!players.length){ await upsertPlayer(); }
     const allPlayers=sortPlayers((await roomRef('players').get()).val()||{}).slice(0,5);
     const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
     const updates={};
-    allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; });
+    allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
     updates.game={status:'playing',startedAt:firebase.database.ServerValue.TIMESTAMP,turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
     await roomRef().update(updates);
   }
@@ -248,7 +261,7 @@
     const deck=Array.isArray(game.deck)?[...game.deck]:[];
     if(!deck.length){ status(els.gameStatus,'Kortleken är slut. Lås in eller starta om.','warn'); return; }
     const card=deck.shift();
-    await roomRef('game').update({deck,currentCard:card,proposedIndex:null,wrongReveal:null,message:'Dra kortet till rätt plats i tidslinjen.'});
+    await roomRef().update({'game/deck':deck,'game/currentCard':card,'game/proposedIndex':null,'game/wrongReveal':null,'game/message':'Dra kortet till rätt plats i tidslinjen.',['players/'+player.id+'/activeProposal']:null});
     playCurrentSpotify(false);
   }
   async function setProposedIndex(index){
@@ -256,7 +269,15 @@
     const me=roomData.players?.[player.id];
     const len=timelineOf(me).length;
     const i=Math.max(0,Math.min(Number(index)||0,len));
-    await roomRef('game').update({proposedIndex:i});
+    const card=currentCard();
+    await roomRef().update({
+      'game/proposedIndex': i,
+      ['players/'+player.id+'/activeProposal']: {
+        index: i,
+        card: {...card, status:'proposed'},
+        updatedAt: firebase.database.ServerValue.TIMESTAMP
+      }
+    });
   }
   function timelineWithProposal(timeline,card,index){
     const arr=[...timeline];
@@ -284,7 +305,7 @@
     const correct=isSortedByYear(proposed);
     if(correct){
       const newTimeline=[...timeline]; newTimeline.splice(idx,0,{...card,status:'pending'});
-      await roomRef().update({['players/'+player.id+'/timeline']:newTimeline,'game/currentCard':null,'game/proposedIndex':null,'game/message':'Rätt. Dra ett till kort eller lås in dina gula kort.'});
+      await roomRef().update({['players/'+player.id+'/timeline']:newTimeline,['players/'+player.id+'/activeProposal']:null,'game/currentCard':null,'game/proposedIndex':null,'game/message':'Rätt. Dra ett till kort eller lås in dina gula kort.'});
       status(els.gameStatus,'Rätt. Kortet är gult och riskeras tills du låser in.','ok');
     }else{
       const pending=timeline.filter(c=>c.status==='pending');
@@ -299,7 +320,7 @@
         const snap = await roomRef('game/wrongReveal').get();
         const wr = snap.val();
         if(!wr || wr.until !== until) return;
-        await roomRef().update({['players/'+player.id+'/timeline']:locked,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
+        await roomRef().update({['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/activeProposal']:null,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
       }, 5000);
     }
   }
@@ -311,7 +332,7 @@
     if(!timeline.some(c=>c.status==='pending')){ status(els.gameStatus,'Du har inga gula kort att låsa in. Dra ett kort eller passa turen.','warn'); return; }
     const locked=timeline.map(c=>({...c,status:'locked'}));
     const score=locked.length;
-    const updates={['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/score']:score};
+    const updates={['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/score']:score,['players/'+player.id+'/activeProposal']:null};
     if(score>=WIN_SCORE){
       updates['game/status']='finished'; updates['game/winnerId']=player.id; updates['game/message']=(me.name||player.name)+' vann med '+score+' låsta kort.';
     }else{
@@ -330,7 +351,7 @@
     connectFirebase();
     const updates = {'game':null,'songBank':null,'selectedPlaylistId':null,'playlistImportDebug':null};
     const players = roomData.players || {};
-    Object.keys(players).forEach(id => { updates['players/'+id+'/timeline'] = []; updates['players/'+id+'/score'] = 0; updates['players/'+id+'/ready'] = false; });
+    Object.keys(players).forEach(id => { updates['players/'+id+'/timeline'] = []; updates['players/'+id+'/score'] = 0; updates['players/'+id+'/ready'] = false; updates['players/'+id+'/activeProposal'] = null; });
     await roomRef().update(updates);
     status(els.playlistStatus,'Spelet är avslutat och sessionens låtdata är rensad.','ok');
   }
@@ -457,17 +478,20 @@
     }
     const wrong = isWrongRevealActive();
     const canDrag=isMeActive() && !wrong;
-    const div=document.createElement('div'); div.className='drawCard'+cardVisibilityClass()+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
+    const div=document.createElement('div'); div.className='drawCard'+(wrong?'':' '+cardVisibilityClass())+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
     const yearText = wrong ? ('Fel placering · '+esc(card.year)) : 'Årtal dolt';
     div.innerHTML='<div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
     els.drawCardWrap.innerHTML=''; els.drawCardWrap.appendChild(div);
   }
   function renderActiveTimeline(){
-    const ap=activePlayer()||{}; const timeline=timelineOf(ap); const card=currentCard(); const idx=proposedIndex();
+    const ap=activePlayer()||{};
+    const timeline=timelineOf(ap);
+    const activeProposal=ap.activeProposal || null;
+    const card=currentCard() || activeProposal?.card || null;
+    const idx=proposedIndex() ?? (Number.isInteger(activeProposal?.index) ? activeProposal.index : null);
     setText(els.activeTimelineTitle,(ap.name||'Aktiv spelare')+'s aktiva tidslinje'); setText(els.roundPill,'Runda: '+pendingCount(ap)+' kort riskeras');
     els.activeTimeline.innerHTML='';
-    const withProposal = card && idx!==null ? timelineWithProposal(timeline,card,idx) : timeline;
     for(let i=0;i<=timeline.length;i++){
       els.activeTimeline.appendChild(makeDropSlot(i,idx));
       const cardAt = timeline[i];
@@ -490,10 +514,14 @@
     return slot;
   }
   function makeTimelineCard(card){
-    const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked')+cardVisibilityClass();
+    const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked');
     const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
+    if(card.status==='proposed' && isMeActive() && currentCard() && !isWrongRevealActive()){
+      div.title='Dra kortet igen för att placera om det';
+      bindCardPointerDrag(div, currentCard());
+    }
     return div;
   }
   function renderOwnTimeline(){
@@ -523,9 +551,10 @@
     players.forEach(p=>{
       const board=document.createElement('div'); board.className='playerBoard'+(p.id===roomData?.game?.turnPlayerId?' active':'');
       const tl=timelineOf(p);
+      const preview = p.activeProposal?.card && Number.isInteger(p.activeProposal?.index) ? timelineWithProposal(tl,p.activeProposal.card,p.activeProposal.index) : tl;
       board.innerHTML='<div class="playerBoardHead"><h3>'+esc(p.name||'Spelare')+'</h3><span class="pill">'+lockedCount(p)+'/'+WIN_SCORE+' låsta · '+pendingCount(p)+' risk</span></div><div class="miniTimeline"></div>';
       const mt=board.querySelector('.miniTimeline');
-      if(!tl.length) mt.innerHTML='<p class="tiny">Tom tidslinje</p>'; else tl.forEach(c=>mt.appendChild(makeTimelineCard(c)));
+      if(!preview.length) mt.innerHTML='<p class="tiny">Tom tidslinje</p>'; else preview.forEach(c=>mt.appendChild(makeTimelineCard(c)));
       els.playerBoards.appendChild(board);
     });
   }
@@ -542,7 +571,7 @@
   function esc(s){ return String(s ?? '').replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
 
   function bind(){
-    els.redirectUriText.textContent=redirectUri(); els.playerNameInput.value=player.name;
+    els.redirectUriText.textContent=redirectUri(); els.playerNameInput.value=player.name; applyOwnTimelineCollapsed(localStorage.getItem(KEYS.ownCollapsed)==='1'); if(els.ownTimelineToggle) els.ownTimelineToggle.onclick=toggleOwnTimeline;
     if(els.profileButton) els.profileButton.onclick=()=>{ els.profileMenu?.classList.toggle('open'); els.playlistMenu?.classList.remove('open'); };
     if(els.playlistButton) els.playlistButton.onclick=()=>{ els.playlistMenu?.classList.toggle('open'); els.profileMenu?.classList.remove('open'); };
     els.spotifyLoginBtn.onclick=loginSpotify;
@@ -563,7 +592,7 @@
   }
 
   async function init(){
-    window.musicTimelineDebug={VERSION,connectFirebase,roomRef,createDemo,startGame,endGame,drawCard,confirmPlacement,lockIn,get room(){return roomData},get player(){return player}};
+    window.musicTimelineDebug={VERSION,connectFirebase,roomRef,createDemo,startGame,endGame,drawCard,confirmPlacement,lockIn,setProposedIndex,get room(){return roomData},get player(){return player}};
     bind();
     try{ await handleSpotifyCallback(); }catch(err){ console.error(err); status(els.connectionStatus,err.message,'bad'); }
     connectFirebase();
