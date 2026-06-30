@@ -9655,12 +9655,28 @@ Jolene;Dolly Parton;1973"></textarea>
     }
 
     async function ensureFirebase() {
-      if (!window.state?.mp?.db && typeof connectFirebase === 'function') await connectFirebase();
-      if (!window.state?.mp?.db) throw new Error('Firebase är inte anslutet. Kontrollera Firebase-config och databaseURL.');
-      if (window.state?.mp) window.state.mp.roomCode = ROOM;
+      // OBS: den gamla appens `state` är deklarerad med const och finns därför inte som window.state.
+      // Använd de globala funktionerna som redan har tillgång till rätt state via sin egen closure.
       try { localStorage.setItem('hitster_multiplayer_room_v1', ROOM); } catch {}
-      if (typeof roomRef !== 'function') throw new Error('roomRef saknas. Firebase-rummet kunde inte initieras.');
-      return roomRef(ROOM);
+
+      if (typeof connectFirebase === 'function') {
+        await connectFirebase();
+      }
+
+      if (typeof roomRef === 'function') {
+        try {
+          return roomRef(ROOM);
+        } catch (err) {
+          // Fallback nedan om roomRef ännu inte har fått state.mp.db.
+        }
+      }
+
+      // Fallback: hämta den namngivna Firebase-appen direkt.
+      // Din app initieras som 'hitster-multiplayer', inte som [DEFAULT].
+      const app = firebase.apps.find(a => a.name === 'hitster-multiplayer');
+      if (!app) throw new Error('Firebase är inte anslutet. connectFirebase kunde inte skapa appen hitster-multiplayer.');
+      const db = firebase.database(app);
+      return db.ref('rooms/' + ROOM);
     }
 
     async function spotifyGet(path, label) {
