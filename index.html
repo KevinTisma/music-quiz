@@ -58,6 +58,19 @@
     @media(max-width:920px){:root{--dockH:182px;--ownH:128px}.gameShell{padding-top:8px}.currentCardZone{min-height:218px}.drawCard,.deckBack{width:min(190px,58vw);min-height:224px}.ownTimelineDock{padding:7px 10px 24px}.bottomDock{padding:7px 8px 8px}.playerStrip{flex-wrap:wrap}.playerTile{flex-basis:calc(50% - 6px);max-width:180px}.profileArea,.playlistArea{bottom:10px}.activeTimelineArea .timeline{justify-content:flex-start}.ownTimelineDock .legend{flex-wrap:wrap;width:calc(100vw - 20px);gap:8px}}
     @media(max-height:760px) and (min-width:921px){:root{--dockH:116px;--ownH:122px}.currentCardZone{min-height:210px}.drawCard,.deckBack{width:196px;min-height:224px}.activeTimelineArea .tlCard{width:100px;min-width:100px;min-height:142px}.ownTimelineDock .tlCard{width:82px!important;min-width:82px!important;min-height:118px!important}.rulesFooter{font-size:.62rem}}
 
+
+    /* v11: active player colors + first-card ghost slot */
+    .playerTile{--player-rgb:125,211,252;box-shadow:inset 0 0 0 1px rgba(var(--player-rgb),.10);}
+    .playerTile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:rgba(var(--player-rgb),.95);}
+    .playerTile.active{border-color:rgba(var(--player-rgb),1)!important;box-shadow:0 0 0 4px rgba(var(--player-rgb),.72),0 0 0 8px rgba(var(--player-rgb),.16),inset 0 0 0 2px rgba(255,255,255,.12)!important;background:linear-gradient(180deg,rgba(var(--player-rgb),.24),rgba(255,255,255,.045))!important;}
+    .playerTile.viewing{box-shadow:0 0 0 2px rgba(var(--player-rgb),.28) inset;}
+    .playerTile.active.viewing{box-shadow:0 0 0 4px rgba(var(--player-rgb),.72),0 0 0 8px rgba(var(--player-rgb),.16),inset 0 0 0 2px rgba(255,255,255,.18)!important;}
+    .activeTimelineArea{--active-player-rgb:125,211,252;border:1px solid rgba(var(--active-player-rgb),.28);background:linear-gradient(180deg,rgba(var(--active-player-rgb),.13),rgba(var(--active-player-rgb),.045));border-radius:22px;padding:8px 10px 10px!important;box-shadow:0 18px 55px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.04);}
+    .activeTimelineArea .timelineHeader h2{color:rgb(var(--active-player-rgb));}
+    .dropSlot.emptySlot,.activeTimelineArea .dropSlot.emptySlot{width:112px!important;min-width:112px!important;min-height:158px!important;opacity:1!important;background:rgba(var(--active-player-rgb),.10)!important;border:2px dashed rgba(var(--active-player-rgb),.68)!important;border-radius:16px!important;color:rgba(255,255,255,.65)!important;display:grid!important;place-items:center!important;padding:10px!important;text-align:center!important;}
+    .dropSlot.emptySlot::after{content:'Placera första kortet här'!important;color:rgba(255,255,255,.70)!important;font-size:.72rem;font-weight:900;line-height:1.15;text-transform:uppercase;letter-spacing:.035em;}
+    .dropSlot.emptySlot.active,.dropSlot.emptySlot:hover{transform:translateY(-3px)!important;background:rgba(var(--active-player-rgb),.20)!important;border-color:rgba(var(--active-player-rgb),.98)!important;box-shadow:0 14px 36px rgba(0,0,0,.25)!important;}
+
   </style>
 </head>
 <body>
@@ -76,7 +89,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v10';
+  const VERSION = 'timeline-game-v11';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
   const ROOM_ID = 'active';
@@ -106,6 +119,13 @@
   function cleanKey(s){ return String(s || '').replace(/[.#$\[\]/]/g,'_').slice(0,120); }
   function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
   function sortPlayers(players){ return Object.values(players || {}).sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0) || String(a.name||'').localeCompare(String(b.name||''))); }
+
+  const PLAYER_PALETTES = ['125,211,252','192,132,252','64,217,139','251,191,36','255,107,107'];
+  function playerRgb(id){
+    const players = sortPlayers(roomData?.players || {}).slice(0,5);
+    const idx = Math.max(0, players.findIndex(p=>p.id===id));
+    return PLAYER_PALETTES[idx % PLAYER_PALETTES.length];
+  }
   function timelineOf(p){ return Array.isArray(p?.timeline) ? p.timeline : []; }
   function lockedCount(p){ return timelineOf(p).filter(c=>c.status === 'locked').length; }
   function pendingCount(p){ return timelineOf(p).filter(c=>c.status === 'pending').length; }
@@ -436,6 +456,7 @@
       const div=document.createElement('button');
       div.type='button';
       div.className='playerTile'+(p.id===roomData?.game?.turnPlayerId?' active':'')+(roomData?.game?.winnerId===p.id?' winner':'')+(p.id===viewedTimelinePlayerId?' viewing':'');
+      div.style.setProperty('--player-rgb', playerRgb(p.id));
       div.title='Visa '+(p.name||'spelarens')+' tidslinje';
       div.innerHTML='<div class="playerName">'+esc(p.name||'Spelare')+'</div><div class="playerScore">'+lockedCount(p)+'<span class="scoreLabel"> / '+WIN_SCORE+'</span></div><div class="small">'+pendingCount(p)+' gula kort riskeras</div>';
       div.addEventListener('click',()=>{ viewedTimelinePlayerId=p.id; localStorage.setItem(VIEWED_TIMELINE_KEY,p.id); renderPlayers(); renderOwnTimeline(); });
@@ -519,9 +540,11 @@
     const card=currentCard() || activeProposal?.card || null;
     const idx=proposedIndex() ?? (Number.isInteger(activeProposal?.index) ? activeProposal.index : null);
     setText(els.activeTimelineTitle,(ap.name||'Aktiv spelare')+'s aktiva tidslinje'); setText(els.roundPill,'Runda: '+pendingCount(ap)+' kort riskeras');
+    const area = els.activeTimeline?.closest?.('.activeTimelineArea');
+    if(area) area.style.setProperty('--active-player-rgb', playerRgb(ap.id));
     els.activeTimeline.innerHTML='';
     for(let i=0;i<=timeline.length;i++){
-      els.activeTimeline.appendChild(makeDropSlot(i,idx));
+      els.activeTimeline.appendChild(makeDropSlot(i,idx,timeline.length===0));
       const cardAt = timeline[i];
       if(cardAt) els.activeTimeline.appendChild(makeTimelineCard(cardAt));
     }
@@ -533,8 +556,8 @@
     }
     if(!timeline.length && !card) els.activeTimeline.innerHTML='<p class="small">Tidslinjen är tom.</p>';
   }
-  function makeDropSlot(index,selected){
-    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':''); slot.title='Placera här'; slot.dataset.index=index;
+  function makeDropSlot(index,selected,isEmptyTimeline){
+    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera första kortet här':'Placera här'; slot.dataset.index=index;
     slot.addEventListener('click',()=>setProposedIndex(index));
     slot.addEventListener('dragover',e=>{ if(isMeActive() && currentCard()){ e.preventDefault(); slot.classList.add('active'); }});
     slot.addEventListener('dragleave',()=>slot.classList.remove('active'));
