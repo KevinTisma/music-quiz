@@ -2276,6 +2276,200 @@
     }
 
 
+    /* v58: mjukare övergång till slutskärm + rätt albumcovers */
+    body.finishedMode{
+      background:#020617!important;
+      background-image:none!important;
+      transition:background-color .55s cubic-bezier(.22,1,.36,1)!important;
+      overflow:hidden!important;
+    }
+
+    body.finishedMode .turnTitle,
+    body.finishedMode .resultActions,
+    body.finishedMode #gameStatus,
+    body.finishedMode .activePlayerBanner,
+    body.finishedMode .activeTimelineArea,
+    body.finishedMode .ownTimelineDock,
+    body.finishedMode .bottomDock{
+      animation:finishedUiFadeOut .34s cubic-bezier(.4,0,.2,1) both!important;
+    }
+
+    @keyframes finishedUiFadeOut{
+      from{
+        opacity:1;
+        transform:translateY(0);
+      }
+      to{
+        opacity:0;
+        transform:translateY(18px);
+      }
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:block!important;
+      overflow:hidden!important;
+      animation:none!important;
+    }
+
+    body.finishedMode .centerStage,
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      max-width:none!important;
+      min-height:100vh!important;
+      height:100vh!important;
+      display:block!important;
+    }
+
+    .planetResultsScene{
+      position:fixed!important;
+      inset:0!important;
+      z-index:12!important;
+      overflow:hidden!important;
+      background:
+        radial-gradient(circle at 18% 52%,rgba(255,137,24,.18) 0 13rem,transparent 21rem),
+        radial-gradient(circle at 82% 25%,rgba(37,99,235,.22) 0 13rem,transparent 23rem),
+        linear-gradient(135deg,#020617 0%,#061036 54%,#020617 100%)!important;
+      color:#ffffff!important;
+      padding:42px clamp(22px,5vw,72px)!important;
+      isolation:isolate!important;
+      animation:planetSceneGlideUp 1.18s cubic-bezier(.76,0,.16,1) both!important;
+    }
+
+    @keyframes planetSceneGlideUp{
+      0%{
+        opacity:0;
+        transform:translateY(28vh);
+      }
+      12%{
+        opacity:1;
+      }
+      78%{
+        opacity:1;
+        transform:translateY(-1.2vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    .planetList{
+      width:min(1260px,calc(100vw - 40px))!important;
+      gap:clamp(14px,2vh,20px)!important;
+    }
+
+    .planetResult{
+      grid-template-columns:92px minmax(220px,300px) minmax(380px,1fr)!important;
+      gap:24px!important;
+      align-items:center!important;
+      min-height:96px!important;
+    }
+
+    .planetPlayerTimeline{
+      display:flex!important;
+      align-items:center!important;
+      flex-wrap:wrap!important;
+      gap:12px!important;
+      overflow:visible!important;
+      padding:8px 0!important;
+      min-width:0!important;
+    }
+
+    .planetTimelineCard{
+      position:relative!important;
+      width:84px!important;
+      min-width:84px!important;
+      height:84px!important;
+      border-radius:16px!important;
+      overflow:hidden!important;
+      background:#0f172a!important;
+      border:2px solid rgba(255,255,255,.14)!important;
+      display:block!important;
+      box-shadow:none!important;
+    }
+
+    .planetTimelineCard img{
+      position:absolute!important;
+      inset:0!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      object-position:center center!important;
+      z-index:1!important;
+      display:block!important;
+      background:#0f172a!important;
+    }
+
+    .planetTimelineCard::after{
+      content:''!important;
+      position:absolute!important;
+      left:0!important;
+      right:0!important;
+      bottom:0!important;
+      height:30px!important;
+      z-index:2!important;
+      background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,0))!important;
+      pointer-events:none!important;
+    }
+
+    .planetTimelineCard span{
+      position:absolute!important;
+      z-index:3!important;
+      left:50%!important;
+      bottom:5px!important;
+      transform:translateX(-50%)!important;
+      color:#ffffff!important;
+      font-size:.7rem!important;
+      font-weight:1000!important;
+      line-height:1!important;
+      text-shadow:none!important;
+      background:rgba(0,0,0,.66)!important;
+      border-radius:999px!important;
+      padding:4px 7px!important;
+      white-space:nowrap!important;
+    }
+
+    @media(max-width:900px){
+      .planetResultsScene{
+        overflow:auto!important;
+      }
+
+      .planetResult{
+        grid-template-columns:70px 1fr!important;
+        grid-template-areas:
+          "planet text"
+          "timeline timeline"!important;
+        gap:10px 14px!important;
+        padding-bottom:8px!important;
+        transform:translateX(0)!important;
+      }
+
+      .planetPlayerTimeline{
+        flex-wrap:nowrap!important;
+        overflow-x:auto!important;
+        padding-bottom:10px!important;
+      }
+
+      .planetTimelineCard{
+        width:68px!important;
+        min-width:68px!important;
+        height:68px!important;
+        border-radius:13px!important;
+      }
+
+      .planetTimelineCard::after{
+        height:26px!important;
+      }
+
+      .planetTimelineCard span{
+        font-size:.62rem!important;
+        padding:3px 6px!important;
+      }
+    }
+
+
   </style>
 </head>
 <body>
@@ -2285,7 +2479,7 @@
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div></div><div class="timeline" id="ownTimeline"></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton cornerBlob cornerBlobLeft" id="profileButton" type="button"><span class="cornerBlobText profileButtonText"><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in med Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton cornerBlob cornerBlobRight" id="playlistButton" type="button"><span class="cornerBlobText playlistButtonText"><b id="playlistButtonSub">Inställningar</b></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v57</span></div></div>
+  <div class="playlistArea"><button class="playlistButton cornerBlob cornerBlobRight" id="playlistButton" type="button"><span class="cornerBlobText playlistButtonText"><b id="playlistButtonSub">Inställningar</b></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v58</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -2294,7 +2488,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v57';
+  const VERSION = 'timeline-game-v58';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
@@ -2878,7 +3072,8 @@
 
       const timelineHtml = tl.length
         ? tl.map(c=>{
-            const img = c.coverUrl ? '<img src="'+esc(c.coverUrl)+'" alt="">' : '';
+            const cover = c.image || c.coverUrl || c.albumImage || '';
+            const img = cover ? '<img src="'+esc(cover)+'" alt="">' : '';
             return '<div class="planetTimelineCard '+esc(c.status||'locked')+'">'+
               img+
               '<span>'+esc(String(c.year || '?'))+'</span>'+
