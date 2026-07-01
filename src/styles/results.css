@@ -1,0 +1,1308 @@
+﻿    /* v51: slutskÃ¤rm som planetsystem inspirerad av Wrapped-space-kÃ¤nslan */
+    body.finishedMode{
+      padding-bottom:0!important;
+      background:#020617!important;
+      background-image:none!important;
+      overflow:hidden!important;
+    }
+
+    body.finishedMode::before,
+    body.finishedMode::after{
+      content:none!important;
+      display:none!important;
+    }
+
+    body.finishedMode .bottomDock,
+    body.finishedMode .ownTimelineDock,
+    body.finishedMode .activeTimelineArea,
+    body.finishedMode .activePlayerBanner,
+    body.finishedMode .resultActions,
+    body.finishedMode #gameStatus,
+    body.finishedMode .turnTitle{
+      display:none!important;
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:grid!important;
+      place-items:center!important;
+      overflow:hidden!important;
+      animation:finishedUiDrop .46s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    body.finishedMode .centerStage{
+      width:100%!important;
+      max-width:none!important;
+      height:100vh!important;
+      display:block!important;
+    }
+
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      height:100vh!important;
+      min-height:100vh!important;
+      display:block!important;
+    }
+
+    @keyframes finishedUiDrop{
+      0%{opacity:.2;transform:translateY(-36px);}
+      100%{opacity:1;transform:translateY(0);}
+    }
+
+    .planetResultsScene{
+      position:fixed!important;
+      inset:0!important;
+      z-index:12!important;
+      overflow:hidden!important;
+      background:
+        radial-gradient(circle at 18% 52%,rgba(255,137,24,.18) 0 13rem,transparent 21rem),
+        radial-gradient(circle at 82% 25%,rgba(37,99,235,.22) 0 13rem,transparent 23rem),
+        linear-gradient(135deg,#020617 0%,#061036 54%,#020617 100%)!important;
+      color:#ffffff!important;
+      padding:42px clamp(22px,5vw,72px)!important;
+      isolation:isolate!important;
+      animation:planetSceneIn .52s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    @keyframes planetSceneIn{
+      from{opacity:0;transform:translateY(70px);}
+      to{opacity:1;transform:translateY(0);}
+    }
+
+    .planetStars{
+      position:absolute!important;
+      inset:0!important;
+      z-index:0!important;
+      background:
+        radial-gradient(circle at 10% 18%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 22% 72%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 37% 31%,#ffffff 0 1.5px,transparent 2px),
+        radial-gradient(circle at 48% 82%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 63% 18%,#ffffff 0 1.6px,transparent 2px),
+        radial-gradient(circle at 78% 64%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 91% 38%,#ffffff 0 1.5px,transparent 2px),
+        radial-gradient(circle at 88% 87%,#ffffff 0 2px,transparent 2.4px);
+      opacity:.58!important;
+    }
+
+    .planetSun{
+      position:absolute!important;
+      left:-22vmin!important;
+      top:32%!important;
+      width:52vmin!important;
+      height:52vmin!important;
+      border-radius:50%!important;
+      background:#ff8a18!important;
+      box-shadow:0 0 70px rgba(255,138,24,.34)!important;
+      z-index:1!important;
+    }
+
+    .planetOrbit{
+      position:absolute!important;
+      left:-18vmin!important;
+      top:25%!important;
+      width:64vmin!important;
+      height:64vmin!important;
+      border:2px solid rgba(255,255,255,.72)!important;
+      border-radius:50%!important;
+      z-index:2!important;
+      opacity:.76!important;
+    }
+
+    .planetOrbit2{
+      width:78vmin!important;
+      height:78vmin!important;
+      left:-24vmin!important;
+      top:18%!important;
+      opacity:.42!important;
+    }
+
+    .planetOrbit3{
+      width:92vmin!important;
+      height:92vmin!important;
+      left:-30vmin!important;
+      top:11%!important;
+      opacity:.25!important;
+    }
+
+    .planetResultsTitle{
+      position:relative!important;
+      z-index:3!important;
+      max-width:760px!important;
+      margin:0 auto 28px!important;
+      text-align:center!important;
+    }
+
+    .planetResultsTitle span{
+      display:block!important;
+      font-size:.9rem!important;
+      font-weight:950!important;
+      letter-spacing:.18em!important;
+      text-transform:uppercase!important;
+      color:#f5ff3d!important;
+    }
+
+    .planetResultsTitle b{
+      display:block!important;
+      margin-top:6px!important;
+      font-size:clamp(2.1rem,5vw,5.2rem)!important;
+      line-height:.9!important;
+      letter-spacing:-.07em!important;
+      color:#ffffff!important;
+    }
+
+    .planetList{
+      position:relative!important;
+      z-index:4!important;
+      width:min(760px,calc(100vw - 38px))!important;
+      margin:0 auto!important;
+      display:grid!important;
+      gap:clamp(14px,2.2vh,24px)!important;
+      padding-top:clamp(6px,2vh,24px)!important;
+    }
+
+    .planetResult{
+      position:relative!important;
+      display:grid!important;
+      grid-template-columns:86px 1fr!important;
+      align-items:center!important;
+      gap:18px!important;
+      min-height:78px!important;
+      transform:translateX(var(--planet-shift,0px))!important;
+    }
+
+    .planetRank1{--planet-shift:-34px;}
+    .planetRank2{--planet-shift:22px;}
+    .planetRank3{--planet-shift:-8px;}
+    .planetRank4{--planet-shift:38px;}
+    .planetRank5{--planet-shift:-26px;}
+
+    .planetShape{
+      position:relative!important;
+      width:74px!important;
+      height:74px!important;
+      display:grid!important;
+      place-items:center!important;
+      filter:none!important;
+    }
+
+    .planetShape::before{
+      content:''!important;
+      position:absolute!important;
+      width:74px!important;
+      height:74px!important;
+      border-radius:50%!important;
+      background:rgb(var(--player-rgb))!important;
+      clip-path:polygon(50% 0%,57% 12%,67% 3%,72% 17%,85% 12%,84% 28%,100% 32%,88% 43%,100% 50%,88% 57%,100% 68%,84% 72%,85% 88%,72% 83%,67% 97%,57% 88%,50% 100%,43% 88%,33% 97%,28% 83%,15% 88%,16% 72%,0% 68%,12% 57%,0% 50%,12% 43%,0% 32%,16% 28%,15% 12%,28% 17%,33% 3%,43% 12%)!important;
+    }
+
+    .planetShape::after{
+      content:''!important;
+      position:absolute!important;
+      left:-13px!important;
+      right:-13px!important;
+      height:10px!important;
+      border:6px solid #f5ff3d!important;
+      border-top-color:#f5ff3d!important;
+      border-bottom-color:#f5ff3d!important;
+      border-left-color:transparent!important;
+      border-right-color:transparent!important;
+      border-radius:50%!important;
+      transform:rotate(-8deg)!important;
+      z-index:2!important;
+    }
+
+    .planetRank1 .planetShape{
+      width:88px!important;
+      height:88px!important;
+    }
+
+    .planetRank1 .planetShape::before{
+      width:88px!important;
+      height:88px!important;
+      background:#f5ff3d!important;
+    }
+
+    .planetRank2 .planetShape::before{background:#21e064!important;}
+    .planetRank3 .planetShape::before{background:#ff8a18!important;}
+    .planetRank4 .planetShape::before{background:#ff4ba0!important;}
+    .planetRank5 .planetShape::before{background:#7c1dff!important;}
+
+    .planetResultText{
+      display:grid!important;
+      gap:4px!important;
+      color:#ffffff!important;
+    }
+
+    .planetResultText div{
+      display:flex!important;
+      align-items:baseline!important;
+      gap:16px!important;
+      min-width:0!important;
+    }
+
+    .planetResultText strong{
+      font-size:1.6rem!important;
+      font-weight:1000!important;
+      color:#ffffff!important;
+      min-width:28px!important;
+      text-align:right!important;
+    }
+
+    .planetResultText b{
+      font-size:clamp(1.2rem,2.6vw,2.1rem)!important;
+      font-weight:1000!important;
+      letter-spacing:-.055em!important;
+      color:#f5ff3d!important;
+      white-space:nowrap!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+    }
+
+    .planetResultText small{
+      color:rgba(255,255,255,.72)!important;
+      font-size:.78rem!important;
+      font-weight:850!important;
+      margin-left:44px!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+    }
+
+    @media(max-width:760px){
+      .planetResultsScene{
+        padding:32px 18px!important;
+      }
+
+      .planetResultsTitle{
+        margin-bottom:18px!important;
+      }
+
+      .planetList{
+        gap:12px!important;
+      }
+
+      .planetResult{
+        grid-template-columns:66px 1fr!important;
+        gap:12px!important;
+        min-height:66px!important;
+        transform:translateX(0)!important;
+      }
+
+      .planetShape{
+        width:58px!important;
+        height:58px!important;
+      }
+
+      .planetShape::before{
+        width:58px!important;
+        height:58px!important;
+      }
+
+      .planetShape::after{
+        left:-8px!important;
+        right:-8px!important;
+        height:8px!important;
+        border-width:4px!important;
+      }
+
+      .planetRank1 .planetShape,
+      .planetRank1 .planetShape::before{
+        width:66px!important;
+        height:66px!important;
+      }
+
+      .planetSun{
+        left:-34vmin!important;
+        top:34%!important;
+        width:58vmin!important;
+        height:58vmin!important;
+      }
+
+      .planetOrbit{
+        left:-34vmin!important;
+        top:25%!important;
+        width:82vmin!important;
+        height:82vmin!important;
+      }
+
+      .planetResultText strong{
+        font-size:1.25rem!important;
+        min-width:22px!important;
+      }
+
+      .planetResultText b{
+        font-size:1.12rem!important;
+      }
+
+      .planetResultText small{
+        margin-left:38px!important;
+        font-size:.62rem!important;
+      }
+    }
+
+
+    /* v52: Aktiv Spelare-text med hÃ¶g kontrast och inverterad blend */
+    .activePlayerBanner{
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      padding:0!important;
+      display:flex!important;
+      justify-content:center!important;
+      align-items:center!important;
+      min-height:auto!important;
+      isolation:isolate!important;
+    }
+
+    .activePlayerBanner,
+    .activePlayerBanner *{
+      color:#ffffff!important;
+      mix-blend-mode:difference!important;
+    }
+
+    .activePlayerBanner{
+      font-size:clamp(1.1rem,2vw,1.5rem)!important;
+      font-weight:1000!important;
+      letter-spacing:-.05em!important;
+      text-transform:uppercase!important;
+      line-height:.95!important;
+      text-align:center!important;
+      filter:none!important;
+    }
+
+    .activePlayerBanner .small,
+    .activePlayerBanner small,
+    .activePlayerBanner span:first-child{
+      font-size:.72em!important;
+      font-weight:1000!important;
+      letter-spacing:.1em!important;
+      text-transform:uppercase!important;
+      opacity:1!important;
+      display:block!important;
+    }
+
+    .activePlayerBanner b,
+    .activePlayerBanner strong,
+    .activePlayerBanner .playerName{
+      font-size:1.28em!important;
+      font-weight:1000!important;
+      letter-spacing:-.06em!important;
+      display:block!important;
+    }
+
+    @media(max-width:920px){
+      .activePlayerBanner{
+        font-size:clamp(.95rem,4vw,1.18rem)!important;
+      }
+      .activePlayerBanner .small,
+      .activePlayerBanner small,
+      .activePlayerBanner span:first-child{
+        font-size:.68em!important;
+      }
+      .activePlayerBanner b,
+      .activePlayerBanner strong,
+      .activePlayerBanner .playerName{
+        font-size:1.18em!important;
+      }
+    }
+
+
+    /* v53: lÃ¥ngsammare dramatisk scroll till slutresultat + tidslinjer bredvid spelare */
+    body.finishedMode .gameShell{
+      animation:finishedScrollDropSlow 2.35s cubic-bezier(.86,0,.07,1) both!important;
+    }
+
+    @keyframes finishedScrollDropSlow{
+      0%{
+        opacity:0;
+        transform:translateY(100vh);
+      }
+      18%{
+        opacity:1;
+        transform:translateY(94vh);
+      }
+      62%{
+        opacity:1;
+        transform:translateY(6vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    .planetResultsScene{
+      animation:planetSceneScrollInSlow 2.35s cubic-bezier(.86,0,.07,1) both!important;
+    }
+
+    @keyframes planetSceneScrollInSlow{
+      0%{
+        opacity:1;
+        transform:translateY(100vh);
+      }
+      18%{
+        transform:translateY(92vh);
+      }
+      64%{
+        transform:translateY(5vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    .planetResultsTitle span{
+      color:#f5ff3d!important;
+      max-width:min(780px,calc(100vw - 48px))!important;
+      margin:0 auto!important;
+      white-space:nowrap!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+    }
+
+    .planetResultsTitle b{
+      color:#ffffff!important;
+    }
+
+    .planetList{
+      width:min(1180px,calc(100vw - 48px))!important;
+      gap:clamp(14px,2vh,20px)!important;
+    }
+
+    .planetResult{
+      grid-template-columns:92px minmax(210px,330px) minmax(260px,1fr)!important;
+      gap:22px!important;
+      align-items:center!important;
+      min-height:88px!important;
+    }
+
+    .planetResultText{
+      min-width:0!important;
+    }
+
+    .planetPlayerTimeline{
+      display:flex!important;
+      align-items:center!important;
+      gap:8px!important;
+      overflow-x:auto!important;
+      overflow-y:hidden!important;
+      padding:8px 4px!important;
+      scrollbar-color:rgba(255,255,255,.34) transparent!important;
+      min-width:0!important;
+    }
+
+    .planetTimelineCard{
+      position:relative!important;
+      width:54px!important;
+      min-width:54px!important;
+      height:54px!important;
+      border-radius:12px!important;
+      overflow:hidden!important;
+      background:#1f2937!important;
+      border:2px solid rgba(255,255,255,.16)!important;
+      display:grid!important;
+      place-items:end center!important;
+    }
+
+    .planetTimelineCard img{
+      position:absolute!important;
+      inset:0!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      z-index:1!important;
+    }
+
+    .planetTimelineCard::after{
+      content:''!important;
+      position:absolute!important;
+      left:0!important;
+      right:0!important;
+      bottom:0!important;
+      height:62%!important;
+      z-index:2!important;
+      background:linear-gradient(to top,rgba(0,0,0,.88),rgba(0,0,0,0))!important;
+      pointer-events:none!important;
+    }
+
+    .planetTimelineCard span{
+      position:relative!important;
+      z-index:3!important;
+      color:#ffffff!important;
+      font-size:.68rem!important;
+      font-weight:1000!important;
+      padding:0 0 4px!important;
+      line-height:1!important;
+      text-shadow:0 1px 2px rgba(0,0,0,.6)!important;
+    }
+
+    .planetTimelineCard.pending{
+      border-color:#facc15!important;
+    }
+
+    .planetTimelineCard.locked{
+      border-color:#16a34a!important;
+    }
+
+    .planetTimelineEmpty{
+      margin:0!important;
+      color:rgba(255,255,255,.55)!important;
+      font-size:.8rem!important;
+      font-weight:850!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+    }
+
+    @media(max-width:900px){
+      .planetResultsScene{
+        overflow:auto!important;
+      }
+
+      .planetResult{
+        grid-template-columns:70px 1fr!important;
+        grid-template-areas:
+          "planet text"
+          "timeline timeline"!important;
+        gap:8px 14px!important;
+        min-height:0!important;
+        padding-bottom:8px!important;
+        transform:translateX(0)!important;
+      }
+
+      .planetShape{
+        grid-area:planet!important;
+      }
+
+      .planetResultText{
+        grid-area:text!important;
+      }
+
+      .planetPlayerTimeline{
+        grid-area:timeline!important;
+        padding-left:4px!important;
+      }
+
+      .planetTimelineCard{
+        width:48px!important;
+        min-width:48px!important;
+        height:48px!important;
+        border-radius:10px!important;
+      }
+
+      .planetTimelineCard span{
+        font-size:.6rem!important;
+      }
+    }
+
+
+    /* v54: aktiv-spelare-ruta i spelarens fÃ¤rg + tydligare album pÃ¥ slutskÃ¤rmen */
+    .activePlayerBanner{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      width:min(1040px,100%)!important;
+      min-height:68px!important;
+      padding:14px 24px!important;
+      margin-bottom:-8px!important;
+      border:0!important;
+      border-radius:20px!important;
+      background:rgb(var(--active-player-rgb,124,29,255))!important;
+      color:rgb(var(--active-player-text-rgb,255,255,255))!important;
+      box-shadow:none!important;
+      text-transform:uppercase!important;
+      font-weight:1000!important;
+      font-size:clamp(1.05rem,2vw,1.5rem)!important;
+      letter-spacing:-.055em!important;
+      line-height:.95!important;
+      text-align:center!important;
+      mix-blend-mode:normal!important;
+      isolation:isolate!important;
+      filter:none!important;
+    }
+
+    .activePlayerBanner,
+    .activePlayerBanner *{
+      color:rgb(var(--active-player-text-rgb,255,255,255))!important;
+      mix-blend-mode:normal!important;
+      text-shadow:none!important;
+    }
+
+    .planetList{
+      width:min(1260px,calc(100vw - 40px))!important;
+    }
+
+    .planetResult{
+      grid-template-columns:92px minmax(220px,300px) minmax(380px,1fr)!important;
+      gap:24px!important;
+      align-items:center!important;
+    }
+
+    .planetPlayerTimeline{
+      display:flex!important;
+      align-items:center!important;
+      flex-wrap:wrap!important;
+      gap:10px!important;
+      overflow:visible!important;
+      padding:8px 0!important;
+      min-width:0!important;
+    }
+
+    .planetTimelineCard{
+      position:relative!important;
+      width:74px!important;
+      min-width:74px!important;
+      height:74px!important;
+      border-radius:14px!important;
+      overflow:hidden!important;
+      background:#111827!important;
+      border:2px solid rgba(255,255,255,.16)!important;
+      display:block!important;
+      box-shadow:none!important;
+    }
+
+    .planetTimelineCard img{
+      position:absolute!important;
+      inset:0!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      z-index:1!important;
+    }
+
+    .planetTimelineCard::after{
+      content:none!important;
+      display:none!important;
+    }
+
+    .planetTimelineCard span{
+      position:absolute!important;
+      z-index:3!important;
+      left:50%!important;
+      bottom:5px!important;
+      transform:translateX(-50%)!important;
+      color:#ffffff!important;
+      font-size:.68rem!important;
+      font-weight:1000!important;
+      line-height:1!important;
+      text-shadow:none!important;
+      background:rgba(0,0,0,.78)!important;
+      border-radius:999px!important;
+      padding:4px 7px!important;
+      white-space:nowrap!important;
+    }
+
+    .planetTimelineCard.pending{
+      border-color:#facc15!important;
+    }
+
+    .planetTimelineCard.locked{
+      border-color:#16a34a!important;
+    }
+
+    .planetTimelineEmpty{
+      margin:0!important;
+      color:rgba(255,255,255,.65)!important;
+      font-size:.82rem!important;
+      font-weight:850!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+    }
+
+    @media(max-width:900px){
+      .activePlayerBanner{
+        min-height:60px!important;
+        padding:12px 18px!important;
+        font-size:clamp(.95rem,4vw,1.16rem)!important;
+      }
+
+      .planetResult{
+        grid-template-columns:70px 1fr!important;
+        grid-template-areas:
+          "planet text"
+          "timeline timeline"!important;
+        gap:10px 14px!important;
+      }
+
+      .planetPlayerTimeline{
+        flex-wrap:nowrap!important;
+        overflow-x:auto!important;
+        padding-bottom:10px!important;
+      }
+
+      .planetTimelineCard{
+        width:62px!important;
+        min-width:62px!important;
+        height:62px!important;
+        border-radius:12px!important;
+      }
+
+      .planetTimelineCard span{
+        font-size:.6rem!important;
+        padding:3px 6px!important;
+      }
+    }
+
+
+    /* v55: Aktiv Spelare tillbaka till vit text */
+    .activePlayerBanner{
+      color:#ffffff!important;
+    }
+
+    .activePlayerBanner,
+    .activePlayerBanner *{
+      color:#ffffff!important;
+      mix-blend-mode:normal!important;
+      text-shadow:none!important;
+    }
+
+
+    /* v56: Aktiv Spelare som fristÃ¥ende text i spelarens fÃ¤rg */
+    .activePlayerBanner{
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      outline:0!important;
+      padding:0!important;
+      margin:0 auto -8px!important;
+      min-height:0!important;
+      width:auto!important;
+      max-width:min(1040px,100%)!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      color:rgb(var(--active-player-rgb,124,29,255))!important;
+      font-weight:1000!important;
+      font-size:clamp(1.15rem,2.2vw,1.7rem)!important;
+      letter-spacing:-.06em!important;
+      line-height:.95!important;
+      text-align:center!important;
+      text-transform:uppercase!important;
+      mix-blend-mode:normal!important;
+      filter:none!important;
+    }
+
+    .activePlayerBanner,
+    .activePlayerBanner *{
+      color:rgb(var(--active-player-rgb,124,29,255))!important;
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      text-shadow:none!important;
+      mix-blend-mode:normal!important;
+    }
+
+    @media(max-width:920px){
+      .activePlayerBanner{
+        font-size:clamp(.95rem,4vw,1.25rem)!important;
+      }
+    }
+
+
+    /* v57: mer luft mellan Dra kort och Aktiv Spelare */
+    body.playingMode .resultActions{
+      margin-bottom:30px!important;
+    }
+
+    body.playingMode .activePlayerBanner{
+      margin-top:18px!important;
+      margin-bottom:10px!important;
+    }
+
+    body.playingMode .activeTimelineArea{
+      margin-top:6px!important;
+    }
+
+    @media(max-width:920px){
+      body.playingMode .resultActions{
+        margin-bottom:22px!important;
+      }
+
+      body.playingMode .activePlayerBanner{
+        margin-top:12px!important;
+        margin-bottom:8px!important;
+      }
+    }
+
+
+    /* v58: mjukare Ã¶vergÃ¥ng till slutskÃ¤rm + rÃ¤tt albumcovers */
+    body.finishedMode{
+      background:#020617!important;
+      background-image:none!important;
+      transition:background-color .55s cubic-bezier(.22,1,.36,1)!important;
+      overflow:hidden!important;
+    }
+
+    body.finishedMode .turnTitle,
+    body.finishedMode .resultActions,
+    body.finishedMode #gameStatus,
+    body.finishedMode .activePlayerBanner,
+    body.finishedMode .activeTimelineArea,
+    body.finishedMode .ownTimelineDock,
+    body.finishedMode .bottomDock{
+      animation:finishedUiFadeOut .34s cubic-bezier(.4,0,.2,1) both!important;
+    }
+
+    @keyframes finishedUiFadeOut{
+      from{
+        opacity:1;
+        transform:translateY(0);
+      }
+      to{
+        opacity:0;
+        transform:translateY(18px);
+      }
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:block!important;
+      overflow:hidden!important;
+      animation:none!important;
+    }
+
+    body.finishedMode .centerStage,
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      max-width:none!important;
+      min-height:100vh!important;
+      height:100vh!important;
+      display:block!important;
+    }
+
+    .planetResultsScene{
+      position:fixed!important;
+      inset:0!important;
+      z-index:12!important;
+      overflow:hidden!important;
+      background:
+        radial-gradient(circle at 18% 52%,rgba(255,137,24,.18) 0 13rem,transparent 21rem),
+        radial-gradient(circle at 82% 25%,rgba(37,99,235,.22) 0 13rem,transparent 23rem),
+        linear-gradient(135deg,#020617 0%,#061036 54%,#020617 100%)!important;
+      color:#ffffff!important;
+      padding:42px clamp(22px,5vw,72px)!important;
+      isolation:isolate!important;
+      animation:planetSceneGlideUp 1.18s cubic-bezier(.76,0,.16,1) both!important;
+    }
+
+    @keyframes planetSceneGlideUp{
+      0%{
+        opacity:0;
+        transform:translateY(28vh);
+      }
+      12%{
+        opacity:1;
+      }
+      78%{
+        opacity:1;
+        transform:translateY(-1.2vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    .planetList{
+      width:min(1260px,calc(100vw - 40px))!important;
+      gap:clamp(14px,2vh,20px)!important;
+    }
+
+    .planetResult{
+      grid-template-columns:92px minmax(220px,300px) minmax(380px,1fr)!important;
+      gap:24px!important;
+      align-items:center!important;
+      min-height:96px!important;
+    }
+
+    .planetPlayerTimeline{
+      display:flex!important;
+      align-items:center!important;
+      flex-wrap:wrap!important;
+      gap:12px!important;
+      overflow:visible!important;
+      padding:8px 0!important;
+      min-width:0!important;
+    }
+
+    .planetTimelineCard{
+      position:relative!important;
+      width:84px!important;
+      min-width:84px!important;
+      height:84px!important;
+      border-radius:16px!important;
+      overflow:hidden!important;
+      background:#0f172a!important;
+      border:2px solid rgba(255,255,255,.14)!important;
+      display:block!important;
+      box-shadow:none!important;
+    }
+
+    .planetTimelineCard img{
+      position:absolute!important;
+      inset:0!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      object-position:center center!important;
+      z-index:1!important;
+      display:block!important;
+      background:#0f172a!important;
+    }
+
+    .planetTimelineCard::after{
+      content:''!important;
+      position:absolute!important;
+      left:0!important;
+      right:0!important;
+      bottom:0!important;
+      height:30px!important;
+      z-index:2!important;
+      background:linear-gradient(to top,rgba(0,0,0,.82),rgba(0,0,0,0))!important;
+      pointer-events:none!important;
+    }
+
+    .planetTimelineCard span{
+      position:absolute!important;
+      z-index:3!important;
+      left:50%!important;
+      bottom:5px!important;
+      transform:translateX(-50%)!important;
+      color:#ffffff!important;
+      font-size:.7rem!important;
+      font-weight:1000!important;
+      line-height:1!important;
+      text-shadow:none!important;
+      background:rgba(0,0,0,.66)!important;
+      border-radius:999px!important;
+      padding:4px 7px!important;
+      white-space:nowrap!important;
+    }
+
+    @media(max-width:900px){
+      .planetResultsScene{
+        overflow:auto!important;
+      }
+
+      .planetResult{
+        grid-template-columns:70px 1fr!important;
+        grid-template-areas:
+          "planet text"
+          "timeline timeline"!important;
+        gap:10px 14px!important;
+        padding-bottom:8px!important;
+        transform:translateX(0)!important;
+      }
+
+      .planetPlayerTimeline{
+        flex-wrap:nowrap!important;
+        overflow-x:auto!important;
+        padding-bottom:10px!important;
+      }
+
+      .planetTimelineCard{
+        width:68px!important;
+        min-width:68px!important;
+        height:68px!important;
+        border-radius:13px!important;
+      }
+
+      .planetTimelineCard::after{
+        height:26px!important;
+      }
+
+      .planetTimelineCard span{
+        font-size:.62rem!important;
+        padding:3px 6px!important;
+      }
+    }
+
+
+    /* v59: slutskÃ¤rmen renderas en gÃ¥ng och UI fadeas istÃ¤llet fÃ¶r att fÃ¶rsvinna direkt */
+    body.finishedMode{
+      background:#020617!important;
+      background-image:none!important;
+      overflow:hidden!important;
+      transition:background-color .42s cubic-bezier(.22,1,.36,1)!important;
+    }
+
+    body.finishedMode::before,
+    body.finishedMode::after{
+      content:none!important;
+      display:none!important;
+      background:none!important;
+    }
+
+    body.finishedMode .turnTitle{
+      display:block!important;
+    }
+
+    body.finishedMode .resultActions{
+      display:flex!important;
+    }
+
+    body.finishedMode #gameStatus{
+      display:block!important;
+    }
+
+    body.finishedMode .activePlayerBanner{
+      display:flex!important;
+    }
+
+    body.finishedMode .activeTimelineArea{
+      display:block!important;
+    }
+
+    body.finishedMode .ownTimelineDock,
+    body.finishedMode .bottomDock{
+      display:block!important;
+    }
+
+    body.finishedMode .turnTitle,
+    body.finishedMode .resultActions,
+    body.finishedMode #gameStatus,
+    body.finishedMode .activePlayerBanner,
+    body.finishedMode .activeTimelineArea,
+    body.finishedMode .ownTimelineDock,
+    body.finishedMode .bottomDock{
+      pointer-events:none!important;
+      animation:finishedUiFadeOutOnce .62s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    @keyframes finishedUiFadeOutOnce{
+      0%{
+        opacity:1;
+        transform:translateY(0);
+      }
+      100%{
+        opacity:0;
+        transform:translateY(34px);
+      }
+    }
+
+    body.finishedMode .profileArea,
+    body.finishedMode .playlistArea{
+      opacity:1!important;
+      transform:none!important;
+      animation:none!important;
+      pointer-events:auto!important;
+      display:block!important;
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:block!important;
+      overflow:hidden!important;
+      animation:none!important;
+    }
+
+    body.finishedMode .centerStage,
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      max-width:none!important;
+      min-height:100vh!important;
+      height:100vh!important;
+      display:block!important;
+      animation:none!important;
+    }
+
+    .planetResultsScene{
+      animation:planetSceneGlideUpOnce 1.45s cubic-bezier(.82,0,.12,1) both!important;
+      transform:translateY(0);
+    }
+
+    .planetResultsScene[data-result-key]{
+      will-change:transform,opacity!important;
+    }
+
+    @keyframes planetSceneGlideUpOnce{
+      0%{
+        opacity:1;
+        transform:translateY(100vh);
+      }
+      18%{
+        transform:translateY(88vh);
+      }
+      72%{
+        transform:translateY(-1.5vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+
+    /* v60: bakgrund fadeas separat, solsystemet glider upp ovanpÃ¥ + albumcovers syns tydligare */
+    body.finishedMode{
+      background:#020617!important;
+      background-image:none!important;
+      overflow:hidden!important;
+      transition:none!important;
+    }
+
+    body.finishedMode::before{
+      content:''!important;
+      display:block!important;
+      position:fixed!important;
+      inset:0!important;
+      z-index:8!important;
+      pointer-events:none!important;
+      background:#020617!important;
+      opacity:0!important;
+      animation:resultsBackgroundFade .78s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    body.finishedMode::after{
+      content:none!important;
+      display:none!important;
+      background:none!important;
+    }
+
+    @keyframes resultsBackgroundFade{
+      from{opacity:0;}
+      to{opacity:1;}
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:block!important;
+      overflow:hidden!important;
+      animation:none!important;
+      background:transparent!important;
+    }
+
+    body.finishedMode .centerStage,
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      max-width:none!important;
+      min-height:100vh!important;
+      height:100vh!important;
+      display:block!important;
+      animation:none!important;
+      background:transparent!important;
+    }
+
+    .planetResultsScene{
+      z-index:12!important;
+      background:transparent!important;
+      animation:planetElementsGlideUp .96s cubic-bezier(.78,0,.16,1) both!important;
+    }
+
+    .planetResultsScene::before{
+      content:''!important;
+      position:fixed!important;
+      inset:0!important;
+      z-index:-1!important;
+      pointer-events:none!important;
+      background:
+        radial-gradient(circle at 18% 52%,rgba(255,137,24,.18) 0 13rem,transparent 21rem),
+        radial-gradient(circle at 82% 25%,rgba(37,99,235,.22) 0 13rem,transparent 23rem),
+        linear-gradient(135deg,#020617 0%,#061036 54%,#020617 100%)!important;
+      opacity:1!important;
+    }
+
+    @keyframes planetElementsGlideUp{
+      0%{
+        opacity:0;
+        transform:translateY(22vh);
+      }
+      16%{
+        opacity:1;
+      }
+      78%{
+        transform:translateY(-1.1vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    .planetTimelineCard{
+      background:#111827!important;
+      width:92px!important;
+      min-width:92px!important;
+      height:92px!important;
+      border-radius:16px!important;
+    }
+
+    .planetTimelineCard img{
+      display:block!important;
+      opacity:1!important;
+      visibility:visible!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      object-position:center!important;
+      position:absolute!important;
+      inset:0!important;
+      z-index:1!important;
+    }
+
+    .planetTimelineCard:not(:has(img)){
+      background:
+        linear-gradient(135deg,#1f2937,#0f172a)!important;
+    }
+
+    .planetTimelineCard::after{
+      content:''!important;
+      display:block!important;
+      position:absolute!important;
+      left:0!important;
+      right:0!important;
+      bottom:0!important;
+      height:30px!important;
+      z-index:2!important;
+      background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,0))!important;
+      pointer-events:none!important;
+    }
+
+    .planetTimelineCard span{
+      z-index:3!important;
+    }
+
+    @media(max-width:900px){
+      .planetTimelineCard{
+        width:72px!important;
+        min-width:72px!important;
+        height:72px!important;
+        border-radius:13px!important;
+      }
+    }
+
+
+    /* v61: blob-planeter i spelarens fÃ¤rg utan ringar + nÃ¥got lÃ¥ngsammare bakgrundsfade */
+    @keyframes resultsBackgroundFade{
+      from{opacity:0;}
+      to{opacity:1;}
+    }
+
+    body.finishedMode::before{
+      animation:resultsBackgroundFade 1.12s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    .planetShape::before{
+      background:rgb(var(--player-rgb))!important;
+    }
+
+    .planetShape::after{
+      content:none!important;
+      display:none!important;
+      border:0!important;
+      background:none!important;
+      box-shadow:none!important;
+    }
+
+    .planetRank1 .planetShape::before,
+    .planetRank2 .planetShape::before,
+    .planetRank3 .planetShape::before,
+    .planetRank4 .planetShape::before,
+    .planetRank5 .planetShape::before{
+      background:rgb(var(--player-rgb))!important;
+    }
+

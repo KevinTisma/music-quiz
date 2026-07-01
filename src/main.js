@@ -1,0 +1,593 @@
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js';
+import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
+import { readToken, spotifyFetch, validToken } from './spotify/spotify-api.js';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js';
+import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
+import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
+import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
+import { getRoomRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
+import { createRenderer } from './ui/render.js';
+
+(() => {
+  'use strict';
+
+
+  let db = null, roomData = {}, roomListenerRef = null, roomListenerCallback = null, heartbeatTimer = null, presenceRef = null;
+  const urlRoom = new URLSearchParams(window.location.search).get('room');
+  let activeRoomId = normalizeRoomId(urlRoom || localStorage.getItem(LS.lobbyRoom) || ROOM_ID);
+  let player = { id:getPlayerId(), name:localStorage.getItem(LS.playerName) || 'Spelare', avatarUrl:'' };
+  try { const cachedSpotifyProfile = JSON.parse(localStorage.getItem(LS.spotifyProfile) || 'null'); if(cachedSpotifyProfile?.displayName){ player.name = cachedSpotifyProfile.displayName; } if(cachedSpotifyProfile?.avatarUrl){ player.avatarUrl = cachedSpotifyProfile.avatarUrl; } } catch {}
+  const uiState = {
+    dragCardId:null,
+    lastAutoplayCardId:null,
+    wrongRevealTimeout:null,
+    viewedTimelinePlayerId:localStorage.getItem(VIEWED_TIMELINE_KEY) || player.id
+  };
+
+  const $ = id => document.getElementById(id);
+  const els = {
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
+  };
+
+  function redirectUri(){ return window.location.origin + window.location.pathname; }
+  function isActivePlayer(p){
+    if(!p?.id) return false;
+    if(p.id === player.id) return true;
+    const lastSeen = Number(p.lastSeen || 0);
+    return p.online === true && lastSeen > Date.now() - ACTIVE_PLAYER_WINDOW_MS;
+  }
+  function activePlayersFrom(players){ return sortPlayers(players).filter(isActivePlayer).slice(0,5); }
+
+  function playerRgb(id){
+    const players = activePlayersFrom(roomData?.players || {});
+    const idx = Math.max(0, players.findIndex(p=>p.id===id));
+    return PLAYER_PALETTES[idx % PLAYER_PALETTES.length];
+  }
+  function invertRgb(rgb){
+    const parts=String(rgb||'255,255,255').split(',').map(v=>Math.max(0,Math.min(255,255-Number(v||0))));
+    return parts.join(',');
+  }
+  function isMeActive(){ return roomData?.game?.turnPlayerId === player.id && roomData?.game?.status === 'playing'; }
+  function activePlayer(){ return roomData?.players?.[roomData?.game?.turnPlayerId] || null; }
+  function currentCard(){ return roomData?.game?.currentCard || null; }
+  function cardVisibility(){
+    return roomData?.game?.cardVisibility || {cover:true,artist:true,title:true};
+  }
+  function cardVisibilityClass(){
+    const v = cardVisibility();
+    return (v.cover===false?' cardNoCover':'') + (v.artist===false?' cardNoArtist':'') + (v.title===false?' cardNoTitle':'');
+  }
+  function readVisibilityToggles(){
+    return {cover:!!els.showCoverToggle?.checked, artist:!!els.showArtistToggle?.checked, title:!!els.showTitleToggle?.checked};
+  }
+  function isWrongRevealActive(){
+    const wr = roomData?.game?.wrongReveal;
+    return !!(wr && Number(wr.until || 0) > Date.now());
+  }
+  function proposedIndex(){ const n = roomData?.game?.proposedIndex; return Number.isInteger(n) ? n : null; }
+  function directCover(card){
+    return card?.image || card?.coverUrl || card?.albumImage || card?.album?.images?.[0]?.url || card?.track?.album?.images?.[0]?.url || '';
+  }
+  function coverForCard(card){
+    const direct = directCover(card);
+    if(direct) return direct;
+
+    const pools = [];
+    const addPool = value => {
+      if(!value) return;
+      if(Array.isArray(value)) pools.push(...value);
+      else if(typeof value === 'object') pools.push(...Object.values(value));
+    };
+
+    addPool(roomData?.songBank);
+    const selectedId = roomData?.selectedPlaylistId;
+    addPool(roomData?.savedPlaylists?.[selectedId]?.songs);
+    addPool(roomData?.savedPlaylists?.[cleanKey(selectedId)]?.songs);
+
+    const id = String(card?.id || '');
+    const uri = String(card?.uri || '');
+    const title = String(card?.title || '').toLowerCase();
+    const artist = String(card?.artist || '').toLowerCase();
+    const year = String(card?.year || '');
+
+    const found = pools.find(s => {
+      if(!s) return false;
+      if(id && String(s.id || '') === id) return true;
+      if(uri && String(s.uri || '') === uri) return true;
+      const sameTitle = title && String(s.title || '').toLowerCase() === title;
+      const sameYear = year && String(s.year || '') === year;
+      const sameArtist = !artist || String(s.artist || '').toLowerCase() === artist;
+      return sameTitle && sameYear && sameArtist;
+    });
+
+    return directCover(found);
+  }
+
+
+  function spotifyProfileCache(){
+    try { return JSON.parse(localStorage.getItem(LS.spotifyProfile) || 'null'); } catch { return null; }
+  }
+  function applySpotifyProfile(profile){
+    if(!profile) return false;
+    const displayName = (profile.display_name || profile.id || '').trim();
+    const avatarUrl = profile.images?.[0]?.url || '';
+    const cached = { displayName: displayName || 'Spotify-spelare', avatarUrl, spotifyId: profile.id || '', updatedAt: now() };
+    localStorage.setItem(LS.spotifyProfile, JSON.stringify(cached));
+    player.name = cached.displayName;
+    player.avatarUrl = cached.avatarUrl;
+    localStorage.setItem(LS.playerName, player.name);
+    if(els.playerNameInput) els.playerNameInput.value = player.name;
+    return true;
+  }
+  async function syncSpotifyProfile(){
+    if(!validToken(readToken())) return;
+    try{
+      const profile = await spotifyFetch('/me');
+      if(applySpotifyProfile(profile)){
+        await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
+        renderProfile();
+      }
+    }catch(err){
+      console.warn('[spotify-profile]', err);
+    }
+  }
+
+
+  function connectFirebase(){
+    if(db) return db;
+    db = getFirebaseDatabase();
+    setupPresence();
+    listenRoom();
+    upsertPlayer();
+    return db;
+  }
+  function setupPresence(){
+    if(!db) return;
+    if(presenceRef) presenceRef.onDisconnect().cancel().catch(()=>{});
+    presenceRef = db.ref(playerRoomPath(player.id, activeRoomId));
+    const ref = presenceRef;
+    ref.onDisconnect().update({online:false,lastSeen:serverTimestamp()});
+    if(heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = setInterval(() => {
+      if(db) ref.update({online:true,lastSeen:serverTimestamp()}).catch(()=>{});
+    }, 30000);
+  }
+  function roomRef(path=''){ if(!db) connectFirebase(); return getRoomRef(db, path, activeRoomId); }
+  function listenRoom(){
+    if(roomListenerRef) return;
+    roomListenerRef = roomRef();
+    roomListenerCallback = snap => { roomData = snap.val() || {}; render(); };
+    roomListenerRef.on('value', roomListenerCallback);
+  }
+  function syncRoomUrl(){
+    localStorage.setItem(LS.lobbyRoom, activeRoomId);
+    if(els.roomCodeText) setText(els.roomCodeText, activeRoomId);
+    if(els.shareLinkInput) els.shareLinkInput.value = shareLink();
+    if(els.firebasePathText) setText(els.firebasePathText, 'rooms/'+activeRoomId);
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', activeRoomId);
+    window.history.replaceState({}, '', url);
+  }
+  function shareLink(){
+    const url = new URL(window.location.href);
+    url.searchParams.set('room', activeRoomId);
+    return url.toString();
+  }
+  function stopRoomListener(){
+    if(roomListenerRef && roomListenerCallback) roomListenerRef.off('value', roomListenerCallback);
+    roomListenerRef = null;
+    roomListenerCallback = null;
+  }
+  async function switchRoom(roomId, asHost=false){
+    const nextRoomId = normalizeRoomId(roomId);
+    if(db && nextRoomId !== activeRoomId){
+      db.ref(playerRoomPath(player.id, activeRoomId)).update({online:false,lastSeen:serverTimestamp()}).catch(()=>{});
+    }
+    activeRoomId = nextRoomId;
+    syncRoomUrl();
+    roomData = {};
+    stopRoomListener();
+    if(db) setupPresence();
+    connectFirebase();
+    listenRoom();
+    const roomMeta = asHost ? {
+      hostId:player.id,
+      code:activeRoomId,
+      status:'lobby',
+      createdAt:serverTimestamp(),
+      updatedAt:serverTimestamp()
+    } : {
+      code:activeRoomId,
+      updatedAt:serverTimestamp()
+    };
+    roomRef('meta').update(roomMeta).catch(err => status(els.startStatus,'Kunde inte spara lobby: '+err.message,'bad'));
+    upsertPlayer({ready:true}).catch(err => status(els.startStatus,'Kunde inte ansluta spelaren: '+err.message,'bad'));
+    updateStartScreen();
+  }
+  function createLobbyCode(){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    const bytes = crypto.getRandomValues(new Uint8Array(5));
+    bytes.forEach(b => { code += chars[b % chars.length]; });
+    return code;
+  }
+  async function createUniqueLobbyCode(){
+    connectFirebase();
+    for(let i=0;i<8;i++){
+      const code = createLobbyCode();
+      const snap = await getRoomRef(db, 'meta', code).get();
+      if(!snap.exists()) return code;
+    }
+    return createLobbyCode();
+  }
+  async function roomExists(roomId){
+    connectFirebase();
+    const snap = await getRoomRef(db, 'meta', roomId).get();
+    return snap.exists();
+  }
+  function updateStartScreen(){
+    syncRoomUrl();
+    if(els.startPlayerNameInput && els.startPlayerNameInput.value !== player.name) els.startPlayerNameInput.value = player.name;
+    if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId === ROOM_ID ? '' : activeRoomId;
+    renderLobbySummary();
+    const done = localStorage.getItem(LS.startDone) === '1';
+    document.body.classList.toggle('startOpen', !done);
+    els.startScreen?.classList.toggle('hidden', done);
+  }
+  function renderLobbySummary(){
+    syncRoomUrl();
+    const players = activePlayersFrom(roomData?.players || {});
+    const hostId = roomData?.meta?.hostId || '';
+    const isHost = hostId === player.id;
+    const hostName = roomData?.players?.[hostId]?.name || 'annan spelare';
+    setText(els.hostStatusText, hostId ? (isHost ? 'Du är host' : 'Host: '+hostName) : 'Host saknas');
+    if(!els.lobbyPlayers) return;
+    if(!players.length){
+      els.lobbyPlayers.innerHTML = '<p class="small">Inga spelare ännu.</p>';
+      return;
+    }
+    els.lobbyPlayers.innerHTML = players.map(p => {
+      const badges = (p.id === hostId ? '<span class="pill">Host</span>' : '') + (p.id === player.id ? '<span class="pill">Du</span>' : '');
+      return '<div class="lobbyPlayer"><span class="lobbyPlayerName">'+esc(p.name || 'Spelare')+'</span><span class="lobbyPlayerBadges">'+badges+'</span></div>';
+    }).join('');
+  }
+  async function savePlayerNameFromStart(){
+    const input = els.startPlayerNameInput || els.playerNameInput;
+    player.name = (input?.value || player.name || 'Spelare').slice(0,32);
+    localStorage.setItem(LS.playerName, player.name);
+    if(els.playerNameInput) els.playerNameInput.value = player.name;
+    upsertPlayer().catch(err => status(els.startStatus,'Kunde inte spara spelaren: '+err.message,'bad'));
+  }
+  async function testSpotifyConnection(){
+    try{
+      if(!validToken(readToken())) throw new Error('Koppla Spotify först.');
+      const profile = await spotifyFetch('/me');
+      applySpotifyProfile(profile);
+      await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
+      status(els.startStatus,'Spotify svarar som '+(player.name || 'spelare')+'.','ok');
+      status(els.connectionStatus,'Spotify anslutet.','ok');
+      renderProfile();
+    }catch(err){
+      status(els.startStatus,'Spotify-test misslyckades: '+err.message,'bad');
+    }
+  }
+  async function upsertPlayer(extra={}){
+    connectFirebase();
+    const name=(player.name || 'Spelare').slice(0,32);
+    const existing = roomData?.players?.[player.id] || {};
+    await roomRef('players/'+player.id).update({id:player.id,name,avatarUrl:player.avatarUrl||'',ready:!!player.ready,online:true,joinedAt:existing.joinedAt || serverTimestamp(),lastSeen:serverTimestamp(),timeline:timelineOf(existing),...extra});
+  }
+
+  async function importPlaylist(){
+    const btn = els.importPlaylistBtn;
+    try{
+      const pid=playlistIdFromInput(els.playlistInput.value); if(!pid) throw new Error('Klistra in en Spotify-spellista först.');
+      const limit=50;
+      let offset=0;
+      let total=null;
+      const songs=[];
+      if(btn) btn.disabled = true;
+      status(els.playlistStatus,'Importerar hela spellistan. Hämtar första 50 låtarna...', 'warn');
+      // Spotify ändrade playlist-endpointen 2026: /tracks är borttagen i Development Mode.
+      // Den nya endpointen är /items och själva låten ligger i item i stället för track.
+      while(total === null || offset < total){
+        const path='/playlists/'+encodeURIComponent(pid)+'/items?limit='+limit+'&offset='+offset+'&fields=total,items(item(id,type,is_local,uri,name,duration_ms,external_urls.spotify,album(release_date,images),artists(name)))';
+        const data=await spotifyFetch(path);
+        const pageItems=Array.isArray(data.items) ? data.items : [];
+        if(total === null) total = Number(data.total || pageItems.length || 0);
+        const pageSongs=pageItems.map((it,i)=>normalizeTrack(it.item || it.track,offset+i)).filter(Boolean);
+        songs.push(...pageSongs);
+        offset += pageItems.length;
+        status(els.playlistStatus,'Importerar '+Math.min(offset,total || offset)+'/'+(total || '?')+' poster från Spotify. '+songs.length+' låtar med årtal hittade...', 'warn');
+        if(!pageItems.length) break;
+      }
+      if(!songs.length) throw new Error('Hittade inga låtar med årtal i spellistan.');
+      await savePlaylist(pid,'Spotify-spellista '+pid.slice(0,6),songs,'spotify');
+      status(els.playlistStatus,'Sparade '+songs.length+' låtar i Firebase.','ok');
+    }catch(err){ console.error('[playlist-import]',err); status(els.playlistStatus,'Kunde inte importera: '+err.message,'bad'); }
+    finally{ if(btn) btn.disabled = false; }
+  }
+  async function savePlaylist(pid,name,songs,source){
+    connectFirebase();
+    await roomRef().update({ songBank:songs, selectedPlaylistId:pid, ['songBanks/'+cleanKey(pid)]:songs, ['savedPlaylists/'+cleanKey(pid)]:{id:pid,name,source:source||'manual',songCount:songs.length,importedAt:serverTimestamp(),songs} });
+  }
+  async function createDemo(){
+    const songs=[
+      {id:'demo1',title:'Neon Nights',artist:'The Example Band',year:1984,uri:'spotify:track:demo1',image:'https://picsum.photos/400?random=11'},
+      {id:'demo2',title:'Summer Static',artist:'Fake Radio',year:1997,uri:'spotify:track:demo2',image:'https://picsum.photos/400?random=12'},
+      {id:'demo3',title:'Digital Hearts',artist:'Console Dreams',year:2012,uri:'spotify:track:demo3',image:'https://picsum.photos/400?random=13'}
+    ];
+    await savePlaylist('demo-3-songs','Demo-spellista med 3 låtar',songs,'demo');
+    status(els.playlistStatus,'Demo-spellista skapad.','ok');
+  }
+  async function refreshPlaylists(){
+    connectFirebase();
+    const snap=await roomRef('savedPlaylists').get();
+    const playlists=snap.val()||{};
+    const current=els.savedPlaylistSelect.value;
+    els.savedPlaylistSelect.innerHTML='';
+    const keys=Object.keys(playlists);
+    if(!keys.length){ els.savedPlaylistSelect.innerHTML='<option value="">Ingen spellista sparad än</option>'; return; }
+    keys.forEach(k=>{ const p=playlists[k]; const opt=document.createElement('option'); opt.value=k; opt.textContent=(p.name||k)+' ('+(p.songCount || (p.songs?Object.keys(p.songs).length:0))+' låtar)'; els.savedPlaylistSelect.appendChild(opt); });
+    if(current && playlists[current]) els.savedPlaylistSelect.value=current;
+  }
+  async function selectPlaylist(){
+    connectFirebase();
+    const id=els.savedPlaylistSelect.value; if(!id) return;
+    const snap=await roomRef('savedPlaylists/'+id+'/songs').get();
+    let songs=snap.val(); if(!Array.isArray(songs)) songs=Object.values(songs||{});
+    if(!songs.length) throw new Error('Spellistan saknar låtar.');
+    await roomRef().update({selectedPlaylistId:id,songBank:songs});
+    status(els.playlistStatus,'Vald spellista används nu.','ok');
+  }
+
+  function getSongs(){ const s=roomData.songBank; return Array.isArray(s)?s:Object.values(s||{}); }
+  async function songsFromSelectedPlaylist(){
+    const id=els.savedPlaylistSelect?.value;
+    if(!id) return null;
+    const snap=await roomRef('savedPlaylists/'+id+'/songs').get();
+    let songs=snap.val();
+    if(!Array.isArray(songs)) songs=Object.values(songs||{});
+    if(!songs.length) return null;
+    await roomRef().update({selectedPlaylistId:id,songBank:songs});
+    return songs;
+  }
+  async function startGame(){
+    connectFirebase();
+    const hostId = roomData?.meta?.hostId || '';
+    if(hostId !== player.id){ status(els.gameStatus,'Endast host kan starta spelet.','bad'); return; }
+    const selectedSongs = await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
+    const songs=selectedSongs || getSongs(); if(!songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
+    const players=activePlayersFrom(roomData.players || {});
+    if(!players.length){ await upsertPlayer(); }
+    const allPlayers=activePlayersFrom((await roomRef('players').get()).val()||{});
+    const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
+    const updates={};
+    allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
+    updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
+    await roomRef().update(updates);
+  }
+  async function drawCard(){
+    if(!isMeActive()) return;
+    const game=roomData.game||{};
+    if(game.currentCard){ status(els.gameStatus,'Placera och bekräfta det aktuella kortet först.','warn'); return; }
+    const deck=Array.isArray(game.deck)?[...game.deck]:[];
+    if(!deck.length){ status(els.gameStatus,'Kortleken är slut. Lås in eller starta om.','warn'); return; }
+    const card=deck.shift();
+    await roomRef().update({'game/deck':deck,'game/currentCard':card,'game/proposedIndex':null,'game/wrongReveal':null,'game/message':'Dra kortet till rätt plats i tidslinjen.',['players/'+player.id+'/activeProposal']:null});
+    playCurrentSpotify(false);
+  }
+  async function setProposedIndex(index){
+    if(!isMeActive() || !currentCard()) return;
+    const me=roomData.players?.[player.id];
+    const len=timelineOf(me).length;
+    const i=Math.max(0,Math.min(Number(index)||0,len));
+    const card=currentCard();
+    await roomRef().update({
+      'game/proposedIndex': i,
+      ['players/'+player.id+'/activeProposal']: {
+        index: i,
+        card: {...card, status:'proposed'},
+        updatedAt: serverTimestamp()
+      }
+    });
+  }
+  function nextPlayerId(currentId){
+    const players=activePlayersFrom(roomData.players || {});
+    if(!players.length) return currentId;
+    const idx=players.findIndex(p=>p.id===currentId);
+    return players[(idx+1+players.length)%players.length].id;
+  }
+  async function confirmPlacement(){
+    if(!isMeActive()) return;
+    const game=roomData.game||{}, card=game.currentCard, idx=proposedIndex();
+    if(!card){ status(els.gameStatus,'Dra ett kort först.','warn'); return; }
+    if(idx===null){ status(els.gameStatus,'Dra kortet till en plats i tidslinjen först.','warn'); return; }
+    const me=roomData.players?.[player.id]||{};
+    const timeline=timelineOf(me);
+    const proposed=timelineWithProposal(timeline,card,idx);
+    const correct=isSortedByYear(proposed);
+    if(correct){
+      const newTimeline=[...timeline]; newTimeline.splice(idx,0,{...card,status:'pending'});
+      await roomRef().update({['players/'+player.id+'/timeline']:newTimeline,['players/'+player.id+'/activeProposal']:null,'game/currentCard':null,'game/proposedIndex':null,'game/message':'Rätt. Dra ett till kort eller lås in dina gula kort.'});
+      status(els.gameStatus,'Rätt. Kortet är gult och riskeras tills du låser in.','ok');
+    }else{
+      const pending=timeline.filter(c=>c.status==='pending');
+      const locked=timeline.filter(c=>c.status==='locked');
+      const returnCards=[...pending,card].map(c=>{ const x={...c}; delete x.status; return x; });
+      const deck=[...(Array.isArray(game.deck)?game.deck:[]),...shuffle(returnCards)];
+      const nextId = nextPlayerId(player.id);
+      const until = Date.now() + 5000;
+      await roomRef('game').update({wrongReveal:{card:{...card,status:'wrong'},playerId:player.id,until,year:card.year},message:'Fel placering. Rätt år var '+card.year+'. Nästa spelares tur om 5 sekunder.'});
+      status(els.gameStatus,'Fel. Rätt år var '+card.year+'. Du förlorar gula kort från rundan.','bad');
+      setTimeout(async()=>{
+        const snap = await roomRef('game/wrongReveal').get();
+        const wr = snap.val();
+        if(!wr || wr.until !== until) return;
+        await roomRef().update({['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/activeProposal']:null,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
+      }, 5000);
+    }
+  }
+  async function lockIn(){
+    if(!isMeActive()) return;
+    const game=roomData.game||{}, me=roomData.players?.[player.id]||{};
+    if(game.currentCard){ status(els.gameStatus,'Placera aktuellt kort först, eller bekräfta fel/rätt.','warn'); return; }
+    const timeline=timelineOf(me);
+    if(!timeline.some(c=>c.status==='pending')){ status(els.gameStatus,'Du har inga gula kort att låsa in. Dra ett kort eller passa turen.','warn'); return; }
+    const locked=timeline.map(c=>({...c,status:'locked'}));
+    const score=locked.length;
+    const updates={['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/score']:score,['players/'+player.id+'/activeProposal']:null};
+    if(score>=WIN_SCORE){
+      updates['game/status']='finished'; updates['game/winnerId']=player.id; updates['game/message']=(me.name||player.name)+' vann med '+score+' låsta kort.';
+    }else{
+      updates['game/turnPlayerId']=nextPlayerId(player.id); updates['game/turnNumber']=(game.turnNumber||1)+1; updates['game/message']='Kort låsta. Nästa spelares tur.';
+    }
+    await roomRef().update(updates);
+  }
+  async function playCurrentSpotify(showStatus=true){
+    try{
+      const card=currentCard(); if(!card?.uri || card.uri.includes('demo')){ if(showStatus) status(els.gameStatus,'Den här demolåten har ingen riktig Spotify-URI.','warn'); return; }
+      await spotifyFetch('/me/player/play',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uris:[card.uri]})});
+      if(showStatus) status(els.gameStatus,'Spelar aktuell låt i Spotify.','ok');
+    }catch(err){ console.error(err); if(showStatus) status(els.gameStatus,'Kunde inte spela i Spotify: '+err.message,'bad'); }
+  }
+  async function endGame(){
+    connectFirebase();
+    const updates = {'game':null,'songBank':null,'selectedPlaylistId':null,'playlistImportDebug':null};
+    const players = roomData.players || {};
+    Object.keys(players).forEach(id => { updates['players/'+id+'/timeline'] = []; updates['players/'+id+'/score'] = 0; updates['players/'+id+'/ready'] = false; updates['players/'+id+'/activeProposal'] = null; });
+    await roomRef().update(updates);
+    status(els.playlistStatus,'Spelet är avslutat och sessionens låtdata är rensad.','ok');
+  }
+
+  async function resetRoom(){
+    connectFirebase();
+    if(!confirm('Resetta rummet? Detta tar bort spel, spelare och sparade spellistor i lobby '+activeRoomId+'.')) return;
+    await roomRef().remove(); roomData={}; await upsertPlayer({timeline:[],score:0}); status(els.connectionStatus,'Rummet är återställt.','ok');
+  }
+
+  const renderer = createRenderer({
+    els,
+    uiState,
+    getRoomData:()=>roomData,
+    getPlayer:()=>player,
+    getDb:()=>db,
+    redirectUri,
+    activePlayer,
+    activePlayersFrom,
+    cardVisibilityClass,
+    coverForCard,
+    currentCard,
+    isMeActive,
+    isWrongRevealActive,
+    playCurrentSpotify,
+    playerRgb,
+    proposedIndex,
+    setProposedIndex,
+    spotifyProfileCache
+  });
+  function render(){ renderer.render(); renderLobbySummary(); }
+  function renderProfile(){ renderer.renderProfile(); }
+  function applyOwnTimelineCollapsed(collapsed){
+    const isCollapsed = !!collapsed;
+    document.body.classList.toggle('ownCollapsed', isCollapsed);
+    if(els.ownTimelineToggle) els.ownTimelineToggle.textContent = isCollapsed ? 'Öppna' : 'Minimera';
+  }
+  function toggleOwnTimeline(){
+    const next = !document.body.classList.contains('ownCollapsed');
+    applyOwnTimelineCollapsed(next);
+    localStorage.setItem(LS.ownCollapsed, next ? '1' : '0');
+  }
+
+  function bind(){
+    els.redirectUriText.textContent=redirectUri(); els.playerNameInput.value=player.name; applyOwnTimelineCollapsed(false); localStorage.setItem(LS.ownCollapsed,'0'); if(els.ownTimelineToggle) els.ownTimelineToggle.onclick=toggleOwnTimeline;
+    if(els.startPlayerNameInput) els.startPlayerNameInput.value = player.name;
+    if(els.roomCodeText) setText(els.roomCodeText, activeRoomId);
+    if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId === ROOM_ID ? '' : activeRoomId;
+    if(els.profileButton) els.profileButton.onclick=()=>{
+      const open = !els.profileMenu?.classList.contains('open');
+      els.profileMenu?.classList.toggle('open', open);
+      els.playlistMenu?.classList.remove('open');
+      els.profileButton.classList.add('spinning');
+      els.profileButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      window.setTimeout(()=>els.profileButton?.classList.remove('spinning'), 520);
+    };
+    if(els.playlistButton) els.playlistButton.onclick=()=>{
+      const open = !els.playlistMenu?.classList.contains('open');
+      els.playlistMenu?.classList.toggle('open', open);
+      els.profileMenu?.classList.remove('open');
+      els.profileButton?.setAttribute('aria-expanded','false');
+      els.playlistButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+      els.playlistButton.classList.add('spinning');
+      window.setTimeout(()=>els.playlistButton?.classList.remove('spinning'), 520);
+    };
+    els.spotifyLoginBtn.onclick=()=>loginSpotify(redirectUri());
+    if(els.startSpotifyLoginBtn) els.startSpotifyLoginBtn.onclick=async()=>{ await savePlayerNameFromStart(); loginSpotify(redirectUri()); };
+    if(els.testSpotifyBtn) els.testSpotifyBtn.onclick=testSpotifyConnection;
+    if(els.createLobbyBtn) els.createLobbyBtn.onclick=async()=>{
+      await savePlayerNameFromStart();
+      await switchRoom(await createUniqueLobbyCode(), true);
+      status(els.startStatus,'Lobby '+activeRoomId+' skapad. Dela koden eller länken.','ok');
+    };
+    if(els.joinLobbyBtn) els.joinLobbyBtn.onclick=async()=>{
+      const code = normalizeRoomId(els.lobbyCodeInput?.value || '');
+      if(code === ROOM_ID){ status(els.startStatus,'Skriv en lobbykod först.','warn'); return; }
+      await savePlayerNameFromStart();
+      if(!await roomExists(code)){ status(els.startStatus,'Hittar ingen lobby med kod '+code+'.','bad'); return; }
+      await switchRoom(code, false);
+      status(els.startStatus,'Du är med i lobby '+activeRoomId+'.','ok');
+    };
+    if(els.copyShareLinkBtn) els.copyShareLinkBtn.onclick=async()=>{
+      try{
+        const link = shareLink();
+        if(navigator.clipboard?.writeText) await navigator.clipboard.writeText(link);
+        else { els.shareLinkInput?.select(); document.execCommand('copy'); }
+        status(els.startStatus,'Länken är kopierad.','ok');
+      }catch(err){
+        status(els.startStatus,'Kunde inte kopiera länken automatiskt.','warn');
+      }
+    };
+    if(els.enterGameBtn) els.enterGameBtn.onclick=async()=>{
+      await savePlayerNameFromStart();
+      if(!roomData?.meta?.hostId && !await roomExists(activeRoomId)){
+        status(els.startStatus,'Skapa en lobby eller gå med med en kod först.','warn');
+        return;
+      }
+      localStorage.setItem(LS.startDone,'1');
+      updateStartScreen();
+      status(els.connectionStatus,'Ansluten till lobby '+activeRoomId+'.','ok');
+    };
+    els.spotifyLogoutBtn.onclick=async()=>{ localStorage.removeItem(LS.token); localStorage.removeItem(LS.spotifyProfile); player.avatarUrl=''; status(els.connectionStatus,'Utloggad från Spotify.','ok'); await upsertPlayer({avatarUrl:''}); renderProfile(); };
+    els.connectFirebaseBtn.onclick=()=>{ connectFirebase(); status(els.connectionStatus,'Firebase anslutet.','ok'); };
+    els.resetRoomBtn.onclick=resetRoom;
+    els.saveNameBtn.onclick=async()=>{ player.name=(els.playerNameInput.value||'Spelare').slice(0,32); localStorage.setItem(LS.playerName,player.name); await upsertPlayer(); };
+    if(els.autoPlaySpotifyToggle){ const savedAutoplay = localStorage.getItem(LS.autoplay); els.autoPlaySpotifyToggle.checked = savedAutoplay === null ? true : savedAutoplay === '1'; if(savedAutoplay === null) localStorage.setItem(LS.autoplay,'1'); els.autoPlaySpotifyToggle.onchange=()=>localStorage.setItem(LS.autoplay, els.autoPlaySpotifyToggle.checked?'1':'0'); }
+    els.importPlaylistBtn.onclick=importPlaylist;
+    els.createDemoBtn.onclick=createDemo;
+    els.refreshPlaylistsBtn.onclick=refreshPlaylists;
+    els.selectPlaylistBtn.onclick=selectPlaylist;
+    els.startGameBtn.onclick=()=>{ if(roomData?.game?.status==='playing') endGame(); else startGame(); };
+    els.drawCardBtn.onclick=drawCard;
+    els.confirmPlacementBtn.onclick=confirmPlacement;
+    els.lockInBtn.onclick=lockIn;
+    if(els.playSpotifyBtn) els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
+  }
+
+  async function init(){
+    if(urlRoom) localStorage.removeItem(LS.startDone);
+    window.musicTimelineDebug={VERSION,connectFirebase,roomRef,createDemo,startGame,endGame,drawCard,confirmPlacement,lockIn,setProposedIndex,activePlayers:()=>activePlayersFrom(roomData.players||{}),get room(){return roomData},get player(){return player},get roomId(){return activeRoomId}};
+    bind();
+    updateStartScreen();
+    try{ if(await handleSpotifyCallback(redirectUri(), syncSpotifyProfile)) status(els.connectionStatus,'Spotify ar anslutet.','ok'); }catch(err){ console.error(err); status(els.connectionStatus,err.message,'bad'); }
+    connectFirebase();
+    const cachedProfile = spotifyProfileCache();
+    if(validToken(readToken()) && (!cachedProfile || !cachedProfile.updatedAt || now() - cachedProfile.updatedAt > 24*60*60*1000)){ syncSpotifyProfile(); }
+    status(els.connectionStatus,'Appen är laddad. Version '+VERSION+'.','ok');
+  }
+  init();
+})();
+
+
+
+
+

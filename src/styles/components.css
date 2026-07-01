@@ -1,0 +1,115 @@
+﻿    /* v4 layout and interaction refinements */
+    .appTop{display:none!important}
+    .gameShell{padding-top:24px}
+    .drawCard{touch-action:none;user-select:none;will-change:transform,left,top}.drawCard.dragging{opacity:1!important;transform:scale(.88) rotate(var(--drag-rot,0deg))!important;transition:transform 90ms linear, box-shadow .12s ease!important;box-shadow:0 34px 90px rgba(0,0,0,.62);cursor:grabbing}.drawCard.wrongReveal{border-color:rgba(255,107,107,.95)!important;background:linear-gradient(145deg,rgba(255,107,107,.34),rgba(255,107,107,.18) 48%,rgba(255,255,255,.05))!important;animation:wrongShake .42s ease-in-out 0s 2;box-shadow:0 0 0 4px rgba(255,107,107,.18),0 34px 90px rgba(0,0,0,.55)}@keyframes wrongShake{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-10px) rotate(-2deg)}40%{transform:translateX(9px) rotate(2deg)}60%{transform:translateX(-7px) rotate(-1.4deg)}80%{transform:translateX(5px) rotate(1deg)}}
+    .resultActions #playSpotifyBtn{display:none!important}
+    .settingChecks{display:grid;gap:8px;margin:12px 0}.checkLine{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:.9rem}.checkLine input{width:auto}.playlistMenu .startRow{margin-top:16px;padding-top:12px;border-top:1px solid var(--border)}.playlistMenu .startRow button{width:100%}.startRow .danger{background:rgba(255,107,107,.18);border-color:rgba(255,107,107,.5)}
+    .tlCard{width:148px;min-width:148px;min-height:218px;border-radius:22px;padding:10px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(145deg,rgba(125,211,252,.16),rgba(192,132,252,.10) 48%,rgba(255,255,255,.04));overflow:hidden}.tlCard .cover{border-radius:15px}.tlCardTitle{font-size:.86rem;line-height:1.02;margin-top:8px;padding-right:0}.tlArtist{font-size:.72rem;line-height:1.12}.tlYear{font-size:.9rem;margin-top:7px}.tlTag{left:8px;right:auto;top:8px;z-index:2}.activeTimelineArea .tlCard{width:162px;min-width:162px;min-height:236px}.ownTimelineDock .tlCard{width:132px;min-width:132px;min-height:198px}.ownTimelineDock .tlCardTitle{font-size:.76rem}.ownTimelineDock .tlArtist{font-size:.68rem}.dropSlot{width:34px;min-width:34px}.dropSlot.active,.dropSlot:hover,.dropSlot.selected{width:162px}
+    .cardNoCover .cover{display:none}.cardNoTitle .trackTitle,.cardNoTitle .tlCardTitle{display:none}.cardNoArtist .trackArtist,.cardNoArtist .tlArtist{display:none}
+    @media(max-width:700px){.currentCardZone{min-height:270px}.drawCard,.deckBack{width:min(240px,80vw);min-height:292px}.trackTitle{font-size:1.25rem}.activeTimelineArea .tlCard{width:136px;min-width:136px;min-height:205px}.ownTimelineDock .tlCard{width:122px;min-width:122px;min-height:184px}.dropSlot.active,.dropSlot:hover,.dropSlot.selected{width:136px}}
+
+  
+    /* v5: timeline cards always show full info; only active draw card respects card visibility toggles. */
+
+    @media(max-width:700px){.ownTimelineDock .legend{gap:8px;font-size:.72rem;flex-wrap:wrap;width:calc(100vw - 24px)}.ownTimelineDock .legendItem{font-size:.72rem}}
+
+    /* v10 compact layout and cleaner timeline drag */
+    :root{--dockH:126px;--ownH:136px}
+    body{padding-bottom:calc(var(--dockH) + var(--ownH) + 12px)}
+    .gameShell{min-height:calc(100vh - var(--dockH) - var(--ownH) - 8px);padding:10px 10px 8px;place-items:start center}
+    .centerStage{gap:8px;width:min(1040px,100%)}
+    .turnTitle .eyebrow{font-size:.72rem}.bigMessage{font-size:clamp(1rem,2.1vw,1.8rem)}
+    .currentCardZone{min-height:232px}.drawCard,.deckBack{width:min(218px,52vw);min-height:252px;border-radius:22px;padding:11px}.cover{border-radius:15px}.trackTitle{font-size:1.05rem;margin-top:8px}.trackArtist{font-size:.8rem;margin-top:4px}.yearHidden{font-size:.74rem;padding:5px 9px;margin-top:7px}
+    .activeTimelineArea{width:min(1040px,100%);padding:0 4px}.activeTimelineArea .timelineHeader{justify-content:center;text-align:center;margin-bottom:2px}.activeTimelineArea .timelineHeader h2{font-size:.92rem}.activeTimelineArea .timeline{justify-content:center;min-height:152px;padding:6px 4px 10px;gap:6px;align-items:center}.activeTimelineArea .tlCard{width:112px;min-width:112px;min-height:158px;border-radius:16px;padding:7px}.activeTimelineArea .tlCardTitle{font-size:.68rem}.activeTimelineArea .tlArtist{font-size:.61rem}.activeTimelineArea .tlYear{font-size:.72rem}.activeTimelineArea .tlTag{font-size:.56rem;padding:2px 5px}
+    .tlCard .cover{border-radius:11px}.tlCardTitle{font-size:.74rem}.tlArtist{font-size:.65rem}.tlYear{font-size:.8rem}
+    .dropSlot{width:0!important;min-width:0!important;padding:0!important;border-color:transparent!important;background:transparent!important;overflow:hidden;opacity:0;transition:width .18s ease,min-width .18s ease,opacity .18s ease,background .18s ease,border-color .18s ease,transform .18s ease}.dropSlot::after{content:''!important}.dropSlot.selected{background:transparent!important;border-color:transparent!important;opacity:0!important;transform:none!important}.dropSlot:hover{background:transparent!important;border-color:transparent!important;transform:none!important}
+    body.draggingTimelineCard .activeTimelineArea .dropSlot{width:18px!important;min-width:18px!important;opacity:1}.activeTimelineArea .dropSlot.active{width:116px!important;min-width:116px!important;background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important;transform:none!important}.activeTimelineArea .dropSlot.active::after{content:''!important;display:none!important}
+    .ownTimelineDock{min-height:var(--ownH);padding:7px 136px 24px}.ownTimelineDock .timeline{min-height:84px;padding:4px 0 4px;gap:7px}.ownTimelineDock .tlCard{width:92px!important;min-width:92px!important;min-height:132px!important;border-radius:13px;padding:6px}.ownTimelineDock .tlCardTitle{font-size:.6rem}.ownTimelineDock .tlArtist{font-size:.56rem}.ownTimelineDock .tlYear{font-size:.68rem}.ownTimelineDock .timelineHeader h2{font-size:.88rem}.ownTimelineDock .legend{bottom:5px;gap:12px}.ownTimelineDock .legendItem{font-size:.7rem}.ownTimelineToggle{top:8px;right:14px;padding:6px 10px;font-size:.72rem}body.ownCollapsed{--ownH:44px}
+    .bottomDock{min-height:var(--dockH);padding:7px 140px 8px;gap:5px}.playerStrip{max-width:820px;gap:7px}.playerTile{min-height:58px;min-width:112px;max-width:154px;border-radius:14px;padding:7px;text-align:left}.playerTile.viewing{border-color:rgba(192,132,252,.9);box-shadow:0 0 0 2px rgba(192,132,252,.20) inset}.playerName{font-size:.8rem}.playerScore{font-size:1.1rem}.scoreLabel{font-size:.62rem}.playerTile .small{font-size:.68rem}.rulesFooter{font-size:.66rem;line-height:1.12;width:min(760px,100%)}.profileButton,.playlistButton{padding:7px 10px;min-width:118px}.avatarDot,.playlistIcon{width:28px;height:28px}.profileButton b,.playlistButton b{font-size:.78rem}.profileButton small,.playlistButton small{font-size:.64rem}.profileArea,.playlistArea{bottom:10px}
+    .primary,.secondary,.danger,.success{padding:9px 12px;border-radius:12px;font-size:.88rem}.actions{gap:7px;margin-top:8px}input,select{padding:9px;border-radius:12px}
+    @media(max-width:920px){:root{--dockH:182px;--ownH:128px}.gameShell{padding-top:8px}.currentCardZone{min-height:218px}.drawCard,.deckBack{width:min(190px,58vw);min-height:224px}.ownTimelineDock{padding:7px 10px 24px}.bottomDock{padding:7px 8px 8px}.playerStrip{flex-wrap:wrap}.playerTile{flex-basis:calc(50% - 6px);max-width:180px}.profileArea,.playlistArea{bottom:10px}.activeTimelineArea .timeline{justify-content:flex-start}.ownTimelineDock .legend{flex-wrap:wrap;width:calc(100vw - 20px);gap:8px}}
+    @media(max-height:760px) and (min-width:921px){:root{--dockH:116px;--ownH:122px}.currentCardZone{min-height:210px}.drawCard,.deckBack{width:196px;min-height:224px}.activeTimelineArea .tlCard{width:100px;min-width:100px;min-height:142px}.ownTimelineDock .tlCard{width:82px!important;min-width:82px!important;min-height:118px!important}.rulesFooter{font-size:.62rem}}
+
+
+    /* v11: active player colors + first-card ghost slot */
+    .playerTile{--player-rgb:125,211,252;box-shadow:inset 0 0 0 1px rgba(var(--player-rgb),.10);}
+    .playerTile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:5px;background:rgba(var(--player-rgb),.95);}
+    .playerTile.active{border-color:rgba(var(--player-rgb),1)!important;box-shadow:0 0 0 4px rgba(var(--player-rgb),.72),0 0 0 8px rgba(var(--player-rgb),.16),inset 0 0 0 2px rgba(255,255,255,.12)!important;background:linear-gradient(180deg,rgba(var(--player-rgb),.24),rgba(255,255,255,.045))!important;}
+    .playerTile.viewing{box-shadow:0 0 0 2px rgba(var(--player-rgb),.28) inset;}
+    .playerTile.active.viewing{box-shadow:0 0 0 4px rgba(var(--player-rgb),.72),0 0 0 8px rgba(var(--player-rgb),.16),inset 0 0 0 2px rgba(255,255,255,.18)!important;}
+    .activeTimelineArea{--active-player-rgb:125,211,252;border:1px solid rgba(var(--active-player-rgb),.28);background:linear-gradient(180deg,rgba(var(--active-player-rgb),.13),rgba(var(--active-player-rgb),.045));border-radius:22px;padding:8px 10px 10px!important;box-shadow:0 18px 55px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.04);}
+    .activeTimelineArea .timelineHeader h2{color:rgb(var(--active-player-rgb));}
+    .dropSlot.emptySlot,.activeTimelineArea .dropSlot.emptySlot{width:112px!important;min-width:112px!important;min-height:158px!important;opacity:1!important;background:rgba(var(--active-player-rgb),.10)!important;border:2px dashed rgba(var(--active-player-rgb),.68)!important;border-radius:16px!important;color:rgba(255,255,255,.65)!important;display:grid!important;place-items:center!important;padding:10px!important;text-align:center!important;}
+    .dropSlot.emptySlot::after{content:'Placera fÃ¶rsta kortet hÃ¤r'!important;color:rgba(255,255,255,.70)!important;font-size:.72rem;font-weight:900;line-height:1.15;text-transform:uppercase;letter-spacing:.035em;}
+    .dropSlot.emptySlot.active,.dropSlot.emptySlot:hover{transform:translateY(-3px)!important;background:rgba(var(--active-player-rgb),.20)!important;border-color:rgba(var(--active-player-rgb),.98)!important;box-shadow:0 14px 36px rgba(0,0,0,.25)!important;}
+
+
+    /* v12: only active players, clearer player outlines and easier drag slots */
+    .playerTile::before{display:none!important;content:none!important;}
+    .playerTile{border:2px solid rgba(var(--player-rgb),.58)!important;box-shadow:0 0 0 1px rgba(var(--player-rgb),.10), inset 0 0 0 1px rgba(255,255,255,.04)!important;background:linear-gradient(180deg,rgba(var(--player-rgb),.10),rgba(255,255,255,.045))!important;}
+    .playerTile.viewing{border-color:rgba(var(--player-rgb),.95)!important;box-shadow:0 0 0 2px rgba(var(--player-rgb),.25), inset 0 0 0 1px rgba(255,255,255,.06)!important;}
+    .playerTile.active{border-color:rgba(var(--player-rgb),1)!important;box-shadow:0 0 0 5px rgba(var(--player-rgb),.78),0 0 0 10px rgba(var(--player-rgb),.16), inset 0 0 0 2px rgba(255,255,255,.14)!important;}
+    .playerTile.active.viewing{box-shadow:0 0 0 5px rgba(var(--player-rgb),.85),0 0 0 10px rgba(var(--player-rgb),.20), inset 0 0 0 2px rgba(255,255,255,.20)!important;}
+    body.draggingTimelineCard .activeTimelineArea .dropSlot{width:30px!important;min-width:30px!important;opacity:1!important;}
+    .activeTimelineArea .dropSlot.active{width:126px!important;min-width:126px!important;}
+
+
+    /* v16: waiting/results modes and floating left player list */
+    body{padding-bottom:calc(var(--ownH) + 28px);}
+    .gameShell{padding-left:240px;padding-top:78px;min-height:calc(100vh - var(--ownH) - 24px);}
+    .bottomDock{position:fixed!important;left:12px!important;right:auto!important;bottom:auto!important;top:50%!important;transform:translateY(-50%)!important;width:204px!important;min-height:0!important;max-height:calc(100vh - 178px)!important;padding:10px!important;display:block!important;border-top:1px solid var(--border)!important;border-right:1px solid var(--border)!important;border-radius:22px!important;overflow:auto!important;z-index:34!important;}
+    .playerStrip{display:flex!important;flex-direction:column!important;align-items:stretch!important;justify-content:flex-start!important;gap:9px!important;width:100%!important;max-width:none!important;margin:0!important;}
+    .playerTile{width:100%!important;max-width:none!important;min-width:0!important;flex:0 0 auto!important;}
+    .rulesFooter{display:none!important;}
+    .profileArea{left:14px!important;bottom:14px!important;z-index:55!important;}
+    .playlistArea{right:14px!important;bottom:14px!important;z-index:55!important;}
+    .ownTimelineDock{padding-left:240px!important;padding-right:18px!important;}
+
+    /* v18: keep 'Din tidslinje' fixed at the very bottom, underneath side players/profile/settings */
+    .ownTimelineDock{bottom:0!important;z-index:20!important;padding-left:240px!important;padding-right:18px!important;}
+    .bottomDock{z-index:40!important;}
+    .profileArea,.playlistArea{z-index:60!important;}
+    body.ownCollapsed .ownTimelineDock{bottom:0!important;}
+    body.waitingMode .currentCardZone,
+    body.waitingMode .resultActions,
+    body.waitingMode .gameStatus,
+    body.waitingMode .activeTimelineArea,
+    body.waitingMode .ownTimelineDock{display:none!important;}
+    body.waitingMode{padding-bottom:0!important;}
+    body.waitingMode .gameShell{padding-left:240px;min-height:100vh;}
+    body.waitingMode .turnTitle{background:rgba(19,26,43,.82);border:1px solid var(--border);border-radius:28px;padding:42px 56px;box-shadow:var(--shadow);}
+    body.waitingMode .turnTitle .eyebrow{display:none;}
+    body.waitingMode .bigMessage{font-size:clamp(1.8rem,4vw,3.6rem);}
+    body.finishedMode{padding-bottom:0!important;}
+    body.finishedMode .resultActions,
+    body.finishedMode .activeTimelineArea,
+    body.finishedMode .ownTimelineDock{display:none!important;}
+    body.finishedMode .gameShell{padding-left:240px;min-height:100vh;align-items:start;padding-top:70px;}
+    body.finishedMode .centerStage{width:min(1160px,calc(100vw - 270px));}
+    body.finishedMode .currentCardZone{min-height:0;display:block;width:100%;}
+    .timelineHeader{position:relative;justify-content:center!important;text-align:center!important;padding-right:170px;}
+    .timelineHeader>div{margin:0 auto;}
+    #roundPill{position:absolute;right:0;top:0;}
+    #roundPill::first-letter{text-transform:uppercase;}
+    @media(max-width:920px){
+      body{padding-bottom:calc(var(--dockH) + var(--ownH) + 22px);}
+      .gameShell,body.waitingMode .gameShell,body.finishedMode .gameShell{padding-left:10px!important;padding-right:10px!important;}
+      .bottomDock{left:0!important;right:0!important;bottom:0!important;top:auto!important;transform:none!important;width:auto!important;max-height:none!important;border-radius:0!important;padding:7px 8px 8px!important;}
+      .playerStrip{flex-direction:row!important;flex-wrap:wrap!important;justify-content:center!important;}
+      .playerTile{width:auto!important;flex:1 1 calc(50% - 8px)!important;}
+      .ownTimelineDock{padding-left:10px!important;padding-right:10px!important;}
+      body.finishedMode .centerStage{width:100%;}
+      .timelineHeader{padding-right:0;display:grid!important;place-items:center!important;}
+      #roundPill{position:static;margin-top:6px;}
+    }
+
+  
+    /* v19: tydlig aktiv-spelare-ruta ovanfÃ¶r tidslinjen och renare topp */
+    body.playingMode .turnTitle{display:none!important;}
+    body.playingMode #gameStatus{display:none!important;}
+    .activePlayerBanner{width:min(1040px,100%);display:none;text-align:center;font-weight:950;font-size:clamp(1rem,2vw,1.45rem);letter-spacing:-.025em;color:var(--text);background:linear-gradient(180deg,rgba(var(--active-player-rgb,125,211,252),.24),rgba(var(--active-player-rgb,125,211,252),.08)),var(--panel);border:1px solid rgba(var(--active-player-rgb,125,211,252),.45);box-shadow:0 16px 42px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.05);border-radius:20px;padding:12px 18px;margin-bottom:-8px;}
+    body.playingMode .activePlayerBanner{display:block;}
+    .activeTimelineArea .timelineHeader{justify-content:flex-end!important;text-align:right!important;padding-right:0!important;margin-bottom:4px;}
+    .activeTimelineArea .timelineHeader .pill{margin-left:auto;}
+
+
