@@ -1448,6 +1448,350 @@
     }
 
 
+    /* v51: slutskärm som planetsystem inspirerad av Wrapped-space-känslan */
+    body.finishedMode{
+      padding-bottom:0!important;
+      background:#020617!important;
+      background-image:none!important;
+      overflow:hidden!important;
+    }
+
+    body.finishedMode::before,
+    body.finishedMode::after{
+      content:none!important;
+      display:none!important;
+    }
+
+    body.finishedMode .bottomDock,
+    body.finishedMode .ownTimelineDock,
+    body.finishedMode .activeTimelineArea,
+    body.finishedMode .activePlayerBanner,
+    body.finishedMode .resultActions,
+    body.finishedMode #gameStatus,
+    body.finishedMode .turnTitle{
+      display:none!important;
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:grid!important;
+      place-items:center!important;
+      overflow:hidden!important;
+      animation:finishedUiDrop .46s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    body.finishedMode .centerStage{
+      width:100%!important;
+      max-width:none!important;
+      height:100vh!important;
+      display:block!important;
+    }
+
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      height:100vh!important;
+      min-height:100vh!important;
+      display:block!important;
+    }
+
+    @keyframes finishedUiDrop{
+      0%{opacity:.2;transform:translateY(-36px);}
+      100%{opacity:1;transform:translateY(0);}
+    }
+
+    .planetResultsScene{
+      position:fixed!important;
+      inset:0!important;
+      z-index:12!important;
+      overflow:hidden!important;
+      background:
+        radial-gradient(circle at 18% 52%,rgba(255,137,24,.18) 0 13rem,transparent 21rem),
+        radial-gradient(circle at 82% 25%,rgba(37,99,235,.22) 0 13rem,transparent 23rem),
+        linear-gradient(135deg,#020617 0%,#061036 54%,#020617 100%)!important;
+      color:#ffffff!important;
+      padding:42px clamp(22px,5vw,72px)!important;
+      isolation:isolate!important;
+      animation:planetSceneIn .52s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    @keyframes planetSceneIn{
+      from{opacity:0;transform:translateY(70px);}
+      to{opacity:1;transform:translateY(0);}
+    }
+
+    .planetStars{
+      position:absolute!important;
+      inset:0!important;
+      z-index:0!important;
+      background:
+        radial-gradient(circle at 10% 18%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 22% 72%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 37% 31%,#ffffff 0 1.5px,transparent 2px),
+        radial-gradient(circle at 48% 82%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 63% 18%,#ffffff 0 1.6px,transparent 2px),
+        radial-gradient(circle at 78% 64%,#ffffff 0 2px,transparent 2.4px),
+        radial-gradient(circle at 91% 38%,#ffffff 0 1.5px,transparent 2px),
+        radial-gradient(circle at 88% 87%,#ffffff 0 2px,transparent 2.4px);
+      opacity:.58!important;
+    }
+
+    .planetSun{
+      position:absolute!important;
+      left:-22vmin!important;
+      top:32%!important;
+      width:52vmin!important;
+      height:52vmin!important;
+      border-radius:50%!important;
+      background:#ff8a18!important;
+      box-shadow:0 0 70px rgba(255,138,24,.34)!important;
+      z-index:1!important;
+    }
+
+    .planetOrbit{
+      position:absolute!important;
+      left:-18vmin!important;
+      top:25%!important;
+      width:64vmin!important;
+      height:64vmin!important;
+      border:2px solid rgba(255,255,255,.72)!important;
+      border-radius:50%!important;
+      z-index:2!important;
+      opacity:.76!important;
+    }
+
+    .planetOrbit2{
+      width:78vmin!important;
+      height:78vmin!important;
+      left:-24vmin!important;
+      top:18%!important;
+      opacity:.42!important;
+    }
+
+    .planetOrbit3{
+      width:92vmin!important;
+      height:92vmin!important;
+      left:-30vmin!important;
+      top:11%!important;
+      opacity:.25!important;
+    }
+
+    .planetResultsTitle{
+      position:relative!important;
+      z-index:3!important;
+      max-width:760px!important;
+      margin:0 auto 28px!important;
+      text-align:center!important;
+    }
+
+    .planetResultsTitle span{
+      display:block!important;
+      font-size:.9rem!important;
+      font-weight:950!important;
+      letter-spacing:.18em!important;
+      text-transform:uppercase!important;
+      color:#f5ff3d!important;
+    }
+
+    .planetResultsTitle b{
+      display:block!important;
+      margin-top:6px!important;
+      font-size:clamp(2.1rem,5vw,5.2rem)!important;
+      line-height:.9!important;
+      letter-spacing:-.07em!important;
+      color:#ffffff!important;
+    }
+
+    .planetList{
+      position:relative!important;
+      z-index:4!important;
+      width:min(760px,calc(100vw - 38px))!important;
+      margin:0 auto!important;
+      display:grid!important;
+      gap:clamp(14px,2.2vh,24px)!important;
+      padding-top:clamp(6px,2vh,24px)!important;
+    }
+
+    .planetResult{
+      position:relative!important;
+      display:grid!important;
+      grid-template-columns:86px 1fr!important;
+      align-items:center!important;
+      gap:18px!important;
+      min-height:78px!important;
+      transform:translateX(var(--planet-shift,0px))!important;
+    }
+
+    .planetRank1{--planet-shift:-34px;}
+    .planetRank2{--planet-shift:22px;}
+    .planetRank3{--planet-shift:-8px;}
+    .planetRank4{--planet-shift:38px;}
+    .planetRank5{--planet-shift:-26px;}
+
+    .planetShape{
+      position:relative!important;
+      width:74px!important;
+      height:74px!important;
+      display:grid!important;
+      place-items:center!important;
+      filter:none!important;
+    }
+
+    .planetShape::before{
+      content:''!important;
+      position:absolute!important;
+      width:74px!important;
+      height:74px!important;
+      border-radius:50%!important;
+      background:rgb(var(--player-rgb))!important;
+      clip-path:polygon(50% 0%,57% 12%,67% 3%,72% 17%,85% 12%,84% 28%,100% 32%,88% 43%,100% 50%,88% 57%,100% 68%,84% 72%,85% 88%,72% 83%,67% 97%,57% 88%,50% 100%,43% 88%,33% 97%,28% 83%,15% 88%,16% 72%,0% 68%,12% 57%,0% 50%,12% 43%,0% 32%,16% 28%,15% 12%,28% 17%,33% 3%,43% 12%)!important;
+    }
+
+    .planetShape::after{
+      content:''!important;
+      position:absolute!important;
+      left:-13px!important;
+      right:-13px!important;
+      height:10px!important;
+      border:6px solid #f5ff3d!important;
+      border-top-color:#f5ff3d!important;
+      border-bottom-color:#f5ff3d!important;
+      border-left-color:transparent!important;
+      border-right-color:transparent!important;
+      border-radius:50%!important;
+      transform:rotate(-8deg)!important;
+      z-index:2!important;
+    }
+
+    .planetRank1 .planetShape{
+      width:88px!important;
+      height:88px!important;
+    }
+
+    .planetRank1 .planetShape::before{
+      width:88px!important;
+      height:88px!important;
+      background:#f5ff3d!important;
+    }
+
+    .planetRank2 .planetShape::before{background:#21e064!important;}
+    .planetRank3 .planetShape::before{background:#ff8a18!important;}
+    .planetRank4 .planetShape::before{background:#ff4ba0!important;}
+    .planetRank5 .planetShape::before{background:#7c1dff!important;}
+
+    .planetResultText{
+      display:grid!important;
+      gap:4px!important;
+      color:#ffffff!important;
+    }
+
+    .planetResultText div{
+      display:flex!important;
+      align-items:baseline!important;
+      gap:16px!important;
+      min-width:0!important;
+    }
+
+    .planetResultText strong{
+      font-size:1.6rem!important;
+      font-weight:1000!important;
+      color:#ffffff!important;
+      min-width:28px!important;
+      text-align:right!important;
+    }
+
+    .planetResultText b{
+      font-size:clamp(1.2rem,2.6vw,2.1rem)!important;
+      font-weight:1000!important;
+      letter-spacing:-.055em!important;
+      color:#f5ff3d!important;
+      white-space:nowrap!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+    }
+
+    .planetResultText small{
+      color:rgba(255,255,255,.72)!important;
+      font-size:.78rem!important;
+      font-weight:850!important;
+      margin-left:44px!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+    }
+
+    @media(max-width:760px){
+      .planetResultsScene{
+        padding:32px 18px!important;
+      }
+
+      .planetResultsTitle{
+        margin-bottom:18px!important;
+      }
+
+      .planetList{
+        gap:12px!important;
+      }
+
+      .planetResult{
+        grid-template-columns:66px 1fr!important;
+        gap:12px!important;
+        min-height:66px!important;
+        transform:translateX(0)!important;
+      }
+
+      .planetShape{
+        width:58px!important;
+        height:58px!important;
+      }
+
+      .planetShape::before{
+        width:58px!important;
+        height:58px!important;
+      }
+
+      .planetShape::after{
+        left:-8px!important;
+        right:-8px!important;
+        height:8px!important;
+        border-width:4px!important;
+      }
+
+      .planetRank1 .planetShape,
+      .planetRank1 .planetShape::before{
+        width:66px!important;
+        height:66px!important;
+      }
+
+      .planetSun{
+        left:-34vmin!important;
+        top:34%!important;
+        width:58vmin!important;
+        height:58vmin!important;
+      }
+
+      .planetOrbit{
+        left:-34vmin!important;
+        top:25%!important;
+        width:82vmin!important;
+        height:82vmin!important;
+      }
+
+      .planetResultText strong{
+        font-size:1.25rem!important;
+        min-width:22px!important;
+      }
+
+      .planetResultText b{
+        font-size:1.12rem!important;
+      }
+
+      .planetResultText small{
+        margin-left:38px!important;
+        font-size:.62rem!important;
+      }
+    }
+
+
   </style>
 </head>
 <body>
@@ -1457,7 +1801,7 @@
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div></div><div class="timeline" id="ownTimeline"></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton cornerBlob cornerBlobLeft" id="profileButton" type="button"><span class="cornerBlobText profileButtonText"><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in med Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton cornerBlob cornerBlobRight" id="playlistButton" type="button"><span class="cornerBlobText playlistButtonText"><b id="playlistButtonSub">Inställningar</b></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v50</span></div></div>
+  <div class="playlistArea"><button class="playlistButton cornerBlob cornerBlobRight" id="playlistButton" type="button"><span class="cornerBlobText playlistButtonText"><b id="playlistButtonSub">Inställningar</b></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v51</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -1466,7 +1810,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v50';
+  const VERSION = 'timeline-game-v51';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
@@ -2010,25 +2354,33 @@
       if(scoreDiff) return scoreDiff;
       return pendingCount(b) - pendingCount(a);
     });
+
     if(!players.length){
-      els.drawCardWrap.innerHTML='<div class="resultsBoard"><p class="small">Inga spelare att visa.</p></div>';
+      els.drawCardWrap.innerHTML='<section class="planetResultsScene"><p class="small">Inga spelare att visa.</p></section>';
       return;
     }
-    const board=document.createElement('div');
-    board.className='resultsBoard';
+
+    const scene=document.createElement('section');
+    scene.className='planetResultsScene';
+    scene.innerHTML='<div class="planetStars"></div><div class="planetSun"></div><div class="planetOrbit planetOrbit1"></div><div class="planetOrbit planetOrbit2"></div><div class="planetOrbit planetOrbit3"></div><div class="planetResultsTitle"><span>Slutresultat</span><b>Planetsystem</b></div><div class="planetList"></div>';
+
+    const list=scene.querySelector('.planetList');
     players.forEach((p,i)=>{
-      const row=document.createElement('section');
-      row.className='resultPlayer'+(roomData?.game?.winnerId===p.id?' winner':'');
-      row.style.setProperty('--player-rgb', playerRgb(p.id));
-      row.innerHTML='<div class="resultHead"><div><div class="resultRank">#'+(i+1)+'</div><div class="resultName">'+esc(p.name||'Spelare')+'</div></div><span class="pill">'+lockedCount(p)+'/'+WIN_SCORE+' låsta · '+pendingCount(p)+' riskeras</span></div><div class="resultTimeline"></div>';
-      const tl=row.querySelector('.resultTimeline');
-      const timeline=timelineOf(p);
-      if(!timeline.length) tl.innerHTML='<p class="tiny">Tom tidslinje</p>';
-      else timeline.forEach(c=>tl.appendChild(makeTimelineCard(c)));
-      board.appendChild(row);
+      const rank=i+1;
+      const item=document.createElement('article');
+      item.className='planetResult planetRank'+rank+(roomData?.game?.winnerId===p.id?' winner':'');
+      item.style.setProperty('--player-rgb', playerRgb(p.id));
+      item.innerHTML=
+        '<div class="planetShape" aria-hidden="true"><span></span></div>'+
+        '<div class="planetResultText">'+
+          '<div><strong>'+rank+'</strong><b>'+esc(p.name||'Spelare')+'</b></div>'+
+          '<small>'+lockedCount(p)+'/'+WIN_SCORE+' låsta kort</small>'+
+        '</div>';
+      list.appendChild(item);
     });
+
     els.drawCardWrap.innerHTML='';
-    els.drawCardWrap.appendChild(board);
+    els.drawCardWrap.appendChild(scene);
   }
 
   function renderCurrentCard(){
