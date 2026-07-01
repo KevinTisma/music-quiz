@@ -2586,6 +2586,146 @@
     }
 
 
+    /* v60: bakgrund fadeas separat, solsystemet glider upp ovanpå + albumcovers syns tydligare */
+    body.finishedMode{
+      background:#020617!important;
+      background-image:none!important;
+      overflow:hidden!important;
+      transition:none!important;
+    }
+
+    body.finishedMode::before{
+      content:''!important;
+      display:block!important;
+      position:fixed!important;
+      inset:0!important;
+      z-index:8!important;
+      pointer-events:none!important;
+      background:#020617!important;
+      opacity:0!important;
+      animation:resultsBackgroundFade .78s cubic-bezier(.22,1,.36,1) both!important;
+    }
+
+    body.finishedMode::after{
+      content:none!important;
+      display:none!important;
+      background:none!important;
+    }
+
+    @keyframes resultsBackgroundFade{
+      from{opacity:0;}
+      to{opacity:1;}
+    }
+
+    body.finishedMode .gameShell{
+      min-height:100vh!important;
+      padding:0!important;
+      display:block!important;
+      overflow:hidden!important;
+      animation:none!important;
+      background:transparent!important;
+    }
+
+    body.finishedMode .centerStage,
+    body.finishedMode .currentCardZone{
+      width:100%!important;
+      max-width:none!important;
+      min-height:100vh!important;
+      height:100vh!important;
+      display:block!important;
+      animation:none!important;
+      background:transparent!important;
+    }
+
+    .planetResultsScene{
+      z-index:12!important;
+      background:transparent!important;
+      animation:planetElementsGlideUp .96s cubic-bezier(.78,0,.16,1) both!important;
+    }
+
+    .planetResultsScene::before{
+      content:''!important;
+      position:fixed!important;
+      inset:0!important;
+      z-index:-1!important;
+      pointer-events:none!important;
+      background:
+        radial-gradient(circle at 18% 52%,rgba(255,137,24,.18) 0 13rem,transparent 21rem),
+        radial-gradient(circle at 82% 25%,rgba(37,99,235,.22) 0 13rem,transparent 23rem),
+        linear-gradient(135deg,#020617 0%,#061036 54%,#020617 100%)!important;
+      opacity:1!important;
+    }
+
+    @keyframes planetElementsGlideUp{
+      0%{
+        opacity:0;
+        transform:translateY(22vh);
+      }
+      16%{
+        opacity:1;
+      }
+      78%{
+        transform:translateY(-1.1vh);
+      }
+      100%{
+        opacity:1;
+        transform:translateY(0);
+      }
+    }
+
+    .planetTimelineCard{
+      background:#111827!important;
+      width:92px!important;
+      min-width:92px!important;
+      height:92px!important;
+      border-radius:16px!important;
+    }
+
+    .planetTimelineCard img{
+      display:block!important;
+      opacity:1!important;
+      visibility:visible!important;
+      width:100%!important;
+      height:100%!important;
+      object-fit:cover!important;
+      object-position:center!important;
+      position:absolute!important;
+      inset:0!important;
+      z-index:1!important;
+    }
+
+    .planetTimelineCard:not(:has(img)){
+      background:
+        linear-gradient(135deg,#1f2937,#0f172a)!important;
+    }
+
+    .planetTimelineCard::after{
+      content:''!important;
+      display:block!important;
+      position:absolute!important;
+      left:0!important;
+      right:0!important;
+      bottom:0!important;
+      height:30px!important;
+      z-index:2!important;
+      background:linear-gradient(to top,rgba(0,0,0,.78),rgba(0,0,0,0))!important;
+      pointer-events:none!important;
+    }
+
+    .planetTimelineCard span{
+      z-index:3!important;
+    }
+
+    @media(max-width:900px){
+      .planetTimelineCard{
+        width:72px!important;
+        min-width:72px!important;
+        height:72px!important;
+        border-radius:13px!important;
+      }
+    }
+
+
   </style>
 </head>
 <body>
@@ -2595,7 +2735,7 @@
   <section class="ownTimelineDock"><div class="timelineHeader"><div><h2 id="ownTimelineTitle">Din tidslinje</h2></div></div><div class="timeline" id="ownTimeline"></div><div class="legend"><span class="legendItem"><span class="dot locked"></span>Låst/permanent</span><span class="legendItem"><span class="dot pending"></span>Aktuell runda, riskeras</span><span class="legendItem"><span class="dot current"></span>Föreslagen placering</span></div></section>
   <footer class="bottomDock"><div class="playerStrip" id="playerStrip"></div><div class="rulesFooter"><b>Regler:</b> Första kortet kan läggas var som helst. Nästa kort måste placeras före, efter eller mellan dina tidigare kort utifrån låtens år. Gissar du rätt blir kortet gult och tillhör din aktuella runda. Lås in för att göra gula kort gröna och permanenta. Gissar du fel förlorar du alla gula kort från rundan och turen går vidare. Först till 7 låsta kort vinner.</div></footer>
   <div class="profileArea"><button class="profileButton cornerBlob cornerBlobLeft" id="profileButton" type="button"><span class="cornerBlobText profileButtonText"><b>Spelare</b><small>Profil</small></span></button><div class="profileMenu" id="profileMenu"><h3 id="profileName">Spelare</h3><p class="small" id="profileSub">Spotify ej anslutet</p><label for="playerNameInput" style="margin-top:12px">Namn</label><input id="playerNameInput" autocomplete="off" placeholder="Spelare"><div class="actions"><button class="secondary" id="saveNameBtn">Spara namn</button></div><label class="checkLine" style="margin-top:12px"><input type="checkbox" id="autoPlaySpotifyToggle"> Autoplay nuvarande låt på Spotify</label><div class="actions"><button class="secondary" id="spotifyLoginBtn">Logga in med Spotify</button><button class="secondary" id="spotifyLogoutBtn">Logga ut</button></div><div class="actions"><button class="secondary" id="connectFirebaseBtn">Anslut Firebase</button><button class="danger" id="resetRoomBtn">Resetta rum</button></div><p class="tiny" style="margin-top:8px">Redirect URI: <code id="redirectUriText"></code></p><p class="status" id="connectionStatus"></p></div></div>
-  <div class="playlistArea"><button class="playlistButton cornerBlob cornerBlobRight" id="playlistButton" type="button"><span class="cornerBlobText playlistButtonText"><b id="playlistButtonSub">Inställningar</b></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v59</span></div></div>
+  <div class="playlistArea"><button class="playlistButton cornerBlob cornerBlobRight" id="playlistButton" type="button"><span class="cornerBlobText playlistButtonText"><b id="playlistButtonSub">Inställningar</b></span></button><div class="playlistMenu" id="playlistMenu"><h3>Spelinställningar</h3><p class="small">Importera en spellista eller välj en sparad från Firebase.</p><div class="setupGrid"><div><label for="playlistInput">Spotify-spellista</label><input id="playlistInput" autocomplete="off" placeholder="Playlist URL eller ID"><button class="primary fullWidthAction" id="importPlaylistBtn" type="button">Hämta spellista</button></div><div><label for="savedPlaylistSelect">Sparade spellistor</label><select id="savedPlaylistSelect"><option value="">Laddar...</option></select><p class="tiny">Vald spellista används automatiskt när du klickar Starta.</p></div></div><div class="actions"><button class="secondary" id="createDemoBtn">Demo 3 låtar</button><button class="secondary hidden" id="selectPlaylistBtn">Använd</button></div><div class="settingChecks"><label class="checkLine"><input type="checkbox" id="showCoverToggle" checked> Visa album cover</label><label class="checkLine"><input type="checkbox" id="showArtistToggle" checked> Visa artist</label><label class="checkLine"><input type="checkbox" id="showTitleToggle" checked> Visa låtnamn</label></div><div class="startRow"><button class="primary" id="startGameBtn">Starta</button></div><p class="status" id="playlistStatus"></p><button class="secondary hidden" id="refreshPlaylistsBtn">Uppdatera lista</button><span class="pill hidden" id="versionPill">timeline-game-v60</span></div></div>
   <div class="hidden" id="playerBoards"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
@@ -2604,7 +2744,7 @@
 (() => {
   'use strict';
 
-  const VERSION = 'timeline-game-v59';
+  const VERSION = 'timeline-game-v60';
   const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
   const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
   const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
@@ -2677,6 +2817,43 @@
   }
   function proposedIndex(){ const n = roomData?.game?.proposedIndex; return Number.isInteger(n) ? n : null; }
   function cardId(card){ return card?.id || card?.uri || (card?.title + '-' + card?.artist + '-' + card?.year); }
+  function directCover(card){
+    return card?.image || card?.coverUrl || card?.albumImage || card?.album?.images?.[0]?.url || card?.track?.album?.images?.[0]?.url || '';
+  }
+  function coverForCard(card){
+    const direct = directCover(card);
+    if(direct) return direct;
+
+    const pools = [];
+    const addPool = value => {
+      if(!value) return;
+      if(Array.isArray(value)) pools.push(...value);
+      else if(typeof value === 'object') pools.push(...Object.values(value));
+    };
+
+    addPool(roomData?.songBank);
+    const selectedId = roomData?.selectedPlaylistId;
+    addPool(roomData?.savedPlaylists?.[selectedId]?.songs);
+    addPool(roomData?.savedPlaylists?.[cleanKey(selectedId)]?.songs);
+
+    const id = String(card?.id || '');
+    const uri = String(card?.uri || '');
+    const title = String(card?.title || '').toLowerCase();
+    const artist = String(card?.artist || '').toLowerCase();
+    const year = String(card?.year || '');
+
+    const found = pools.find(s => {
+      if(!s) return false;
+      if(id && String(s.id || '') === id) return true;
+      if(uri && String(s.uri || '') === uri) return true;
+      const sameTitle = title && String(s.title || '').toLowerCase() === title;
+      const sameYear = year && String(s.year || '') === year;
+      const sameArtist = !artist || String(s.artist || '').toLowerCase() === artist;
+      return sameTitle && sameYear && sameArtist;
+    });
+
+    return directCover(found);
+  }
 
   async function sha256(text){ return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)); }
   function base64url(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''); }
@@ -3206,8 +3383,8 @@
 
       const timelineHtml = tl.length
         ? tl.map(c=>{
-            const cover = c.image || c.coverUrl || c.albumImage || '';
-            const img = cover ? '<img src="'+esc(cover)+'" alt="">' : '';
+            const cover = coverForCard(c);
+            const img = cover ? '<img src="'+esc(cover)+'" alt="" loading="lazy">' : '';
             return '<div class="planetTimelineCard '+esc(c.status||'locked')+'">'+
               img+
               '<span>'+esc(String(c.year || '?'))+'</span>'+
@@ -3239,7 +3416,7 @@
     const canDrag=isMeActive() && !wrong;
     const div=document.createElement('div'); div.className='drawCard'+(wrong?'':' '+cardVisibilityClass())+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
     const yearText = wrong ? ('Fel placering · '+esc(card.year)) : 'Årtal dolt';
-    div.innerHTML='<div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+yearText+'</span></div>';
+    div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
     els.drawCardWrap.innerHTML=''; els.drawCardWrap.appendChild(div);
   }
@@ -3284,7 +3461,7 @@
     const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked');
     const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
-    div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(card.image||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
+    div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
     if(card.status==='proposed' && isMeActive() && currentCard() && !isWrongRevealActive()){
       div.title='Dra kortet igen för att placera om det';
       bindCardPointerDrag(div, currentCard());
