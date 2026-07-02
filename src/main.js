@@ -315,6 +315,13 @@ import { createRenderer } from './ui/render.js';
     syncRoomUrl();
     if(els.startPlayerNameInput && els.startPlayerNameInput.value !== player.name) els.startPlayerNameInput.value = player.name;
     if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId === ROOM_ID ? '' : activeRoomId;
+    const spotifyConnected = validToken(readToken());
+    if(els.startSpotifyLoginBtn){
+      els.startSpotifyLoginBtn.disabled = spotifyConnected;
+      els.startSpotifyLoginBtn.textContent = spotifyConnected ? 'Spotify anslutet' : 'Koppla Spotify';
+      els.startSpotifyLoginBtn.className = spotifyConnected ? 'spotifyConnectedButton' : 'primary';
+      els.startSpotifyLoginBtn.setAttribute('aria-disabled', spotifyConnected ? 'true' : 'false');
+    }
     renderLobbySummary();
     const done = localStorage.getItem(LS.startDone) === '1';
     document.body.classList.toggle('startOpen', !done);
@@ -353,6 +360,7 @@ import { createRenderer } from './ui/render.js';
       status(els.startStatus,'Spotify svarar som '+(player.name || 'spelare')+'.','ok');
       status(els.connectionStatus,'Spotify anslutet.','ok');
       renderProfile();
+      updateStartScreen();
     }catch(err){
       status(els.startStatus,'Spotify-test misslyckades: '+err.message,'bad');
     }
@@ -771,7 +779,7 @@ import { createRenderer } from './ui/render.js';
       updateStartScreen();
       status(els.connectionStatus,'Ansluten till lobby '+activeRoomId+'.','ok');
     };
-    if(els.spotifyLogoutBtn) els.spotifyLogoutBtn.onclick=async()=>{ localStorage.removeItem(LS.token); localStorage.removeItem(LS.spotifyProfile); player.avatarUrl=''; status(els.connectionStatus,'Utloggad från Spotify.','ok'); await upsertPlayer({avatarUrl:''}); renderProfile(); };
+    if(els.spotifyLogoutBtn) els.spotifyLogoutBtn.onclick=async()=>{ localStorage.removeItem(LS.token); localStorage.removeItem(LS.spotifyProfile); player.avatarUrl=''; status(els.connectionStatus,'Utloggad från Spotify.','ok'); await upsertPlayer({avatarUrl:''}); renderProfile(); updateStartScreen(); };
     if(els.connectFirebaseBtn) els.connectFirebaseBtn.onclick=()=>{ connectFirebase(); status(els.connectionStatus,'Firebase anslutet.','ok'); };
     if(els.resetRoomBtn) els.resetRoomBtn.onclick=resetRoom;
     if(els.saveNameBtn) els.saveNameBtn.onclick=async()=>{ player.name=(els.playerNameInput?.value||'Spelare').slice(0,32); localStorage.setItem(LS.playerName,player.name); await upsertPlayer(); };
@@ -801,7 +809,7 @@ import { createRenderer } from './ui/render.js';
     window.musicTimelineDebug={VERSION,connectFirebase,roomRef,createDemo,startGame,endGame,drawCard,confirmPlacement,lockIn,setProposedIndex,activePlayers:()=>activePlayersFrom(roomData.players||{}),get room(){return roomData},get player(){return player},get roomId(){return activeRoomId}};
     bind();
     updateStartScreen();
-    try{ if(await handleSpotifyCallback(redirectUri(), syncSpotifyProfile)) status(els.connectionStatus,'Spotify ar anslutet.','ok'); }catch(err){ console.error(err); status(els.connectionStatus,err.message,'bad'); }
+    try{ if(await handleSpotifyCallback(redirectUri(), syncSpotifyProfile)){ status(els.connectionStatus,'Spotify ar anslutet.','ok'); updateStartScreen(); } }catch(err){ console.error(err); status(els.connectionStatus,err.message,'bad'); }
     connectFirebase();
     const cachedProfile = spotifyProfileCache();
     if(validToken(readToken()) && (!cachedProfile || !cachedProfile.updatedAt || now() - cachedProfile.updatedAt > 24*60*60*1000)){ syncSpotifyProfile(); }

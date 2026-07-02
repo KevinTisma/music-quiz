@@ -13,6 +13,8 @@
 .startStep h2{margin:0 0 10px;font-size:1.05rem}
 .startStep .small{margin:0 0 10px}
 .startActions{display:flex;flex-wrap:wrap;gap:8px}
+.spotifyConnectedButton{padding:9px 12px;border-radius:12px;border:1px solid rgba(64,217,139,.82);background:transparent;color:var(--ok);font-size:.88rem;font-weight:900}
+.spotifyConnectedButton:disabled{opacity:1;cursor:default}
 .lobbyChoiceGrid{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:end}
 .lobbyChoiceGrid>.success{height:43px}
 .joinLobbyRow{display:grid;grid-template-columns:1fr auto;gap:8px}
