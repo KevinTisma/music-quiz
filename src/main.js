@@ -29,7 +29,7 @@ import { createRenderer } from './ui/render.js';
 
   const $ = id => document.getElementById(id);
   const els = {
-    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), utilityEndGameBtn:$('utilityEndGameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), utilityLobbyCode:$('utilityLobbyCode'), versionPill:$('versionPill'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), utilityEndGameBtn:$('utilityEndGameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), utilityMenu:$('utilityMenu'), playlistButtonSub:$('playlistButtonSub'), utilityLobbyCode:$('utilityLobbyCode'), versionPill:$('versionPill'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
   };
 
   function redirectUri(){ return window.location.origin + window.location.pathname; }
@@ -691,8 +691,23 @@ import { createRenderer } from './ui/render.js';
     applyOwnTimelineCollapsed(next);
     localStorage.setItem(LS.ownCollapsed, next ? '1' : '0');
   }
+  function splitSettingsMenus(){
+    if(!els.playlistMenu) return;
+    const utilitySettings = els.playlistMenu.querySelector('.utilitySettings');
+    if(!utilitySettings) return;
+    let utilityMenu = els.utilityMenu || document.getElementById('utilityMenu');
+    if(!utilityMenu){
+      utilityMenu = document.createElement('div');
+      utilityMenu.className = 'utilityMenu';
+      utilityMenu.id = 'utilityMenu';
+      els.playlistMenu.insertAdjacentElement('afterend', utilityMenu);
+    }
+    utilityMenu.appendChild(utilitySettings);
+    els.utilityMenu = utilityMenu;
+  }
 
   function bind(){
+    splitSettingsMenus();
     if(els.redirectUriText) els.redirectUriText.textContent=redirectUri();
     if(els.playerNameInput) els.playerNameInput.value=player.name;
     applyOwnTimelineCollapsed(false); localStorage.setItem(LS.ownCollapsed,'0'); if(els.ownTimelineToggle) els.ownTimelineToggle.onclick=toggleOwnTimeline;
@@ -708,8 +723,9 @@ import { createRenderer } from './ui/render.js';
       window.setTimeout(()=>els.profileButton?.classList.remove('spinning'), 520);
     };
     if(els.playlistButton) els.playlistButton.onclick=()=>{
-      const open = !els.playlistMenu?.classList.contains('open');
-      els.playlistMenu?.classList.toggle('open', open);
+      const open = !els.utilityMenu?.classList.contains('open');
+      els.utilityMenu?.classList.toggle('open', open);
+      els.playlistMenu?.classList.remove('open');
       els.profileMenu?.classList.remove('open');
       els.profileButton?.setAttribute('aria-expanded','false');
       els.playlistButton.setAttribute('aria-expanded', open ? 'true' : 'false');

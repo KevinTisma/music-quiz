@@ -1262,6 +1262,96 @@
       transform:none!important;
     }
 
+
+    /* v63: separera central spelinställningspanel från hörnets appinställningar */
+    .utilityMenu{
+      position:absolute!important;
+      right:22px!important;
+      bottom:184px!important;
+      width:360px!important;
+      max-width:calc(100vw - 24px)!important;
+      display:none!important;
+      background:#111827!important;
+      backdrop-filter:blur(18px)!important;
+      border:1px solid var(--border)!important;
+      border-radius:22px!important;
+      padding:14px!important;
+      box-shadow:var(--shadow)!important;
+      transform-origin:right bottom!important;
+      z-index:80!important;
+    }
+
+    .utilityMenu.open{
+      display:block!important;
+      transform:translateY(-8px) scale(1)!important;
+    }
+
+    body.waitingMode .playlistArea{
+      position:fixed!important;
+      right:0!important;
+      bottom:0!important;
+      left:auto!important;
+      top:auto!important;
+      width:0!important;
+      height:0!important;
+      transform:none!important;
+      z-index:72!important;
+    }
+
+    body.waitingMode .playlistButton{
+      display:flex!important;
+    }
+
+    body.waitingMode .playlistMenu{
+      position:fixed!important;
+      left:50%!important;
+      top:50%!important;
+      right:auto!important;
+      bottom:auto!important;
+      width:min(520px,calc(100vw - 32px))!important;
+      max-height:calc(100vh - 48px)!important;
+      overflow:auto!important;
+      display:block!important;
+      transform:translate(-50%,-50%)!important;
+      transform-origin:center center!important;
+      z-index:62!important;
+      background:#111827!important;
+      border:1px solid var(--border)!important;
+      border-radius:22px!important;
+      padding:18px!important;
+      box-shadow:var(--shadow)!important;
+    }
+
+    body.waitingMode .playlistMenu .gameSettings{
+      display:grid!important;
+    }
+
+    body.waitingMode .playlistMenu .utilitySettings,
+    body.waitingMode .utilityMenu .gameSettings{
+      display:none!important;
+    }
+
+    body:not(.waitingMode) .playlistMenu{
+      display:none!important;
+    }
+
+    body:not(.waitingMode) .utilityMenu .utilitySettings{
+      display:grid!important;
+    }
+
+    @media(max-width:920px){
+      .utilityMenu{
+        right:12px!important;
+        bottom:154px!important;
+        width:min(360px,calc(100vw - 24px))!important;
+      }
+
+      body.waitingMode .playlistMenu{
+        top:50%!important;
+        width:min(460px,calc(100vw - 24px))!important;
+      }
+    }
+
     @keyframes cornerBlobSoftTilt{
       0%{transform:rotate(0deg) scale(1);}
       45%{transform:rotate(45deg) scale(1.018);}
