@@ -1,4 +1,4 @@
-import { ROOM_ID } from '../config.js';
+﻿import { ROOM_ID } from '../config.js';
 
 export function normalizeRoomId(roomId){
   return String(roomId || ROOM_ID).trim().toUpperCase().replace(/[^A-Z0-9-]/g,'').slice(0,18) || ROOM_ID;

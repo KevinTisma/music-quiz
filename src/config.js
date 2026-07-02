@@ -1,4 +1,4 @@
-export const VERSION = 'timeline-game-v63';
+﻿export const VERSION = 'timeline-game-v70';
 export const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
 export const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
 export const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };

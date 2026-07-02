@@ -1,12 +1,12 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js';
+﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v70';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { readToken, spotifyFetch, validToken } from './spotify/spotify-api.js';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v70';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v70';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js';
+import { createRenderer } from './ui/render.js?v=active-room-start-v70';
 
 (() => {
   'use strict';
@@ -29,7 +29,7 @@ import { createRenderer } from './ui/render.js';
 
   const $ = id => document.getElementById(id);
   const els = {
-    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), utilityEndGameBtn:$('utilityEndGameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), playlistNameInput:$('playlistNameInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), utilityMenu:$('utilityMenu'), playlistButtonSub:$('playlistButtonSub'), utilityLobbyCode:$('utilityLobbyCode'), versionPill:$('versionPill'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), utilityEndGameBtn:$('utilityEndGameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), playlistNameInput:$('playlistNameInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), partyModeSelect:$('partyModeSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), utilityMenu:$('utilityMenu'), playlistButtonSub:$('playlistButtonSub'), utilityLobbyCode:$('utilityLobbyCode'), versionPill:$('versionPill'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
   };
 
   function redirectUri(){ return window.location.origin + window.location.pathname; }
@@ -62,6 +62,18 @@ import { createRenderer } from './ui/render.js';
   }
   function readVisibilityToggles(){
     return {cover:!!els.showCoverToggle?.checked, artist:!!els.showArtistToggle?.checked, title:!!els.showTitleToggle?.checked};
+  }
+  function selectedGameMode(){
+    return roomData?.settings?.gameMode || 'timeline';
+  }
+  function selectedPartyMode(){
+    return roomData?.settings?.partyMode || els.partyModeSelect?.value || 'party-owner';
+  }
+  function isPartyGame(){
+    return String(roomData?.game?.mode || '').startsWith('party-');
+  }
+  function partyQuestionFor(mode){
+    return mode === 'party-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
   }
   function isWrongRevealActive(){
     const wr = roomData?.game?.wrongReveal;
@@ -164,6 +176,23 @@ import { createRenderer } from './ui/render.js';
   }
   function roomRef(path=''){ if(!db) connectFirebase(); return getRoomRef(db, path, activeRoomId); }
   function userRef(path=''){ if(!db) connectFirebase(); return getUserRef(db, currentUserId(), path); }
+  function requireHost(message='Endast host kan göra detta.'){
+    const hostId = roomData?.meta?.hostId || '';
+    if(hostId === player.id) return true;
+    status(els.gameStatus, message, 'bad');
+    status(els.playlistStatus, message, 'bad');
+    return false;
+  }
+  function roomActorUpdates(extra={}){
+    return {'meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id,...extra};
+  }
+  async function updateRoomSettings(extra={}){
+    connectFirebase();
+    if(!requireHost('Endast host kan \u00e4ndra spelinst\u00e4llningar.')) return;
+    const updates = roomActorUpdates();
+    Object.entries(extra).forEach(([key,value]) => { updates['settings/'+key] = value; });
+    await roomRef().update(updates);
+  }
   function stopPresence(){
     if(heartbeatTimer) clearInterval(heartbeatTimer);
     heartbeatTimer = null;
@@ -276,15 +305,18 @@ import { createRenderer } from './ui/render.js';
     connectFirebase();
     listenRoom();
     restartUserPlaylistsListener();
-    const roomMeta = asHost ? {
+    if(!asHost){
+      upsertPlayer({ready:true}).catch(err => status(els.startStatus,'Kunde inte ansluta spelaren: '+err.message,'bad'));
+      updateStartScreen();
+      return;
+    }
+    const roomMeta = {
       hostId:player.id,
       code:activeRoomId,
       status:'lobby',
       createdAt:serverTimestamp(),
-      updatedAt:serverTimestamp()
-    } : {
-      code:activeRoomId,
-      updatedAt:serverTimestamp()
+      updatedAt:serverTimestamp(),
+      updatedBy:player.id
     };
     roomRef('meta').update(roomMeta).catch(err => status(els.startStatus,'Kunde inte spara lobby: '+err.message,'bad'));
     upsertPlayer({ready:true}).catch(err => status(els.startStatus,'Kunde inte ansluta spelaren: '+err.message,'bad'));
@@ -324,6 +356,8 @@ import { createRenderer } from './ui/render.js';
     }
     renderLobbySummary();
     const done = localStorage.getItem(LS.startDone) === '1';
+    const hasActiveRoom = activeRoomId !== ROOM_ID && !!roomData?.meta?.hostId && roomData?.meta?.status !== 'closed';
+    document.body.classList.toggle('hasActiveRoom', hasActiveRoom);
     document.body.classList.toggle('startOpen', !done);
     els.startScreen?.classList.toggle('hidden', done);
   }
@@ -399,7 +433,7 @@ import { createRenderer } from './ui/render.js';
       }
       if(!songs.length) throw new Error('Hittade inga låtar med årtal i spellistan.');
       await savePlaylist(pid,appName.slice(0,48),songs,'spotify');
-      status(els.playlistStatus,'Sparade "'+appName.slice(0,48)+'" med '+songs.length+' låtar.','ok');
+      status(els.playlistStatus,'Sparade "'+appName.slice(0,48)+'" med '+songs.length+' låtar. Välj den i listan och tryck + för att lägga till den i rummet.','ok');
     }catch(err){ console.error('[playlist-import]',err); status(els.playlistStatus,'Kunde inte importera: '+err.message,'bad'); }
     finally{ if(btn) btn.disabled = false; }
   }
@@ -407,9 +441,8 @@ import { createRenderer } from './ui/render.js';
     connectFirebase();
     const id = cleanKey(pid);
     const ownerId = currentUserId();
-    const playlist = {id:pid,name,source:source||'manual',songCount:songs.length,importedAt:serverTimestamp(),songs};
+    const playlist = {id:pid,ownerId,name,source:source||'manual',songCount:songs.length,importedAt:serverTimestamp(),updatedAt:serverTimestamp(),songs};
     await userRef('playlists/'+id).set(playlist);
-    await savePlaylistToRoomMix(id, {id,ownerId,name,source:playlist.source}, songs);
   }
   async function migrateLegacyRoomPlaylists(){
     if(migrationInProgress || !db || !roomData?.savedPlaylists) return;
@@ -418,10 +451,10 @@ import { createRenderer } from './ui/render.js';
       const updates = {};
       Object.entries(roomData.savedPlaylists || {}).forEach(([key,playlist]) => {
         const id = cleanKey(playlist?.id || key);
-        updates['playlists/'+id] = {...playlist,id:playlist?.id || key,migratedFromRoom:activeRoomId,migratedAt:serverTimestamp()};
+        updates['playlists/'+id] = {...playlist,id:playlist?.id || key,ownerId:currentUserId(),migratedFromRoom:activeRoomId,migratedAt:serverTimestamp(),updatedAt:serverTimestamp()};
       });
       if(Object.keys(updates).length) await userRef().update(updates);
-      await roomRef().update({savedPlaylists:null,songBanks:null});
+      await roomRef().update(roomActorUpdates({savedPlaylists:null,songBanks:null}));
     }finally{
       migrationInProgress = false;
     }
@@ -433,7 +466,7 @@ import { createRenderer } from './ui/render.js';
       {id:'demo3',title:'Digital Hearts',artist:'Console Dreams',year:2012,uri:'spotify:track:demo3',image:'https://picsum.photos/400?random=13'}
     ];
     await savePlaylist('demo-3-songs','Demo-spellista med 3 låtar',songs,'demo');
-    status(els.playlistStatus,'Demo-spellista skapad.','ok');
+    status(els.playlistStatus,'Demo-spellista skapad. Välj den i listan och tryck + för att lägga till den i rummet.','ok');
   }
   function playlistMixEntries(nextEntry=null){
     const entries = {...(roomData.playlistMix || {})};
@@ -460,15 +493,14 @@ import { createRenderer } from './ui/render.js';
       songs,
       addedAt:serverTimestamp()
     };
-    const entries = playlistMixEntries({key,value:entry});
+    const result = await roomRef('playlistMix').transaction(current => ({...(current || {}), [key]:entry}));
+    const entries = result?.snapshot?.val() || playlistMixEntries({key,value:entry});
     const mixedSongs = songsFromPlaylistMix(entries);
-    await roomRef().update({
-      playlistMix:entries,
+    await roomRef().update(roomActorUpdates({
       songBank:mixedSongs,
       selectedPlaylistId:'mixed',
-      selectedPlaylist:{id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length},
-      'meta/updatedAt':serverTimestamp()
-    });
+      selectedPlaylist:{id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length}
+    }));
   }
   async function refreshPlaylists(){
     connectFirebase();
@@ -484,12 +516,13 @@ import { createRenderer } from './ui/render.js';
   }
   async function selectPlaylist(){
     connectFirebase();
+    if(!requireHost('Endast host kan välja spellista för spelet.')) return;
     const id=els.savedPlaylistSelect.value; if(!id) return;
     const snap=await userRef('playlists/'+id+'/songs').get();
     let songs=snap.val(); if(!Array.isArray(songs)) songs=Object.values(songs||{});
     if(!songs.length) throw new Error('Spellistan saknar låtar.');
     const playlist = userPlaylists?.[id] || {};
-    await roomRef().update({selectedPlaylistId:id,selectedPlaylist:{id,ownerId:currentUserId(),name:playlist.name||id,source:playlist.source||'manual',songCount:songs.length},songBank:songs,'meta/updatedAt':serverTimestamp()});
+    await roomRef().update(roomActorUpdates({selectedPlaylistId:id,selectedPlaylist:{id,ownerId:currentUserId(),name:playlist.name||id,source:playlist.source||'manual',songCount:songs.length},songBank:songs}));
     status(els.playlistStatus,'Vald spellista används nu.','ok');
   }
   async function addPlaylistToMix(){
@@ -510,7 +543,36 @@ import { createRenderer } from './ui/render.js';
   }
 
   function getSongs(){ const s=roomData.songBank; return Array.isArray(s)?s:Object.values(s||{}); }
+  function partyDeckFromPlaylistMix(mode){
+    const entries = Object.values(roomData.playlistMix || {});
+    if(mode === 'party-owner' && entries.length){
+      return entries.flatMap(entry => {
+        const songs = Array.isArray(entry?.songs) ? entry.songs : Object.values(entry?.songs || {});
+        return songs.map(song => ({
+          ...song,
+          ownerPlayerId:entry.playerId || entry.ownerId || '',
+          ownerName:entry.playerName || entry.name || 'Spelare',
+          ownerPlaylistName:entry.name || 'Spellista'
+        }));
+      });
+    }
+    return getSongs().map(song => ({...song, ownerPlayerId:roomData?.meta?.hostId || player.id, ownerName:roomData?.players?.[roomData?.meta?.hostId]?.name || player.name || 'Spelare'}));
+  }
+  function partyChoicesFor(mode, deck, players){
+    if(mode === 'party-year'){
+      const year = Number(deck[0]?.year || 2000);
+      return shuffle([year, year - 1, year + 1, year - 5].filter((v,i,a)=>v && a.indexOf(v)===i)).map(v => ({id:String(v), name:String(v)}));
+    }
+    const fromDeck = [];
+    deck.forEach(song => {
+      const id = song.ownerPlayerId || song.ownerName;
+      if(id && !fromDeck.some(choice => choice.id === id)) fromDeck.push({id, name:song.ownerName || 'Spelare'});
+    });
+    const active = players.map(p => ({id:p.id, name:p.name || 'Spelare'}));
+    return (fromDeck.length ? fromDeck : active).slice(0,8);
+  }
   async function songsFromSelectedPlaylist(){
+    if(!requireHost('Endast host kan välja spellista för spelet.')) return null;
     const id=els.savedPlaylistSelect?.value;
     if(!id) return null;
     const snap=await userRef('playlists/'+id+'/songs').get();
@@ -518,28 +580,53 @@ import { createRenderer } from './ui/render.js';
     if(!Array.isArray(songs)) songs=Object.values(songs||{});
     if(!songs.length) return null;
     const playlist = userPlaylists?.[id] || {};
-    await roomRef().update({selectedPlaylistId:id,selectedPlaylist:{id,ownerId:currentUserId(),name:playlist.name||id,source:playlist.source||'manual',songCount:songs.length},songBank:songs});
+    await roomRef().update(roomActorUpdates({selectedPlaylistId:id,selectedPlaylist:{id,ownerId:currentUserId(),name:playlist.name||id,source:playlist.source||'manual',songCount:songs.length},songBank:songs}));
     return songs;
   }
   async function startGame(){
     connectFirebase();
-    const hostId = roomData?.meta?.hostId || '';
-    if(hostId !== player.id){ status(els.gameStatus,'Endast host kan starta spelet.','bad'); return; }
+    if(!requireHost('Endast host kan starta spelet.')) return;
+    const gameMode = selectedGameMode();
     const hasPlaylistMix = Object.keys(roomData.playlistMix || {}).length > 0;
     const selectedSongs = hasPlaylistMix ? null : await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
     const songs=selectedSongs || getSongs(); if(!songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
     const players=activePlayersFrom(roomData.players || {});
     if(!players.length){ await upsertPlayer(); }
     const allPlayers=activePlayersFrom((await roomRef('players').get()).val()||{});
+    if(gameMode === 'party'){
+      await startPartyGame(allPlayers);
+      return;
+    }
     const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
     const updates={};
     allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
     updates['meta/updatedAt']=serverTimestamp();
+    updates['meta/updatedBy']=player.id;
     updates['meta/status']='playing';
     updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
     await roomRef().update(updates);
   }
+  async function startPartyGame(allPlayers){
+    const mode = selectedPartyMode();
+    const deck = shuffle(partyDeckFromPlaylistMix(mode)).map((s,i)=>({...s,drawId:'p_'+i+'_'+cleanKey(cardId(s))}));
+    if(mode === 'party-owner'){
+      const ownerCount = new Set(deck.map(song => song.ownerPlayerId || song.ownerName).filter(Boolean)).size;
+      if(ownerCount < 2){ status(els.playlistStatus,'Vems l\u00e5t funkar b\u00e4st n\u00e4r minst tv\u00e5 spelare har lagt till varsin spellista.','warn'); }
+    }
+    const choices = partyChoicesFor(mode, deck, allPlayers);
+    const updates={};
+    allPlayers.forEach(p=>{ updates['players/'+p.id+'/score']=0; updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
+    updates['meta/updatedAt']=serverTimestamp();
+    updates['meta/updatedBy']=player.id;
+    updates['meta/status']='playing';
+    updates.game={status:'playing',mode,startedAt:serverTimestamp(),turnPlayerId:player.id,turnNumber:0,deck,discard:[],currentCard:null,choices,answers:{},reveal:false,message:partyQuestionFor(mode)+'. Hosten drar f\u00f6rsta l\u00e5ten.',winnerId:null};
+    await roomRef().update(updates);
+  }
   async function drawCard(){
+    if(isPartyGame()){
+      await drawPartyCard();
+      return;
+    }
     if(!isMeActive()) return;
     const game=roomData.game||{};
     if(game.currentCard){ status(els.gameStatus,'Placera och bekräfta det aktuella kortet först.','warn'); return; }
@@ -548,6 +635,47 @@ import { createRenderer } from './ui/render.js';
     const card=deck.shift();
     await roomRef().update({'game/deck':deck,'game/currentCard':card,'game/proposedIndex':null,'game/wrongReveal':null,'game/message':'Dra kortet till rätt plats i tidslinjen.',['players/'+player.id+'/activeProposal']:null});
     playCurrentSpotify(false);
+  }
+  async function drawPartyCard(){
+    if(!requireHost('Endast host kan dra n\u00e4sta partyl\u00e5t.')) return;
+    const game=roomData.game||{};
+    const deck=Array.isArray(game.deck)?[...game.deck]:[];
+    if(!deck.length && game.currentCard && game.reveal){
+      await roomRef().update({'game/status':'finished','meta/status':'finished','game/message':'Party-rundan \u00e4r slut.','game/currentCard':null,'meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id});
+      return;
+    }
+    if(!deck.length && !game.currentCard){
+      await roomRef().update({'game/status':'finished','meta/status':'finished','game/message':'Party-rundan \u00e4r slut.','meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id});
+      return;
+    }
+    const card=deck.shift();
+    const mode = game.mode || selectedPartyMode();
+    const choices = partyChoicesFor(mode, [card, ...deck].filter(Boolean), activePlayersFrom(roomData.players || {}));
+    await roomRef('game').update({deck,currentCard:card || null,choices,answers:{},reveal:false,turnNumber:(game.turnNumber||0)+1,message:partyQuestionFor(mode)+'. V\u00e4lj ditt svar.'});
+    playCurrentSpotify(false);
+  }
+  async function submitPartyAnswer(choiceId){
+    const game=roomData.game||{};
+    if(!isPartyGame() || game.status !== 'playing' || !game.currentCard || game.reveal) return;
+    await roomRef('game/answers/'+player.id).set({playerId:player.id,playerName:player.name || 'Spelare',choiceId:String(choiceId),answeredAt:serverTimestamp()});
+  }
+  async function revealPartyRound(){
+    if(!requireHost('Endast host kan visa svaret.')) return;
+    const game=roomData.game||{}, card=game.currentCard;
+    if(!isPartyGame() || !card) return;
+    const correctId = game.mode === 'party-year' ? String(card.year) : String(card.ownerPlayerId || card.ownerName || '');
+    const updates = {'game/reveal':true,'game/correctChoiceId':correctId,'game/message':'R\u00e4tt svar: '+partyCorrectLabel(game, card),'meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id};
+    Object.values(game.answers || {}).forEach(answer => {
+      if(String(answer.choiceId) !== correctId) return;
+      const id = answer.playerId;
+      const currentScore = Number(roomData.players?.[id]?.score || 0);
+      updates['players/'+id+'/score'] = currentScore + 1;
+    });
+    await roomRef().update(updates);
+  }
+  function partyCorrectLabel(game, card){
+    if(game?.mode === 'party-year') return String(card?.year || '');
+    return card?.ownerName || 'Ok\u00e4nd spelare';
   }
   async function setProposedIndex(index){
     if(!isMeActive() || !currentCard()) return;
@@ -612,6 +740,7 @@ import { createRenderer } from './ui/render.js';
     if(score>=WIN_SCORE){
       updates['game/status']='finished'; updates['game/winnerId']=player.id; updates['game/message']=(me.name||player.name)+' vann med '+score+' låsta kort.';
       updates['meta/status']='finished'; updates['meta/updatedAt']=serverTimestamp();
+      updates['meta/updatedBy']=player.id;
     }else{
       updates['game/turnPlayerId']=nextPlayerId(player.id); updates['game/turnNumber']=(game.turnNumber||1)+1; updates['game/message']='Kort låsta. Nästa spelares tur.';
     }
@@ -626,19 +755,20 @@ import { createRenderer } from './ui/render.js';
   }
   async function endGame(){
     connectFirebase();
+    if(!requireHost('Endast host kan avsluta spelet.')) return;
     const updates = {'game':null,'songBank':null,'selectedPlaylistId':null,'selectedPlaylist':null,'playlistMix':null,'playlistImportDebug':null};
     const players = roomData.players || {};
     Object.keys(players).forEach(id => { updates['players/'+id+'/timeline'] = []; updates['players/'+id+'/score'] = 0; updates['players/'+id+'/ready'] = false; updates['players/'+id+'/activeProposal'] = null; });
     updates['meta/status']='lobby';
     updates['meta/updatedAt']=serverTimestamp();
+    updates['meta/updatedBy']=player.id;
     await roomRef().update(updates);
     status(els.playlistStatus,'Spelet är avslutat och sessionens låtdata är rensad.','ok');
   }
   async function returnToLobbySettings(){
     connectFirebase();
-    const hostId = roomData?.meta?.hostId || '';
-    if(hostId !== player.id){ status(els.gameStatus,'Endast host kan ändra spelinställningar.','bad'); return; }
-    const updates = {'game':null,'meta/status':'lobby','meta/updatedAt':serverTimestamp()};
+    if(!requireHost('Endast host kan ändra spelinställningar.')) return;
+    const updates = {'game':null,'meta/status':'lobby','meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id};
     Object.keys(roomData.players || {}).forEach(id => {
       updates['players/'+id+'/timeline'] = [];
       updates['players/'+id+'/score'] = 0;
@@ -651,21 +781,31 @@ import { createRenderer } from './ui/render.js';
   async function closeLobby(reason='manual'){
     connectFirebase();
     if(lobbyCleanupInProgress) return;
-    const hostId = roomData?.meta?.hostId || '';
-    if(reason === 'manual' && hostId !== player.id){ status(els.gameStatus,'Endast host kan avsluta lobbyn.','bad'); return; }
+    if(reason === 'manual' && !requireHost('Endast host kan avsluta lobbyn.')) return;
     if(reason === 'manual' && !confirm('Avsluta lobbyn? Detta tar bort rummet för alla spelare.')) return;
     lobbyCleanupInProgress = true;
     const ref = roomRef();
     if(lobbyCleanupTimer){ clearTimeout(lobbyCleanupTimer); lobbyCleanupTimer = null; }
-    await ref.child('meta').update({status:'closed',closedAt:serverTimestamp(),closedBy:player.id,closeReason:reason});
+    await ref.child('meta').update({status:'closed',closedAt:serverTimestamp(),closedBy:player.id,closeReason:reason,updatedAt:serverTimestamp(),updatedBy:player.id});
     stopPresence();
     setTimeout(()=>ref.remove().catch(err=>console.warn('[close-lobby]',err)), CLOSED_LOBBY_REMOVE_DELAY_MS);
   }
 
   async function resetRoom(){
     connectFirebase();
+    if(!requireHost('Endast host kan resetta rummet.')) return;
     if(!confirm('Resetta rummet? Detta tar bort spel och spelare i lobby '+activeRoomId+'. Dina sparade spellistor finns kvar.')) return;
-    await roomRef().remove(); roomData={}; await upsertPlayer({timeline:[],score:0}); status(els.connectionStatus,'Rummet är återställt.','ok');
+    const updates = roomActorUpdates({game:null,songBank:null,selectedPlaylistId:null,selectedPlaylist:null,playlistMix:null,playlistImportDebug:null,'meta/status':'lobby'});
+    Object.keys(roomData.players || {}).forEach(id => {
+      updates['players/'+id+'/timeline'] = [];
+      updates['players/'+id+'/score'] = 0;
+      updates['players/'+id+'/ready'] = false;
+      updates['players/'+id+'/activeProposal'] = null;
+    });
+    await roomRef().update(updates);
+    roomData={...roomData,game:null,songBank:null,selectedPlaylistId:null,selectedPlaylist:null,playlistMix:null};
+    await upsertPlayer({timeline:[],score:0});
+    status(els.connectionStatus,'Rummet är återställt.','ok');
   }
 
   const renderer = createRenderer({
@@ -714,6 +854,16 @@ import { createRenderer } from './ui/render.js';
     }
     utilityMenu.appendChild(utilitySettings);
     els.utilityMenu = utilityMenu;
+    let closeLobbyBtn = document.getElementById('utilityCloseLobbyBtn');
+    if(!closeLobbyBtn){
+      closeLobbyBtn = document.createElement('button');
+      closeLobbyBtn.className = 'danger';
+      closeLobbyBtn.id = 'utilityCloseLobbyBtn';
+      closeLobbyBtn.type = 'button';
+      closeLobbyBtn.textContent = 'Avsluta lobby';
+      utilitySettings.querySelector('.actions')?.appendChild(closeLobbyBtn);
+    }
+    els.utilityCloseLobbyBtn = closeLobbyBtn;
     if(els.playlistMenu.parentElement !== document.body){
       document.body.appendChild(els.playlistMenu);
     }
@@ -745,8 +895,8 @@ import { createRenderer } from './ui/render.js';
       els.playlistButton.classList.add('spinning');
       window.setTimeout(()=>els.playlistButton?.classList.remove('spinning'), 520);
     };
-    if(els.spotifyLoginBtn) els.spotifyLoginBtn.onclick=()=>loginSpotify(redirectUri());
-    if(els.startSpotifyLoginBtn) els.startSpotifyLoginBtn.onclick=async()=>{ await savePlayerNameFromStart(); loginSpotify(redirectUri()); };
+    if(els.spotifyLoginBtn) els.spotifyLoginBtn.onclick=()=>loginSpotify(redirectUri(), window.location.href);
+    if(els.startSpotifyLoginBtn) els.startSpotifyLoginBtn.onclick=async()=>{ await savePlayerNameFromStart(); loginSpotify(redirectUri(), window.location.href); };
     if(els.testSpotifyBtn) els.testSpotifyBtn.onclick=testSpotifyConnection;
     if(els.createLobbyBtn) els.createLobbyBtn.onclick=async()=>{
       await savePlayerNameFromStart();
@@ -786,7 +936,12 @@ import { createRenderer } from './ui/render.js';
     if(els.resetRoomBtn) els.resetRoomBtn.onclick=resetRoom;
     if(els.saveNameBtn) els.saveNameBtn.onclick=async()=>{ player.name=(els.playerNameInput?.value||'Spelare').slice(0,32); localStorage.setItem(LS.playerName,player.name); await upsertPlayer(); };
     if(els.utilityEndGameBtn) els.utilityEndGameBtn.onclick=endGame;
+    if(els.utilityCloseLobbyBtn) els.utilityCloseLobbyBtn.onclick=()=>closeLobby('manual');
     if(els.autoPlaySpotifyToggle){ const savedAutoplay = localStorage.getItem(LS.autoplay); els.autoPlaySpotifyToggle.checked = savedAutoplay === null ? true : savedAutoplay === '1'; if(savedAutoplay === null) localStorage.setItem(LS.autoplay,'1'); els.autoPlaySpotifyToggle.onchange=()=>localStorage.setItem(LS.autoplay, els.autoPlaySpotifyToggle.checked?'1':'0'); }
+    document.querySelectorAll('.modeButton[data-game-mode]').forEach(button => {
+      button.onclick=()=>updateRoomSettings({gameMode:button.dataset.gameMode});
+    });
+    if(els.partyModeSelect) els.partyModeSelect.onchange=()=>updateRoomSettings({partyMode:els.partyModeSelect.value,gameMode:'party'});
     els.importPlaylistBtn.onclick=importPlaylist;
     els.createDemoBtn.onclick=createDemo;
     els.refreshPlaylistsBtn.onclick=refreshPlaylists;
@@ -794,10 +949,12 @@ import { createRenderer } from './ui/render.js';
     if(els.addPlaylistBtn) els.addPlaylistBtn.onclick=addPlaylistToMix;
     els.startGameBtn.onclick=()=>{ if(roomData?.game?.status==='playing') endGame(); else startGame(); };
     els.drawCardBtn.onclick=drawCard;
-    els.confirmPlacementBtn.onclick=confirmPlacement;
+    els.confirmPlacementBtn.onclick=()=>{ if(isPartyGame()) revealPartyRound(); else confirmPlacement(); };
     els.lockInBtn.onclick=lockIn;
     if(els.playSpotifyBtn) els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
     document.addEventListener('click', e=>{
+      const partyChoice = e.target?.closest?.('[data-party-choice]')?.dataset?.partyChoice;
+      if(partyChoice){ submitPartyAnswer(partyChoice); return; }
       const action = e.target?.closest?.('[data-result-action]')?.dataset?.resultAction;
       if(!action) return;
       if(action === 'play-again') startGame();
@@ -812,6 +969,7 @@ import { createRenderer } from './ui/render.js';
     bind();
     updateStartScreen();
     try{ if(await handleSpotifyCallback(redirectUri(), syncSpotifyProfile)){ status(els.connectionStatus,'Spotify ar anslutet.','ok'); updateStartScreen(); } }catch(err){ console.error(err); status(els.connectionStatus,err.message,'bad'); }
+    if(!validToken(readToken()) && await getValidSpotifyToken()){ updateStartScreen(); renderProfile(); }
     connectFirebase();
     const cachedProfile = spotifyProfileCache();
     if(validToken(readToken()) && (!cachedProfile || !cachedProfile.updatedAt || now() - cachedProfile.updatedAt > 24*60*60*1000)){ syncSpotifyProfile(); }

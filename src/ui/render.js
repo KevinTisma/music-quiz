@@ -1,10 +1,10 @@
-﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js';
+﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v70';
 import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js';
-import { renderPlayerStrip } from './player-ui.js';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v70';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v70';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v70';
 
 export function createRenderer(ctx){
   const {
@@ -36,14 +36,19 @@ export function createRenderer(ctx){
     applyGameModeClasses();
     renderTurn(); renderPlayers();
     if(getRoomData()?.game?.status === 'finished') renderFinishedResults();
+    else if(isPartyGame()) renderPartyGame();
     else { renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); }
     renderProfile(); renderBoards(); renderLobbySettings(); updateButtons(); handleAutoplay(); scheduleWrongRevealAdvance();
+  }
+  function isPartyGame(){
+    return String(getRoomData()?.game?.mode || '').startsWith('party-');
   }
   function applyGameModeClasses(){
     const status = getRoomData()?.game?.status || 'lobby';
     document.body.classList.toggle('waitingMode', status !== 'playing' && status !== 'finished');
     document.body.classList.toggle('finishedMode', status === 'finished');
     document.body.classList.toggle('playingMode', status === 'playing');
+    document.body.classList.toggle('partyMode', isPartyGame());
   }
   function refreshPlaylistsFromRoom(){
     refreshSavedPlaylistSelect(els.savedPlaylistSelect, getUserPlaylists(), getRoomData());
@@ -73,7 +78,7 @@ export function createRenderer(ctx){
     if(game.status==='playing'){
       setText(els.turnTitle,'');
       setText(els.turnSub,'');
-    }else{ setText(els.turnTitle,'VÃ¤ntar pÃ¥ att spelet ska starta'); setText(els.turnSub,''); }
+    }else{ setText(els.turnTitle,'Väntar på att spelet ska starta'); setText(els.turnSub,''); }
   }
   function renderPlayers(){
     uiState.viewedTimelinePlayerId = renderPlayerStrip({
@@ -180,6 +185,57 @@ export function createRenderer(ctx){
     });
   }
 
+  function renderPartyGame(){
+    const data=getRoomData(), game=data.game||{}, card=game.currentCard, hostId=data?.meta?.hostId || '';
+    const isHost = hostId === getPlayer().id;
+    const answer = game.answers?.[getPlayer().id] || null;
+    const correctId = game.mode === 'party-year' ? String(card?.year || '') : String(card?.ownerPlayerId || card?.ownerName || '');
+    const title = game.mode === 'party-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
+    setText(els.turnTitle, game.reveal && card ? 'R\u00e4tt svar: '+partyCorrectLabel(game, card) : title);
+    setText(els.turnSub, isHost ? 'Hosten spelar musiken och styr n\u00e4sta steg.' : (answer ? 'Svar l\u00e5st.' : 'V\u00e4lj ditt svar.'));
+    setText(els.activePlayerBanner, isHost ? 'Host-vy' : 'Spelar-vy');
+    setText(els.roundPill, 'Runda '+(game.turnNumber || 1));
+    if(els.activeTimeline) els.activeTimeline.innerHTML = '';
+    if(els.ownTimeline) els.ownTimeline.innerHTML = '';
+    if(!card){
+      els.drawCardWrap.innerHTML='<div class="partyPanel"><h2>'+esc(title)+'</h2><p class="small">'+(isHost?'Tryck p\u00e5 Dra nytt kort f\u00f6r att starta rundan.':'V\u00e4ntar p\u00e5 hosten.')+'</p></div>';
+      return;
+    }
+    if(isHost){
+      const answered = Object.keys(game.answers || {}).length;
+      els.drawCardWrap.innerHTML =
+        '<div class="partyHostGrid">' +
+          '<div class="drawCard partyHostCard"><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+(game.reveal?esc(card.year):'Svar dolt')+'</span></div></div>' +
+          '<div class="partyPanel"><h2>'+esc(title)+'</h2><p class="small">'+answered+' svar inne.</p>'+partyResultMarkup(game, correctId)+'</div>' +
+        '</div>';
+      return;
+    }
+    const choices = Array.isArray(game.choices) ? game.choices : Object.values(game.choices || {});
+    els.drawCardWrap.innerHTML =
+      '<div class="partyPanel partyPlayerPanel">' +
+        '<h2>'+esc(title)+'</h2>' +
+        '<div class="partyChoices">' +
+          choices.map(choice => {
+            const selected = answer && String(answer.choiceId) === String(choice.id);
+            const correct = game.reveal && String(choice.id) === correctId;
+            const wrong = game.reveal && selected && !correct;
+            return '<button class="partyChoice'+(selected?' selected':'')+(correct?' correct':'')+(wrong?' wrong':'')+'" type="button" data-party-choice="'+esc(choice.id)+'"'+(game.reveal?' disabled':'')+'>'+esc(choice.name)+'</button>';
+          }).join('') +
+        '</div>' +
+        partyResultMarkup(game, correctId) +
+      '</div>';
+  }
+  function partyCorrectLabel(game, card){
+    if(game?.mode === 'party-year') return String(card?.year || '');
+    return card?.ownerName || 'Ok\u00e4nd spelare';
+  }
+  function partyResultMarkup(game, correctId){
+    if(!game.reveal) return '';
+    const answers = Object.values(game.answers || {});
+    if(!answers.length) return '<p class="small">Inga svar kom in.</p>';
+    return '<div class="partyResults">'+answers.map(answer => '<span class="pill '+(String(answer.choiceId)===correctId?'ok':'bad')+'">'+esc(answer.playerName || 'Spelare')+'</span>').join('')+'</div>';
+  }
+
   function renderCurrentCard(){
     const card=currentCard();
     if(!card){
@@ -188,7 +244,7 @@ export function createRenderer(ctx){
     const wrong = isWrongRevealActive();
     const canDrag=isMeActive() && !wrong;
     const div=document.createElement('div'); div.className='drawCard'+(wrong?'':' '+cardVisibilityClass())+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
-    const yearText = wrong ? ('Fel placering Â· '+esc(card.year)) : 'Ã…rtal dolt';
+    const yearText = wrong ? ('Fel placering · '+esc(card.year)) : 'Årtal dolt';
     div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
     els.drawCardWrap.innerHTML=''; els.drawCardWrap.appendChild(div);
@@ -199,7 +255,7 @@ export function createRenderer(ctx){
     const activeProposal=ap.activeProposal || null;
     const card=currentCard() || activeProposal?.card || null;
     const idx=proposedIndex() ?? (Number.isInteger(activeProposal?.index) ? activeProposal.index : null);
-    setText(els.activePlayerBanner,'Aktiv Spelare: '+(ap.name||'OkÃ¤nd spelare')); setText(els.roundPill,'Aktiv runda: '+pendingCount(ap)+' kort riskeras');
+    setText(els.activePlayerBanner,'Aktiv Spelare: '+(ap.name||'Okänd spelare')); setText(els.roundPill,'Aktiv runda: '+pendingCount(ap)+' kort riskeras');
     const area = els.activeTimeline?.closest?.('.activeTimelineArea');
     const activeRgb = playerRgb(ap.id);
     if(area) area.style.setProperty('--active-player-rgb', activeRgb);
@@ -220,10 +276,10 @@ export function createRenderer(ctx){
       const prop=makeTimelineCard({...card,status:'proposed'});
       els.activeTimeline.insertBefore(prop, children[insertBeforeIndex] || null);
     }
-    if(!timeline.length && !card) els.activeTimeline.innerHTML='<p class="small">Tidslinjen Ã¤r tom.</p>';
+    if(!timeline.length && !card) els.activeTimeline.innerHTML='<p class="small">Tidslinjen är tom.</p>';
   }
   function makeDropSlot(index,selected,isEmptyTimeline){
-    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera fÃ¶rsta kortet hÃ¤r':'Placera hÃ¤r'; slot.dataset.index=index;
+    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera första kortet här':'Placera här'; slot.dataset.index=index;
     slot.addEventListener('click',()=>setProposedIndex(index));
     slot.addEventListener('dragover',e=>{ if(isMeActive() && currentCard()){ e.preventDefault(); slot.classList.add('active'); }});
     slot.addEventListener('dragleave',()=>slot.classList.remove('active'));
@@ -232,11 +288,11 @@ export function createRenderer(ctx){
   }
   function makeTimelineCard(card){
     const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked');
-    const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'LÃ¥st';
+    const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
     if(card.status==='proposed' && isMeActive() && currentCard() && !isWrongRevealActive()){
-      div.title='Dra kortet igen fÃ¶r att placera om det';
+      div.title='Dra kortet igen för att placera om det';
       bindCardPointerDrag(div, currentCard());
     }
     return div;
@@ -250,9 +306,9 @@ export function createRenderer(ctx){
     const tl=timelineOf(viewed);
     const isMine=viewed.id===getPlayer().id;
     const title=(isMine?'Din tidslinje':((viewed.name||'Spelare')+'s tidslinje'));
-    setText(els.ownTimelineTitle,title+' Â· '+lockedCount(viewed)+'/'+WIN_SCORE);
+    setText(els.ownTimelineTitle,title+' · '+lockedCount(viewed)+'/'+WIN_SCORE);
     els.ownTimeline.innerHTML='';
-    if(!tl.length){ els.ownTimeline.innerHTML='<p class="tiny">'+(isMine?'Din':'Spelarens')+' tidslinje Ã¤r tom. FÃ¶rsta kortet kan lÃ¤ggas var som helst.</p>'; return; }
+    if(!tl.length){ els.ownTimeline.innerHTML='<p class="tiny">'+(isMine?'Din':'Spelarens')+' tidslinje är tom. Första kortet kan läggas var som helst.</p>'; return; }
     tl.forEach(c=>els.ownTimeline.appendChild(makeTimelineCard(c)));
   }
   function renderProfile(){
@@ -264,7 +320,7 @@ export function createRenderer(ctx){
     if(els.profileSub) setText(els.profileSub, spotifyConnected ? 'Spotify anslutet' : 'Spotify ej anslutet');
     if(els.spotifyLoginBtn) els.spotifyLoginBtn.style.display = spotifyConnected ? 'none' : '';
     if(els.spotifyLogoutBtn) els.spotifyLogoutBtn.style.display = spotifyConnected ? '' : 'none';
-    if(els.playlistButtonSub){ setText(els.playlistButtonSub, 'InstÃ¤llningar'); }
+    if(els.playlistButtonSub){ setText(els.playlistButtonSub, 'Inställningar'); }
     if(els.profileButton){
       const me=getRoomData().players?.[getPlayer().id];
       els.profileButton.classList.toggle('active', getRoomData()?.game?.turnPlayerId===getPlayer().id);
@@ -275,12 +331,12 @@ export function createRenderer(ctx){
 
   function renderBoards(){
     const players=activePlayersFrom(getRoomData().players || {}); els.playerBoards.innerHTML='';
-    if(!players.length){ els.playerBoards.innerHTML='<p class="small">Inga spelare Ã¤nnu.</p>'; return; }
+    if(!players.length){ els.playerBoards.innerHTML='<p class="small">Inga spelare ännu.</p>'; return; }
     players.forEach(p=>{
       const board=document.createElement('div'); board.className='playerBoard'+(p.id===getRoomData()?.game?.turnPlayerId?' active':'');
       const tl=timelineOf(p);
       const preview = p.activeProposal?.card && Number.isInteger(p.activeProposal?.index) ? timelineWithProposal(tl,p.activeProposal.card,p.activeProposal.index) : tl;
-      board.innerHTML='<div class="playerBoardHead"><h3>'+esc(p.name||'Spelare')+'</h3><span class="pill">'+lockedCount(p)+'/'+WIN_SCORE+' lÃ¥sta Â· '+pendingCount(p)+' risk</span></div><div class="miniTimeline"></div>';
+      board.innerHTML='<div class="playerBoardHead"><h3>'+esc(p.name||'Spelare')+'</h3><span class="pill">'+lockedCount(p)+'/'+WIN_SCORE+' låsta · '+pendingCount(p)+' risk</span></div><div class="miniTimeline"></div>';
       const mt=board.querySelector('.miniTimeline');
       if(!preview.length) mt.innerHTML='<p class="tiny">Tom tidslinje</p>'; else preview.forEach(c=>mt.appendChild(makeTimelineCard(c)));
       els.playerBoards.appendChild(board);
@@ -291,11 +347,26 @@ export function createRenderer(ctx){
     const hostId = data?.meta?.hostId || '';
     const isHost = hostId === getPlayer().id;
     const gameStatus = data?.game?.status || 'lobby';
+    const roomStatus = data?.meta?.status || gameStatus;
+    const isLobby = roomStatus === 'lobby';
+    const canEditHostSettings = isHost && isLobby;
+    const canEditProfilePlaylists = isLobby;
+    const settings = data.settings || {};
+    const selectedMode = settings.gameMode || 'timeline';
+    const selectedParty = settings.partyMode || 'party-owner';
     const entries = Object.values(data.playlistMix || {}).sort((a,b)=>Number(a.addedAt || 0)-Number(b.addedAt || 0));
     document.body.classList.toggle('isHost', isHost);
     document.body.classList.toggle('isGuest', !isHost);
     if(els.lobbySettingsNotice){
-      setText(els.lobbySettingsNotice, isHost ? 'V\u00e4lj spelinst\u00e4llningar och starta spelet.' : 'V\u00e4ntar p\u00e5 att spelet ska starta');
+      setText(els.lobbySettingsNotice, isHost ? 'V\u00e4lj spelinst\u00e4llningar och starta spelet.' : 'L\u00e4gg till en egen spellista eller v\u00e4nta p\u00e5 hosten.');
+    }
+    document.querySelectorAll('.modeButton[data-game-mode]').forEach(button => {
+      button.classList.toggle('active', button.dataset.gameMode === selectedMode);
+      if(button.dataset.gameMode !== 'quiz') button.disabled = !canEditHostSettings;
+    });
+    if(els.partyModeSelect){
+      els.partyModeSelect.value = selectedParty;
+      els.partyModeSelect.disabled = !canEditHostSettings;
     }
     if(els.selectedPlaylistList){
       if(!entries.length){
@@ -315,20 +386,39 @@ export function createRenderer(ctx){
       }
     }
     document.querySelectorAll('.hostOnlySetting input,.hostOnlySetting select,.hostOnlySetting button').forEach(control => {
-      control.disabled = !isHost || gameStatus === 'playing';
+      control.disabled = !canEditHostSettings;
+    });
+    document.querySelectorAll('.profilePlaylistSetting input,.profilePlaylistSetting select,.profilePlaylistSetting button:not(.hostOnlySetting)').forEach(control => {
+      control.disabled = !canEditProfilePlaylists;
     });
   }
   function updateButtons(){
     const connected=!!getDb(), playing=getRoomData()?.game?.status==='playing', meActive=isMeActive(), hasCurrent=!!currentCard(), hasProposal=proposedIndex()!==null, me=getRoomData().players?.[getPlayer().id], wrong=isWrongRevealActive();
     const hostId = getRoomData()?.meta?.hostId || '';
     const isHost = hostId === getPlayer().id;
-    els.drawCardBtn.disabled=!meActive || hasCurrent || wrong || getRoomData()?.game?.status==='finished';
-    els.confirmPlacementBtn.disabled=!meActive || !hasCurrent || !hasProposal || wrong;
-    els.lockInBtn.disabled=!meActive || hasCurrent || wrong || !pendingCount(me) || getRoomData()?.game?.status==='finished';
+    const roomStatus = getRoomData()?.meta?.status || getRoomData()?.game?.status || 'lobby';
+    const isLobby = roomStatus === 'lobby';
+    if(isPartyGame()){
+      const game = getRoomData()?.game || {};
+      els.drawCardBtn.disabled=!connected || !isHost || getRoomData()?.game?.status==='finished' || (!!game.currentCard && !game.reveal);
+      els.drawCardBtn.textContent=game.currentCard ? 'N\u00e4sta l\u00e5t' : 'Dra nytt kort';
+      els.confirmPlacementBtn.disabled=!connected || !isHost || !game.currentCard || !!game.reveal;
+      els.confirmPlacementBtn.textContent='Visa svar';
+      els.lockInBtn.disabled=true;
+      els.lockInBtn.textContent='L\u00e5s kort';
+    }else{
+      els.drawCardBtn.disabled=!meActive || hasCurrent || wrong || getRoomData()?.game?.status==='finished';
+      els.drawCardBtn.textContent='Dra nytt kort';
+      els.confirmPlacementBtn.disabled=!meActive || !hasCurrent || !hasProposal || wrong;
+      els.confirmPlacementBtn.textContent='Godk\u00e4nn placering';
+      els.lockInBtn.disabled=!meActive || hasCurrent || wrong || !pendingCount(me) || getRoomData()?.game?.status==='finished';
+      els.lockInBtn.textContent='L\u00e5s kort';
+    }
     if(els.playSpotifyBtn) els.playSpotifyBtn.disabled=!hasCurrent;
-    els.startGameBtn.disabled=!connected || !isHost;
+    els.startGameBtn.disabled=!connected || !isHost || !isLobby;
     if(els.utilityEndGameBtn) els.utilityEndGameBtn.disabled=!connected || !isHost || !['playing','finished'].includes(getRoomData()?.game?.status);
-    const canEditPlaylistMix = connected && getRoomData()?.game?.status !== 'playing' && getRoomData()?.game?.status !== 'finished';
+    if(els.utilityCloseLobbyBtn) els.utilityCloseLobbyBtn.disabled=!connected || !isHost;
+    const canEditPlaylistMix = connected && isLobby;
     if(els.addPlaylistBtn) els.addPlaylistBtn.disabled=!canEditPlaylistMix || !els.savedPlaylistSelect?.value;
     if(els.savedPlaylistSelect) els.savedPlaylistSelect.disabled=!canEditPlaylistMix;
     if(getRoomData()?.game?.status==='playing'){ els.startGameBtn.textContent='Avsluta spel'; els.startGameBtn.className='danger'; }

@@ -2,8 +2,10 @@
 import { cardId, esc, lockedCount, pendingCount, timelineOf } from '../utils/helpers.js';
 
 export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb, isHost=false }){
+  const isPartyGame = String(roomData?.game?.mode || '').startsWith('party-');
+  const playerScore = player => isPartyGame ? Number(player?.score || 0) : lockedCount(player);
   const sortedPlayers = players.slice().sort((a,b)=>{
-    const scoreDiff = lockedCount(b) - lockedCount(a);
+    const scoreDiff = playerScore(b) - playerScore(a);
     if(scoreDiff) return scoreDiff;
     return pendingCount(b) - pendingCount(a);
   });
@@ -18,14 +20,16 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
   const resultKey = JSON.stringify({
     playlist: roomData?.selectedPlaylistId || '',
     winner: roomData?.game?.winnerId || '',
-    isHost,
-    players: sortedPlayers.map(p=>({
-      id:p.id,
-      name:p.name,
-      locked:lockedCount(p),
-      pending:pendingCount(p),
-      timeline:timelineOf(p).map(c=>cardId(c)+'|'+(c.year||'')+'|'+(c.status||''))
-    }))
+      isHost,
+      mode: roomData?.game?.mode || '',
+      players: sortedPlayers.map(p=>({
+        id:p.id,
+        name:p.name,
+        score:playerScore(p),
+        locked:lockedCount(p),
+        pending:pendingCount(p),
+        timeline:timelineOf(p).map(c=>cardId(c)+'|'+(c.year||'')+'|'+(c.status||''))
+      }))
   });
 
   const existingScene = drawCardWrap.querySelector('.planetResultsScene');
@@ -71,9 +75,9 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
       '<div class="planetShape" aria-hidden="true"><span></span></div>'+
       '<div class="planetResultText">'+
         '<div><strong>'+rank+'</strong><b>'+esc(p.name||'Spelare')+'</b></div>'+
-        '<small>'+lockedCount(p)+'/'+WIN_SCORE+' lÃ¥sta kort</small>'+
+        '<small>'+(isPartyGame ? (playerScore(p)+' poäng') : (lockedCount(p)+'/'+WIN_SCORE+' låsta kort'))+'</small>'+
       '</div>'+
-      '<div class="planetPlayerTimeline" aria-label="Tidslinje fÃ¶r '+esc(p.name||'Spelare')+'">'+timelineHtml+'</div>';
+      '<div class="planetPlayerTimeline" aria-label="Tidslinje för '+esc(p.name||'Spelare')+'">'+timelineHtml+'</div>';
     list.appendChild(item);
   });
 

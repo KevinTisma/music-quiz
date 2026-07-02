@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v63`
+- `timeline-game-v70`
 
 PWA-version byggd från:
 
@@ -46,7 +46,9 @@ Nuvarande app är fortfarande främst ett Classic Timeline-spel med:
 - iOS homescreen-stöd
 - lobby-system v63 med dynamiska rum, host-id, player list och delningslänk
 - central spelinställningspanel i lobby och separat allmän inställningsmeny i hörnet
+- spelinställningspanelen är uppdelad horisontellt på desktop i tre sektioner: mode selection, Spotify-import och spelspecifika inställningar
 - mixade spellistor där flera spelare kan lägga till egna sparade spellistor till samma rum
+- första Party-mode-flödet för `Vems låt`, där hosten spelar/skärmdelar och spelare svarar i ett enklare Kahoot-liknande UI
 
 Senast byggt 2026-07-02:
 
@@ -66,16 +68,66 @@ Senast byggt 2026-07-02:
 - rummet får spelomgångens kopia av låtar via `songBank`, `selectedPlaylist` och `playlistMix`
 - alla spelare kan lägga till egna sparade spellistor med `+` till `rooms/{roomId}/playlistMix`
 - blandad spellista byggs genom att slå ihop alla entries i `playlistMix`; host startar spelet med den mixade kortleken
+- alla tillagda entries i `playlistMix` visas under rubriken `Blandade spellistor` med spellistenamn, spelare och låtantal
 - spelinställningar visas som stor central panel när man är inne i lobby/vänteläge
+- mode selection visar `Timeline-mode`, `Quiz-mode` och `Party-mode`; Timeline och Party är aktiva, Quiz är fortfarande låst/dummy
+- `Spelspecifika inställningar` har dropdown för Party mode med `Vems låt` och `Årtals Quiz`
+- hostens val sparas i `rooms/{roomId}/settings` som `gameMode` och `partyMode`
+- Party `Vems låt` kan startas från lobbyinställningarna
+- Party `Vems låt` bygger sin kortlek från `playlistMix`, där varje låt får `ownerPlayerId`, `ownerName` och spellistnamn från den spelare som lade till spellistan
+- hosten styr Party-rundan med `Dra nytt kort` / `Nästa låt` och `Visa svar`
+- spelare får ett enklare mobil-/Kahoot-liknande UI med stora svarsknappar
+- Party-svar sparas under `game/answers/{playerId}` och poäng delas ut när hosten visar svaret
+- `Årtals Quiz` finns som valbar Party-grund och skapar årtalsalternativ för aktuell låt, men behöver fortfarande gameplay-polish och hårdtest
+- i Party-läge döljs `utilityMenu`/inställningsknappen för icke-host så spelarvyn blir renare
+- modeknapparna är vertikalt staplade i sin sektion och innehåller både stor titel och kort förklarande text
+- Spotify-import kräver ett eget `Namn i appen`; namnet behöver inte matcha Spotify och används när spellistan sparas i appen
 - icke-host ser samma spelinställningspanel men host-inställningar är nedtonade/oklickbara; spellisteval och `+` är tillgängligt före start
 - allmänna app-/lobbyinställningar ligger i den gamla runda/spikiga `Inställningar`-ikonen nere till höger
-- allmänna inställningar innehåller lobbykod, version, namnbyte, Spotify-autoplay och `Avsluta spel`
+- allmänna inställningar innehåller lobbykod, version, namnbyte, Spotify-autoplay, `Avsluta spel` och `Avsluta lobby`
 - `Avsluta spel` tar endast tillbaka rummet till lobby/spelinställningar och tar inte bort lobbyn
 - slutresultatsidan har host-knappar för `Spela igen`, `Ändra spelinställningar` och `Avsluta lobby`
 - `Avsluta lobby` markerar rummet som stängt, kopplar bort presence och tar bort `rooms/{roomId}` ur Firebase
 - lobby stängs även automatiskt klientdrivet efter 45 minuters inaktivitet eller 4 timmars total livslängd
 - viktig UI-fix: `#playlistMenu` flyttas vid appstart till `document.body` så den centrala spelinställningspanelen centreras mot viewporten och inte påverkas av hörnblobben `.playlistArea`
 - `#utilityMenu` skapas separat inne vid hörnblobben för den allmänna inställningsmenyn
+- Firebase Realtime Database-regler har lagts till i `database.rules.json` och kopplats via `firebase.json`
+- första beta-regler finns för `users/{userId}/playlists` och `rooms/{roomId}`
+- importerade/demo-spellistor sparas nu med `ownerId` för att matcha rules-strukturen
+- rumsuppdateringar märks med `meta/updatedBy` så reglerna kan skilja host- och spelaråtgärder
+- host-only-flöden kontrolleras även i funktionerna, inte bara via nedtonade/disabled knappar
+- `playlistMix` skrivs med Firebase-transaktion så samtidiga spelare inte skriver över varandras bidrag
+- `Resetta rum` rensar speldata och återgår till lobby i stället för att ta bort hela rumsnoden
+
+Party-polish / hårdtest påbörjat 2026-07-02:
+
+- testades lokalt med tre separata klienter mot samma Firebase-lobby via tre lokala portar
+- verifierat att flera klienter kan lägga till varsin sparad spellista till samma `playlistMix` utan att entries tappas; testlobby visade `3 spellistor · 6 låtar`
+- verifierat att host kan välja `Party-mode`, starta `Vems låt`, dra låt och visa svar
+- verifierat att gäster i Party-läge ser stora svarsknappar och inte ser `utilityMenu`/hörninställningar
+- verifierat att poäng skrivs korrekt i databasen när host visar svar
+- fixat att Party-spelarlisten visar `score`/poäng i stället för Timeline-låsta kort
+- fixat att första dragna Party-låten blir `Runda 1` i stället för `Runda 2`
+- fixat att hostens `Nästa låt` efter sista reveal går direkt till slutresultat i stället för ett tomt mellanläge
+- ändrat Party-vyn så gäster inte ser vänstra spelarlisten
+- ändrat hostens vänstra Party-lista till en svarstatuslista som visar poäng och om varje spelare har svarat eller om hosten väntar på svar
+- bumpat appversion till `timeline-game-v64`
+- lagt cache-brytare på `party.css`, `main.js`, `render.js`, `player-ui.js`, `result-ui.js` och `config.js`-importer för att minska risken att gamla Party-moduler ligger kvar i browsercache
+- Spotify-lobbyfix efter v64: Spotify-login sparar nu en `returnUrl` så spelaren kommer tillbaka till samma lobby efter OAuth, access token refreshas automatiskt med sparad refresh token när den gått ut, och cache-brytare är bumpad till `spotify-lobby-v65`
+- v67: icke-host kan nu skapa/importera egna profilspellistor i lobbyn och skapa demo-spellista. Nya spellistor sparas först på spelarens profil; spelaren väljer sedan själv spellistan och trycker `+` för att lägga till den i rummets `playlistMix`. Host-only gäller fortsatt modeval, partyvariant, timeline-visibility och start/avslut.
+- v68: modeknapparna, inklusive `Party-mode`, är klickbara för host när rummets `meta/status` är `lobby`; edit-låsningen går nu på lobby-status i stället för enbart `game/status`, som kunde ligga kvar/störa efter testspel.
+- v69: fixat mojibake/encoding i spel-UI:t så svenska tecken och punktseparatorer i timeline, knappar, statusar och resultat visas korrekt.
+- v70: startskärmens lobbydel byter till Aktivt Rum: <kod> när spelaren redan skapat eller gått med i en lobby; skapa/gå-med-kontrollerna göms för att undvika att samma spelare råkar skapa nya rum i loop.
+
+Kvar efter avbrutet hårdtest:
+
+- verifiera från ett helt färskt rum att `Runda 1` visas efter första draget
+- verifiera från ett helt färskt rum att hostens svarstatuslista visar `Svarat`/`Väntar` under pågående runda, inte bara poäng efter reveal
+- verifiera slutresultatsvyn för Party efter att hela kortleken tar slut
+- verifiera hostens `Nästa låt` efter sista reveal i liveklienterna
+- köra om host/gäst-testet efter vanlig reload och gärna efter deploy/cache-scenario
+- kontrollera att host-only-funktioner fortfarande nekas för gäster via UI och direkta debug-/funktionsanrop
+- kontrollera att `Årtals Quiz` inte regresserat av Party-score/render-ändringarna
 
 ## Viktig begränsning just nu
 
@@ -200,6 +252,8 @@ Byggt:
 - appen lyssnar på `users/{userId}/playlists`
 - room får bara spelomgångens kopia/referensdata: `selectedPlaylist`, `selectedPlaylistId`, `songBank`
 - flera spelare kan bidra till rummet via `rooms/{roomId}/playlistMix`
+- lobbyinställningarna visar alla tillagda spellistor i `playlistMix` under `Blandade spellistor`
+- Spotify-import sparar användarens eget appnamn för spellistan, inte ett automatiskt Spotify-id-namn
 - legacy-data i `rooms/{roomId}/savedPlaylists` migreras till aktuell användares `users/{userId}/playlists`
 
 Resultat:
@@ -208,15 +262,21 @@ Resultat:
 
 Kvar/att förbättra senare:
 
-- Firebase security rules behöver anpassas till `users/{userId}/playlists` och `rooms/{roomId}`
+- Firebase security rules finns som beta-version men behöver bytas till `auth.uid` när riktig Firebase Auth införs
 - långsiktigt bör rummet helst lagra referenser/urval och inte full låtkopia mer än för aktiv spelomgång
 - garanterad automatisk lobby-rensning utan öppen klient kräver server/Firebase Cloud Function
+- reglerna skyddar idag struktur och vanliga felvägar, men är inte full publik säkerhet eftersom appen ännu saknar Firebase Auth
 
 ### Fas 3: Party Mode v1
 
 Mål: första TV/host-baserade spelläget.
 
-Bygg:
+Status:
+
+- Påbörjad. Party-mode kan väljas i lobby och första `Vems låt`-flödet finns.
+- `Årtals Quiz` finns som valbar Party-variant och har grundlogik för svarsalternativ, men är inte färdigpolerat.
+
+Bygg vidare:
 
 - Party: Gissa årtal
 
@@ -238,12 +298,26 @@ Bygg:
 
 - Party: Vems spellista?
 
+Status:
+
+- Första versionen är byggd som `Vems låt`.
+- Spelet använder `playlistMix`, blandar låtar och låter spelare gissa vilken spelare låten tillhör.
+- Hosten spelar/skärmdelar och kontrollerar nästa låt samt reveal.
+
 Flöde:
 
 - Alla spelare lägger in en spellista
 - Spelet blandar låtar
 - Alla gissar vem låten tillhör
 - Poäng delas ut
+
+Kvar:
+
+- hårdtesta med flera riktiga klienter
+- bättre runda-/slutresultatsvy för Party
+- tydligare host-TV-vy när låten spelas
+- bättre fallback när bara en spelare/spellista finns i mixen
+- bestäm om `Vems låt` ska heta `Vems låt` eller `Vems spellista` i hela UI:t
 
 Resultat:
 
@@ -309,6 +383,21 @@ När Spotify-auth behöver verifieras server-side eller när vi närmar oss 100 
 
 Senare kan Firestore övervägas om strukturen växer mycket.
 
+### Firebase Auth
+
+Beslut: lägg till riktig Firebase Auth innan publik beta/testdeploy med okända användare.
+
+Nuvarande app använder fortfarande klientens `player.id` och Spotify-baserad/localStorage-baserad `userId` för ägare och hostmarkering. Det räcker för lokal prototyp och kontrollerade tester, men kan manipuleras av en egen klient.
+
+Rekommenderat införande:
+
+- först hårdtesta nuvarande lobby-, host/guest- och playlist-mix-flöde med 2-3 klienter
+- därefter införa anonym Firebase Auth vid appstart
+- byt långsiktigt `currentUserId()` till `auth.currentUser.uid`
+- behåll `player.id` som spelarsession i rummet, men använd `uid` för ägarskap och regler
+- flytta rules från klientmarkerad `ownerId`/`updatedBy` till `auth.uid`
+- koppla Spotify-profil till Firebase-användaren senare, eller spara Spotify-profil under den anonyma användaren tills riktig kontolänkning behövs
+
 ### Spotify-data ska inte sparas globalt
 
 Beslut: spellistor ska ligga under användare.
@@ -333,30 +422,57 @@ if (mode === 'party-owner') renderPartyOwnerGame();
 
 Nästa kodchatt bör vara:
 
-- Stabilisering av multiplayer/lobby och Firebase-regler
+- Hårdtest och polish av Party-mode + stabilisering av multiplayer/lobby
 
 Målet i den chatten:
 
-- se över Firebase security rules för users/playlists och rooms
+- testa `Vems låt` med minst 2-3 riktiga klienter
+- verifiera att host kan välja Party och `Vems låt` från lobby, starta runda, visa svar och gå till nästa låt
+- verifiera att gäster i Party-läge bara ser svarsvyn och inte `utilityMenu`
+- verifiera att poäng delas ut korrekt när hosten visar svaret
+- förbättra host-TV-vyn och slutresultatsvyn för Party
+- färdigställa/polisha `Årtals Quiz`
+- hårdtesta beta-reglerna för `users/{userId}/playlists` och `rooms/{roomId}`
 - bestäm exakt policy för room-livslängd och serverstyrd cleanup
 - hårdtesta host/icke-host-flödet med flera riktiga klienter
 - testa mixad spellista med flera användare och Spotify-konton
 - säkerställa att deployad GitHub Pages-version inte cachear gammal CSS/JS vid UI-fixar
+- lägga till möjlighet att ta bort sparade spellistor från användarens `users/{userId}/playlists`
+- ta bort spellista ska även hantera om spellistan finns i aktuell `playlistMix` eller är vald i rummet
+- lägga till Firebase Auth innan publik beta/deploy med okända användare
 
 ## Aktuell prioritet
 
 Prio 1:
 
-- stabilisera Firebase-regler, lobby cleanup och multiplayer-flöden
+- hårdtesta Party `Vems låt` med flera klienter, inklusive host/gäst-UI och poäng
 
 Prio 2:
 
-- bygga första party-läget: Gissa årtal
+- hårdtesta Firebase-regler, lobby cleanup och multiplayer-flöden
 
 Prio 3:
+
+- lägga till Firebase Auth inför publik beta
+
+Prio 4:
+
+- färdigställa Party `Årtals Quiz`
+
+Prio 5:
 
 - Firebase Hosting / publik testdeploy
 
 Nästa sak på agendan:
-Fortsätt jobba med CSS för Lobbyinställningar. 
-Justera så att varje gång man lägger till en spellista så ska den också visas under "blandade spellistor". Dvs att Alla spellistor som blir tillagda hamnar på en lista där.
+Fortsätt verifiera Party `Vems låt` efter v64-polish:
+
+- starta ett helt färskt rum med 2-3 klienter
+- låt alla klienter lägga till varsin spellista i `playlistMix`
+- verifiera att första dragna låten visar `Runda 1`
+- verifiera att gäster i Party-läge bara ser svarsvyn, utan vänsterlista och utan `utilityMenu`
+- verifiera att hostens vänstra lista visar poäng samt vilka spelare som har svarat och vilka som saknas
+- verifiera att poäng visas rätt i UI direkt efter reveal
+- verifiera att `Nästa låt` går vidare korrekt och att sista reveal leder till slutresultat
+- verifiera att slutresultatsvyn sorterar Party efter poäng
+- testa att guest fortfarande inte kan starta/avsluta/resetta via UI eller direkta funktionsanrop
+- kontrollera att cache-brytaren räcker i vanlig browser/deployad miljö

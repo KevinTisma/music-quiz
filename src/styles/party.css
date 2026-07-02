@@ -1,1 +1,167 @@
-﻿/* Party mode styles will live here when party modes are added. */
+﻿body.partyMode .ownTimelineDock{
+  display:none!important;
+}
+
+body.partyMode .activeTimelineArea{
+  border:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+  padding:0 8px 10px!important;
+}
+
+body.partyMode .activeTimelineArea .timelineHeader,
+body.partyMode .activeTimelineArea .timeline{
+  display:none!important;
+}
+
+body.partyMode .currentCardZone{
+  min-height:58vh!important;
+  align-items:center;
+}
+
+body.partyMode .activeTimelineActions #lockInBtn{
+  display:none!important;
+}
+
+body.partyMode.isGuest .playlistArea,
+body.partyMode.isGuest .utilityMenu{
+  display:none!important;
+}
+
+body.partyMode.isGuest .bottomDock{
+  display:none!important;
+}
+
+body.partyMode.isGuest .gameShell,
+body.partyMode.isGuest.finishedMode .gameShell{
+  padding-left:10px!important;
+}
+
+body.partyMode.isGuest .centerStage,
+body.partyMode.isGuest.finishedMode .centerStage{
+  width:min(1040px,100%)!important;
+}
+
+body.partyMode .playerTile.partyPlayerTile{
+  cursor:default;
+}
+
+body.partyMode .playerTile.partyPlayerTile.answered{
+  border-color:rgba(64,217,139,.88)!important;
+  background:linear-gradient(180deg,rgba(64,217,139,.18),rgba(255,255,255,.045))!important;
+}
+
+body.partyMode .playerTile.partyPlayerTile.waiting{
+  border-color:rgba(250,204,21,.72)!important;
+  background:linear-gradient(180deg,rgba(250,204,21,.14),rgba(255,255,255,.035))!important;
+}
+
+.partyAnswerStatus{
+  margin-top:4px;
+  color:var(--muted);
+  font-size:.72rem;
+  font-weight:900;
+}
+
+body.partyMode .playerTile.partyPlayerTile.answered .partyAnswerStatus{
+  color:rgb(110,231,183);
+}
+
+body.partyMode .playerTile.partyPlayerTile.waiting .partyAnswerStatus{
+  color:rgb(250,204,21);
+}
+
+.partyPanel{
+  width:min(760px,calc(100vw - 28px));
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  background:rgba(19,26,43,.88);
+  box-shadow:0 24px 70px rgba(0,0,0,.36);
+  padding:22px;
+  display:grid;
+  gap:16px;
+  text-align:center;
+}
+
+.partyPanel h2{
+  margin:0;
+  font-size:clamp(1.6rem,4vw,3rem);
+  letter-spacing:0;
+}
+
+.partyHostGrid{
+  width:min(900px,calc(100vw - 28px));
+  display:grid;
+  grid-template-columns:minmax(210px,300px) 1fr;
+  gap:18px;
+  align-items:center;
+}
+
+.partyHostCard{
+  width:100%!important;
+  min-height:350px!important;
+}
+
+.partyChoices{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+
+.partyChoice{
+  min-height:98px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(135deg,rgba(125,211,252,.22),rgba(64,217,139,.16));
+  color:#f7fbff;
+  font-size:clamp(1.05rem,3.8vw,1.7rem);
+  font-weight:950;
+  line-height:1.05;
+  padding:14px;
+  overflow-wrap:anywhere;
+}
+
+.partyChoice.selected{
+  border-color:rgba(255,255,255,.9);
+  box-shadow:0 0 0 4px rgba(255,255,255,.14) inset;
+}
+
+.partyChoice.correct{
+  background:linear-gradient(135deg,rgba(64,217,139,.72),rgba(125,211,252,.32));
+  color:#06120c;
+}
+
+.partyChoice.wrong{
+  background:linear-gradient(135deg,rgba(255,107,107,.72),rgba(255,255,255,.10));
+}
+
+.partyResults{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.partyResults .pill.ok{
+  border-color:rgba(64,217,139,.8);
+  background:rgba(64,217,139,.18);
+}
+
+.partyResults .pill.bad{
+  border-color:rgba(255,107,107,.72);
+  background:rgba(255,107,107,.16);
+}
+
+@media(max-width:760px){
+  .partyHostGrid{
+    grid-template-columns:1fr;
+  }
+
+  .partyChoices{
+    grid-template-columns:1fr;
+  }
+
+  .partyChoice{
+    min-height:76px;
+  }
+}

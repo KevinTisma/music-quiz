@@ -40,7 +40,7 @@
     .activeTimelineArea{--active-player-rgb:125,211,252;border:1px solid rgba(var(--active-player-rgb),.28);background:linear-gradient(180deg,rgba(var(--active-player-rgb),.13),rgba(var(--active-player-rgb),.045));border-radius:22px;padding:8px 10px 10px!important;box-shadow:0 18px 55px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.04);}
     .activeTimelineArea .timelineHeader h2{color:rgb(var(--active-player-rgb));}
     .dropSlot.emptySlot,.activeTimelineArea .dropSlot.emptySlot{width:112px!important;min-width:112px!important;min-height:158px!important;opacity:1!important;background:rgba(var(--active-player-rgb),.10)!important;border:2px dashed rgba(var(--active-player-rgb),.68)!important;border-radius:16px!important;color:rgba(255,255,255,.65)!important;display:grid!important;place-items:center!important;padding:10px!important;text-align:center!important;}
-    .dropSlot.emptySlot::after{content:'Placera fÃ¶rsta kortet hÃ¤r'!important;color:rgba(255,255,255,.70)!important;font-size:.72rem;font-weight:900;line-height:1.15;text-transform:uppercase;letter-spacing:.035em;}
+    .dropSlot.emptySlot::after{content:'Placera första kortet här'!important;color:rgba(255,255,255,.70)!important;font-size:.72rem;font-weight:900;line-height:1.15;text-transform:uppercase;letter-spacing:.035em;}
     .dropSlot.emptySlot.active,.dropSlot.emptySlot:hover{transform:translateY(-3px)!important;background:rgba(var(--active-player-rgb),.20)!important;border-color:rgba(var(--active-player-rgb),.98)!important;box-shadow:0 14px 36px rgba(0,0,0,.25)!important;}
 
 
@@ -104,7 +104,7 @@
     }
 
   
-    /* v19: tydlig aktiv-spelare-ruta ovanfÃ¶r tidslinjen och renare topp */
+    /* v19: tydlig aktiv-spelare-ruta ovanför tidslinjen och renare topp */
     body.playingMode .turnTitle{display:none!important;}
     body.playingMode #gameStatus{display:none!important;}
     .activePlayerBanner{width:min(1040px,100%);display:none;text-align:center;font-weight:950;font-size:clamp(1rem,2vw,1.45rem);letter-spacing:-.025em;color:var(--text);background:linear-gradient(180deg,rgba(var(--active-player-rgb,125,211,252),.24),rgba(var(--active-player-rgb,125,211,252),.08)),var(--panel);border:1px solid rgba(var(--active-player-rgb,125,211,252),.45);box-shadow:0 16px 42px rgba(0,0,0,.22), inset 0 0 0 1px rgba(255,255,255,.05);border-radius:20px;padding:12px 18px;margin-bottom:-8px;}

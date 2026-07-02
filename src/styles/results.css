@@ -1,4 +1,4 @@
-﻿    /* v51: slutskÃ¤rm som planetsystem inspirerad av Wrapped-space-kÃ¤nslan */
+﻿    /* v51: slutskärm som planetsystem inspirerad av Wrapped-space-känslan */
     body.finishedMode{
       padding-bottom:0!important;
       background:#020617!important;
@@ -342,7 +342,7 @@
     }
 
 
-    /* v52: Aktiv Spelare-text med hÃ¶g kontrast och inverterad blend */
+    /* v52: Aktiv Spelare-text med hög kontrast och inverterad blend */
     .activePlayerBanner{
       background:transparent!important;
       border:0!important;
@@ -408,7 +408,7 @@
     }
 
 
-    /* v53: lÃ¥ngsammare dramatisk scroll till slutresultat + tidslinjer bredvid spelare */
+    /* v53: långsammare dramatisk scroll till slutresultat + tidslinjer bredvid spelare */
     body.finishedMode .gameShell{
       animation:finishedScrollDropSlow 2.35s cubic-bezier(.86,0,.07,1) both!important;
     }
@@ -597,7 +597,7 @@
     }
 
 
-    /* v54: aktiv-spelare-ruta i spelarens fÃ¤rg + tydligare album pÃ¥ slutskÃ¤rmen */
+    /* v54: aktiv-spelare-ruta i spelarens färg + tydligare album på slutskärmen */
     .activePlayerBanner{
       display:flex!important;
       align-items:center!important;
@@ -758,7 +758,7 @@
     }
 
 
-    /* v56: Aktiv Spelare som fristÃ¥ende text i spelarens fÃ¤rg */
+    /* v56: Aktiv Spelare som fristående text i spelarens färg */
     .activePlayerBanner{
       background:transparent!important;
       border:0!important;
@@ -826,7 +826,7 @@
     }
 
 
-    /* v58: mjukare Ã¶vergÃ¥ng till slutskÃ¤rm + rÃ¤tt albumcovers */
+    /* v58: mjukare övergång till slutskärm + rätt albumcovers */
     body.finishedMode{
       background:#020617!important;
       background-image:none!important;
@@ -1020,7 +1020,7 @@
     }
 
 
-    /* v59: slutskÃ¤rmen renderas en gÃ¥ng och UI fadeas istÃ¤llet fÃ¶r att fÃ¶rsvinna direkt */
+    /* v59: slutskärmen renderas en gång och UI fadeas istället för att försvinna direkt */
     body.finishedMode{
       background:#020617!important;
       background-image:none!important;
@@ -1136,7 +1136,7 @@
     }
 
 
-    /* v60: bakgrund fadeas separat, solsystemet glider upp ovanpÃ¥ + albumcovers syns tydligare */
+    /* v60: bakgrund fadeas separat, solsystemet glider upp ovanpå + albumcovers syns tydligare */
     body.finishedMode{
       background:#020617!important;
       background-image:none!important;
@@ -1276,7 +1276,7 @@
     }
 
 
-    /* v61: blob-planeter i spelarens fÃ¤rg utan ringar + nÃ¥got lÃ¥ngsammare bakgrundsfade */
+    /* v61: blob-planeter i spelarens färg utan ringar + något långsammare bakgrundsfade */
     @keyframes resultsBackgroundFade{
       from{opacity:0;}
       to{opacity:1;}
@@ -1307,7 +1307,7 @@
     }
 
 
-    /* v62: slutresultat-actions fÃ¶r ny runda, instÃ¤llningar och lobby-stÃ¤ngning */
+    /* v62: slutresultat-actions för ny runda, inställningar och lobby-stängning */
     .planetResultActions{
       display:flex!important;
       align-items:center!important;

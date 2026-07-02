@@ -1,4 +1,4 @@
-.startScreen{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px;background:rgba(8,13,25,.92);overflow:auto}
+﻿.startScreen{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px;background:rgba(8,13,25,.92);overflow:auto}
 .startScreen.hidden{display:none!important}
 .startBackdrop{position:fixed;inset:0;background:radial-gradient(circle at 20% 15%,rgba(125,211,252,.24),transparent 24rem),radial-gradient(circle at 82% 22%,rgba(64,217,139,.18),transparent 26rem),linear-gradient(135deg,#080d19,#151827 58%,#1b1225)}
 .startPanel{position:relative;width:min(1040px,100%);display:grid;grid-template-columns:minmax(260px,.9fr) minmax(320px,1.25fr);gap:18px;align-items:stretch}
@@ -20,6 +20,10 @@
 .joinLobbyRow{display:grid;grid-template-columns:1fr auto;gap:8px}
 .roomCodeLine{margin:12px 0 0;color:var(--muted);font-size:.86rem}
 .roomCodeLine b{color:var(--text);letter-spacing:.08em}
+.activeRoomLine{display:none;padding:12px 14px;border:1px solid rgba(110,231,183,.35);border-radius:14px;background:rgba(110,231,183,.10);color:var(--text);font-weight:900}
+.activeRoomLine b{color:rgb(110,231,183);font-size:1.05rem}
+body.hasActiveRoom .lobbyChoiceGrid{display:none}
+body.hasActiveRoom .activeRoomLine{display:block}
 .lobbyShareBox{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:12px}
 .lobbyShareBox input{font-size:.82rem}
 .lobbyMetaLine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}

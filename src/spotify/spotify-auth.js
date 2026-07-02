@@ -1,10 +1,10 @@
-﻿import { DEFAULT_CLIENT_ID, LS, SPOTIFY_SCOPES } from '../config.js';
+﻿import { DEFAULT_CLIENT_ID, LS, SPOTIFY_SCOPES } from '../config.js?v=active-room-start-v70';
 import { base64url, now, randomString, sha256 } from '../utils/helpers.js';
-import { saveToken } from './spotify-api.js';
+import { saveToken } from './spotify-api.js?v=active-room-start-v70';
 
-export async function loginSpotify(redirectUri){
+export async function loginSpotify(redirectUri, returnUrl=window.location.href){
   const verifier=randomString(96), challenge=base64url(await sha256(verifier)), state=randomString(24);
-  localStorage.setItem(LS.verifier,verifier); localStorage.setItem(LS.oauthState,state); localStorage.setItem(LS.oauthPayload,JSON.stringify({redirectUri,startedAt:now()}));
+  localStorage.setItem(LS.verifier,verifier); localStorage.setItem(LS.oauthState,state); localStorage.setItem(LS.oauthPayload,JSON.stringify({redirectUri,returnUrl,startedAt:now()}));
   const params=new URLSearchParams({response_type:'code',client_id:DEFAULT_CLIENT_ID,redirect_uri:redirectUri,state,scope:SPOTIFY_SCOPES,code_challenge_method:'S256',code_challenge:challenge});
   window.location.href='https://accounts.spotify.com/authorize?'+params.toString();
 }
@@ -19,7 +19,7 @@ export async function handleSpotifyCallback(redirectUri, onToken){
   if(!res.ok) throw new Error('Kunde inte hamta Spotify-token: '+await res.text());
   const token=await res.json(); token.expires_at=now()+Number(token.expires_in||3600)*1000; saveToken(token);
   localStorage.removeItem(LS.verifier); localStorage.removeItem(LS.oauthState); localStorage.removeItem(LS.oauthPayload);
-  history.replaceState(null,'',redirectUri);
+  history.replaceState(null,'',payload.returnUrl || redirectUri);
   if(onToken) await onToken();
   return true;
 }
