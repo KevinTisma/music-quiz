@@ -113,6 +113,15 @@
     .activeTimelineArea .timelineHeader .pill{margin-left:auto;}
 
     /* v20: central lobby settings with shared playlist mix */
+    .settingsSection{display:grid;gap:9px;margin-top:12px;padding:12px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035);}
+    .settingsSection h4{margin:0;font-size:.92rem;letter-spacing:0;}
+    .settingsSection label:not(:first-of-type){margin-top:4px;}
+    .modeSelector{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+    .modeButton{min-height:42px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);font-weight:900;font-size:.82rem;}
+    .modeButton.active{border-color:rgba(125,211,252,.9);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#08111b;}
+    .modeButton:disabled{opacity:.52;cursor:default;background:transparent;color:var(--muted);}
+    .settingGroup{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.10);}
+    .settingGroup h5{margin:0 0 8px;font-size:.8rem;color:var(--muted);font-weight:900;}
     .playlistAddRow{display:grid;grid-template-columns:1fr 44px;gap:8px;align-items:stretch;}
     .iconButton{width:44px;min-width:44px;height:44px;display:grid;place-items:center;padding:0!important;font-size:1.55rem;line-height:1;font-weight:950;border-radius:12px!important;}
     .selectedPlaylistList{display:grid;gap:8px;margin-top:12px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035);}
@@ -144,6 +153,7 @@
     @media(max-width:920px){
       body.waitingMode .playlistMenu{top:48%!important;width:min(460px,calc(100vw - 24px))!important;}
       .utilityRows{grid-template-columns:1fr;}
+      .modeSelector{grid-template-columns:1fr;}
       .mixSummary{align-items:flex-start;flex-direction:column;}
       .mixPlaylistRow{grid-template-columns:1fr;}
     }

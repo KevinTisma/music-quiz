@@ -34,6 +34,32 @@
 body.startOpen{overflow:hidden}
 body.startOpen .profileArea,body.startOpen .playlistArea{display:none!important}
 
+body.waitingMode .playlistMenu{
+  width:min(1120px,calc(100vw - 32px))!important;
+  max-height:calc(100vh - 40px)!important;
+}
+body.waitingMode .playlistMenu .gameSettings{
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  gap:12px!important;
+  align-items:start;
+}
+body.waitingMode .playlistMenu .gameSettings>h3,
+body.waitingMode .playlistMenu .gameSettings>#lobbySettingsNotice,
+body.waitingMode .playlistMenu .gameSettings>.actions,
+body.waitingMode .playlistMenu .gameSettings>.startRow,
+body.waitingMode .playlistMenu .gameSettings>.status,
+body.waitingMode .playlistMenu .gameSettings>#refreshPlaylistsBtn{
+  grid-column:1/-1;
+}
+body.waitingMode .playlistMenu .settingsSection{
+  margin-top:0;
+  align-content:start;
+}
+body.waitingMode .playlistMenu .modeSelector{
+  grid-template-columns:1fr;
+}
+
 @media(max-width:840px){
   .startScreen{padding:14px}
   .startPanel{grid-template-columns:1fr}
@@ -43,6 +69,9 @@ body.startOpen .profileArea,body.startOpen .playlistArea{display:none!important}
   .startFooter .primary{width:100%}
   .lobbyChoiceGrid{grid-template-columns:1fr}
   .lobbyShareBox{grid-template-columns:1fr}
+  body.waitingMode .playlistMenu{width:min(460px,calc(100vw - 24px))!important}
+  body.waitingMode .playlistMenu .gameSettings{grid-template-columns:1fr!important}
+  body.waitingMode .playlistMenu .modeSelector{grid-template-columns:1fr}
 }
 
 @media(max-width:520px){
