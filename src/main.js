@@ -704,6 +704,9 @@ import { createRenderer } from './ui/render.js';
     }
     utilityMenu.appendChild(utilitySettings);
     els.utilityMenu = utilityMenu;
+    if(els.playlistMenu.parentElement !== document.body){
+      document.body.appendChild(els.playlistMenu);
+    }
   }
 
   function bind(){

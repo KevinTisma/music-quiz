@@ -1322,6 +1322,14 @@
       box-shadow:var(--shadow)!important;
     }
 
+    body.waitingMode > .playlistMenu{
+      left:50%!important;
+      top:50%!important;
+      right:auto!important;
+      bottom:auto!important;
+      transform:translate(-50%,-50%)!important;
+    }
+
     body.waitingMode .playlistMenu .gameSettings{
       display:grid!important;
     }

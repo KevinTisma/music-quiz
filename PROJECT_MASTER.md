@@ -38,13 +38,15 @@ PWA-version byggd från:
 Nuvarande app är fortfarande främst ett Classic Timeline-spel med:
 
 - Spotify playlist import
-- Firebase sparade spellistor
+- Firebase sparade spellistor per användare
 - spelare/profil
 - timeline gameplay
 - slutresultat med planet-tema
 - PWA-stöd
 - iOS homescreen-stöd
 - lobby-system v63 med dynamiska rum, host-id, player list och delningslänk
+- central spelinställningspanel i lobby och separat allmän inställningsmeny i hörnet
+- mixade spellistor där flera spelare kan lägga till egna sparade spellistor till samma rum
 
 Senast byggt 2026-07-02:
 
@@ -57,6 +59,23 @@ Senast byggt 2026-07-02:
 - host markeras i lobby och player strip
 - start/avsluta spel är låst till host
 - spelare markeras offline i gamla rummet vid rumbyte
+- Spotify-profil används för namn/avatar och för stabilt user-id när Spotify är kopplat
+- importerade och demo-spellistor sparas under `users/{userId}/playlists/{playlistId}`
+- äldre room-baserade spellistor migreras från `rooms/{roomId}/savedPlaylists` till aktuell användares `users/{userId}/playlists`
+- appen lyssnar på aktuell användares spellistor och visar dem i lobby/spelinställningar
+- rummet får spelomgångens kopia av låtar via `songBank`, `selectedPlaylist` och `playlistMix`
+- alla spelare kan lägga till egna sparade spellistor med `+` till `rooms/{roomId}/playlistMix`
+- blandad spellista byggs genom att slå ihop alla entries i `playlistMix`; host startar spelet med den mixade kortleken
+- spelinställningar visas som stor central panel när man är inne i lobby/vänteläge
+- icke-host ser samma spelinställningspanel men host-inställningar är nedtonade/oklickbara; spellisteval och `+` är tillgängligt före start
+- allmänna app-/lobbyinställningar ligger i den gamla runda/spikiga `Inställningar`-ikonen nere till höger
+- allmänna inställningar innehåller lobbykod, version, namnbyte, Spotify-autoplay och `Avsluta spel`
+- `Avsluta spel` tar endast tillbaka rummet till lobby/spelinställningar och tar inte bort lobbyn
+- slutresultatsidan har host-knappar för `Spela igen`, `Ändra spelinställningar` och `Avsluta lobby`
+- `Avsluta lobby` markerar rummet som stängt, kopplar bort presence och tar bort `rooms/{roomId}` ur Firebase
+- lobby stängs även automatiskt klientdrivet efter 45 minuters inaktivitet eller 4 timmars total livslängd
+- viktig UI-fix: `#playlistMenu` flyttas vid appstart till `document.body` så den centrala spelinställningspanelen centreras mot viewporten och inte påverkas av hörnblobben `.playlistArea`
+- `#utilityMenu` skapas separat inne vid hörnblobben för den allmänna inställningsmenyn
 
 ## Viktig begränsning just nu
 
@@ -163,24 +182,35 @@ Resultat:
 
 ### Fas 2: Flytta spellistor till användare
 
-Mål: spellistor ska inte ligga globalt eller i rummet.
+Status: huvuddelen är klar i Classic Timeline-flödet.
+
+Mål: spellistor ska inte ligga globalt eller permanent i rummet.
 
 Ny struktur:
 
 - `users/{userId}/playlists/{playlistId}`
 - `rooms/{roomId}`
 
-Bygg:
+Byggt:
 
-- Spotify user-id
-- user profile
-- spara spellistor under användaren
-- host väljer egen spellista
-- room får bara referens eller kopia till spelomgången
+- Spotify user-id används när Spotify-profil finns; annars fallback till lokal player-id
+- user profile cache används för namn/avatar och byter aktiv playlist-lyssnare vid user-id-byte
+- importerade spellistor sparas under `users/{userId}/playlists/{playlistId}`
+- demo-spellista sparas också under användaren
+- appen lyssnar på `users/{userId}/playlists`
+- room får bara spelomgångens kopia/referensdata: `selectedPlaylist`, `selectedPlaylistId`, `songBank`
+- flera spelare kan bidra till rummet via `rooms/{roomId}/playlistMix`
+- legacy-data i `rooms/{roomId}/savedPlaylists` migreras till aktuell användares `users/{userId}/playlists`
 
 Resultat:
 
-- Varje användare har sina egna spellistor.
+- Varje användare har egna spellistor, och ett rum kan skapa en blandad spelomgång från flera användares spellistor.
+
+Kvar/att förbättra senare:
+
+- Firebase security rules behöver anpassas till `users/{userId}/playlists` och `rooms/{roomId}`
+- långsiktigt bör rummet helst lagra referenser/urval och inte full låtkopia mer än för aktiv spelomgång
+- garanterad automatisk lobby-rensning utan öppen klient kräver server/Firebase Cloud Function
 
 ### Fas 3: Party Mode v1
 
@@ -278,22 +308,21 @@ if (mode === 'party-owner') renderPartyOwnerGame();
 
 Nästa kodchatt bör vara:
 
-- Flytta spellistor till användare
+- Stabilisering av multiplayer/lobby och Firebase-regler
 
 Målet i den chatten:
 
-- skapa `users/{userId}/playlists/{playlistId}`
-- koppla Spotify user-id till lokal/Firebase-profil
-- spara importerade spellistor under användaren
-- låta host välja egen spellista
-- låta rummet få en referens eller kopia till spelomgången
-- behålla `rooms/{roomId}` för game state och players
+- se över Firebase security rules för users/playlists och rooms
+- bestäm exakt policy för room-livslängd och serverstyrd cleanup
+- hårdtesta host/icke-host-flödet med flera riktiga klienter
+- testa mixad spellista med flera användare och Spotify-konton
+- säkerställa att deployad GitHub Pages-version inte cachear gammal CSS/JS vid UI-fixar
 
 ## Aktuell prioritet
 
 Prio 1:
 
-- flytta spellistor till användare
+- stabilisera Firebase-regler, lobby cleanup och multiplayer-flöden
 
 Prio 2:
 
