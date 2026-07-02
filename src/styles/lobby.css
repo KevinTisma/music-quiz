@@ -20,10 +20,11 @@
 .joinLobbyRow{display:grid;grid-template-columns:1fr auto;gap:8px}
 .roomCodeLine{margin:12px 0 0;color:var(--muted);font-size:.86rem}
 .roomCodeLine b{color:var(--text);letter-spacing:.08em}
-.activeRoomLine{display:none;padding:12px 14px;border:1px solid rgba(110,231,183,.35);border-radius:14px;background:rgba(110,231,183,.10);color:var(--text);font-weight:900}
+.activeRoomLine{display:none;padding:12px 14px;border:1px solid rgba(110,231,183,.35);border-radius:14px;background:rgba(110,231,183,.10);color:var(--text);font-weight:900;align-items:center;justify-content:space-between;gap:12px}
 .activeRoomLine b{color:rgb(110,231,183);font-size:1.05rem}
 body.hasActiveRoom .lobbyChoiceGrid{display:none}
-body.hasActiveRoom .activeRoomLine{display:block}
+body.hasActiveRoom .activeRoomLine{display:flex}
+.leaveLobbyBtn{min-height:32px;padding:7px 10px;border-radius:10px;font-size:.78rem;white-space:nowrap}
 .lobbyShareBox{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:12px}
 .lobbyShareBox input{font-size:.82rem}
 .lobbyMetaLine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
@@ -76,6 +77,8 @@ body.waitingMode .playlistMenu .modeSelector{
   body.waitingMode .playlistMenu{width:min(460px,calc(100vw - 24px))!important}
   body.waitingMode .playlistMenu .gameSettings{grid-template-columns:1fr!important}
   body.waitingMode .playlistMenu .modeSelector{grid-template-columns:1fr}
+  .activeRoomLine{align-items:stretch;flex-direction:column}
+  .leaveLobbyBtn{width:100%}
 }
 
 @media(max-width:520px){

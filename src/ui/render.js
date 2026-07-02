@@ -1,10 +1,10 @@
-﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v71';
+﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v72';
 import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v71';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v71';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v72';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v72';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v71';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v72';
 
 export function createRenderer(ctx){
   const {
@@ -36,19 +36,29 @@ export function createRenderer(ctx){
     applyGameModeClasses();
     renderTurn(); renderPlayers();
     if(getRoomData()?.game?.status === 'finished') renderFinishedResults();
-    else if(isPartyGame()) renderPartyGame();
+    else if(isQuizGame()) renderPartyGame();
     else { renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); }
     renderProfile(); renderBoards(); renderLobbySettings(); updateButtons(); handleAutoplay(); scheduleWrongRevealAdvance();
   }
   function isPartyGame(){
     return String(getRoomData()?.game?.mode || '').startsWith('party-');
   }
+  function isQuizGame(){
+    const mode = String(getRoomData()?.game?.mode || '');
+    return mode.startsWith('party-') || mode.startsWith('quiz-');
+  }
+  function isPartyPresentation(){
+    const game = getRoomData()?.game || {};
+    const settings = getRoomData()?.settings || {};
+    return game.partyModeEnabled === true || settings.partyModeEnabled === true || settings.gameMode === 'party';
+  }
   function applyGameModeClasses(){
     const status = getRoomData()?.game?.status || 'lobby';
     document.body.classList.toggle('waitingMode', status !== 'playing' && status !== 'finished');
     document.body.classList.toggle('finishedMode', status === 'finished');
     document.body.classList.toggle('playingMode', status === 'playing');
-    document.body.classList.toggle('partyMode', isPartyGame());
+    document.body.classList.toggle('partyMode', isQuizGame() && isPartyPresentation());
+    document.body.classList.toggle('quizMode', isQuizGame());
   }
   function refreshPlaylistsFromRoom(){
     refreshSavedPlaylistSelect(els.savedPlaylistSelect, getUserPlaylists(), getRoomData());
@@ -189,30 +199,34 @@ export function createRenderer(ctx){
     const data=getRoomData(), game=data.game||{}, card=game.currentCard, hostId=data?.meta?.hostId || '';
     const isHost = hostId === getPlayer().id;
     const answer = game.answers?.[getPlayer().id] || null;
-    const correctId = game.mode === 'party-year' ? String(card?.year || '') : String(card?.ownerPlayerId || card?.ownerName || '');
-    const title = game.mode === 'party-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
+    const quizType = normalizedQuizType(game.mode);
+    const partyView = isPartyPresentation();
+    const correctId = quizType === 'party-year' ? String(card?.year || '') : String(card?.ownerPlayerId || card?.ownerName || '');
+    const title = quizType === 'party-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
     setText(els.turnTitle, game.reveal && card ? 'R\u00e4tt svar: '+partyCorrectLabel(game, card) : title);
-    setText(els.turnSub, isHost ? 'Hosten spelar musiken och styr n\u00e4sta steg.' : (answer ? 'Svar l\u00e5st.' : 'V\u00e4lj ditt svar.'));
-    setText(els.activePlayerBanner, isHost ? 'Host-vy' : 'Spelar-vy');
+    setText(els.turnSub, partyView && isHost ? 'Hosten spelar musiken och styr n\u00e4sta steg.' : (answer ? 'Svar l\u00e5st.' : 'V\u00e4lj ditt svar.'));
+    setText(els.activePlayerBanner, partyView && isHost ? 'Host-vy' : 'Quiz-vy');
     setText(els.roundPill, 'Runda '+(game.turnNumber || 1));
     if(els.activeTimeline) els.activeTimeline.innerHTML = '';
     if(els.ownTimeline) els.ownTimeline.innerHTML = '';
     if(!card){
-      els.drawCardWrap.innerHTML='<div class="partyPanel"><h2>'+esc(title)+'</h2><p class="small">'+(isHost?'Tryck p\u00e5 Dra nytt kort f\u00f6r att starta rundan.':'V\u00e4ntar p\u00e5 hosten.')+'</p></div>';
-      return;
-    }
-    if(isHost){
-      const answered = Object.keys(game.answers || {}).length;
-      els.drawCardWrap.innerHTML =
-        '<div class="partyHostGrid">' +
-          '<div class="drawCard partyHostCard"><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+(game.reveal?esc(card.year):'Svar dolt')+'</span></div></div>' +
-          '<div class="partyPanel"><h2>'+esc(title)+'</h2><p class="small">'+answered+' svar inne.</p>'+partyResultMarkup(game, correctId)+'</div>' +
-        '</div>';
+      els.drawCardWrap.innerHTML='<div class="partyPanel quizPanel"><h2>'+esc(title)+'</h2><p class="small">'+(isHost?'Tryck p\u00e5 Dra nytt kort f\u00f6r att starta rundan.':'V\u00e4ntar p\u00e5 hosten.')+'</p></div>';
       return;
     }
     const choices = Array.isArray(game.choices) ? game.choices : Object.values(game.choices || {});
+    const answered = Object.keys(game.answers || {}).length;
+    const total = activePlayersFrom(data.players || {}).length || 1;
+    if(partyView && isHost){
+      els.drawCardWrap.innerHTML =
+        '<div class="partyHostGrid quizHostGrid">' +
+          '<div class="drawCard partyHostCard quizCoverCard"><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div>'+(game.reveal?'<div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>':'')+'</div><div><span class="yearHidden">'+(game.reveal?esc(partyCorrectLabel(game, card)):'Svar dolt')+'</span></div></div>' +
+          '<div class="partyPanel quizPanel"><h2>'+esc(title)+'</h2><p class="small">'+answered+'/'+total+' svar inne.</p>'+partyResultMarkup(game, correctId, choices)+'</div>' +
+        '</div>';
+      return;
+    }
     els.drawCardWrap.innerHTML =
-      '<div class="partyPanel partyPlayerPanel">' +
+      '<div class="partyPanel partyPlayerPanel quizPanel">' +
+        '<div class="quizCardMedia"><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div>' +
         '<h2>'+esc(title)+'</h2>' +
         '<div class="partyChoices">' +
           choices.map(choice => {
@@ -222,18 +236,22 @@ export function createRenderer(ctx){
             return '<button class="partyChoice'+(selected?' selected':'')+(correct?' correct':'')+(wrong?' wrong':'')+'" type="button" data-party-choice="'+esc(choice.id)+'"'+(game.reveal?' disabled':'')+'>'+esc(choice.name)+'</button>';
           }).join('') +
         '</div>' +
-        partyResultMarkup(game, correctId) +
+        partyResultMarkup(game, correctId, choices) +
       '</div>';
   }
+  function normalizedQuizType(mode){
+    return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
+  }
   function partyCorrectLabel(game, card){
-    if(game?.mode === 'party-year') return String(card?.year || '');
+    if(normalizedQuizType(game?.mode) === 'party-year') return String(card?.year || '');
     return card?.ownerName || 'Ok\u00e4nd spelare';
   }
-  function partyResultMarkup(game, correctId){
+  function partyResultMarkup(game, correctId, choices=[]){
     if(!game.reveal) return '';
     const answers = Object.values(game.answers || {});
     if(!answers.length) return '<p class="small">Inga svar kom in.</p>';
-    return '<div class="partyResults">'+answers.map(answer => '<span class="pill '+(String(answer.choiceId)===correctId?'ok':'bad')+'">'+esc(answer.playerName || 'Spelare')+'</span>').join('')+'</div>';
+    const labelFor = id => choices.find(choice => String(choice.id) === String(id))?.name || id;
+    return '<div class="partyResults">'+answers.map(answer => '<span class="pill '+(String(answer.choiceId)===correctId?'ok':'bad')+'"><b>'+esc(answer.playerName || 'Spelare')+'</b><small>'+esc(labelFor(answer.choiceId))+'</small></span>').join('')+'</div>';
   }
 
   function renderCurrentCard(){
@@ -352,8 +370,9 @@ export function createRenderer(ctx){
     const canEditHostSettings = isHost && isLobby;
     const canEditProfilePlaylists = isLobby;
     const settings = data.settings || {};
-    const selectedMode = settings.gameMode || 'timeline';
-    const selectedParty = settings.partyMode || 'party-owner';
+    const selectedMode = settings.gameMode === 'party' ? 'quiz' : (settings.gameMode || 'timeline');
+    const selectedParty = settings.quizType || settings.partyMode || 'party-owner';
+    const partyModeEnabled = settings.partyModeEnabled === true || settings.gameMode === 'party';
     const entries = Object.values(data.playlistMix || {}).sort((a,b)=>Number(a.addedAt || 0)-Number(b.addedAt || 0));
     document.body.classList.toggle('isHost', isHost);
     document.body.classList.toggle('isGuest', !isHost);
@@ -362,11 +381,15 @@ export function createRenderer(ctx){
     }
     document.querySelectorAll('.modeButton[data-game-mode]').forEach(button => {
       button.classList.toggle('active', button.dataset.gameMode === selectedMode);
-      if(button.dataset.gameMode !== 'quiz') button.disabled = !canEditHostSettings;
+      button.disabled = !canEditHostSettings;
     });
+    if(els.partyModeToggle){
+      els.partyModeToggle.checked = partyModeEnabled;
+      els.partyModeToggle.disabled = !canEditHostSettings || selectedMode !== 'quiz';
+    }
     if(els.partyModeSelect){
       els.partyModeSelect.value = selectedParty;
-      els.partyModeSelect.disabled = !canEditHostSettings;
+      els.partyModeSelect.disabled = !canEditHostSettings || selectedMode !== 'quiz';
     }
     if(els.selectedPlaylistList){
       if(!entries.length){
@@ -398,7 +421,7 @@ export function createRenderer(ctx){
     const isHost = hostId === getPlayer().id;
     const roomStatus = getRoomData()?.meta?.status || getRoomData()?.game?.status || 'lobby';
     const isLobby = roomStatus === 'lobby';
-    if(isPartyGame()){
+    if(isQuizGame()){
       const game = getRoomData()?.game || {};
       els.drawCardBtn.disabled=!connected || !isHost || getRoomData()?.game?.status==='finished' || (!!game.currentCard && !game.reveal);
       els.drawCardBtn.textContent=game.currentCard ? 'N\u00e4sta l\u00e5t' : 'Dra nytt kort';

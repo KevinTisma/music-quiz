@@ -1,12 +1,12 @@
-﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v71';
+﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v72';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v71';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v71';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v72';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v72';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v71';
+import { createRenderer } from './ui/render.js?v=active-room-start-v72';
 
 (() => {
   'use strict';
@@ -29,7 +29,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
 
   const $ = id => document.getElementById(id);
   const els = {
-    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), utilityEndGameBtn:$('utilityEndGameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), playlistNameInput:$('playlistNameInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), partyModeSelect:$('partyModeSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), utilityMenu:$('utilityMenu'), playlistButtonSub:$('playlistButtonSub'), utilityLobbyCode:$('utilityLobbyCode'), versionPill:$('versionPill'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), utilityEndGameBtn:$('utilityEndGameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), playlistNameInput:$('playlistNameInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), partyModeToggle:$('partyModeToggle'), partyModeSelect:$('partyModeSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), utilityMenu:$('utilityMenu'), playlistButtonSub:$('playlistButtonSub'), utilityLobbyCode:$('utilityLobbyCode'), versionPill:$('versionPill'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), leaveLobbyBtn:$('leaveLobbyBtn'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
   };
 
   function redirectUri(){ return window.location.origin + window.location.pathname; }
@@ -64,16 +64,22 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     return {cover:!!els.showCoverToggle?.checked, artist:!!els.showArtistToggle?.checked, title:!!els.showTitleToggle?.checked};
   }
   function selectedGameMode(){
-    return roomData?.settings?.gameMode || 'timeline';
+    const mode = roomData?.settings?.gameMode || 'timeline';
+    return mode === 'party' ? 'quiz' : mode;
   }
-  function selectedPartyMode(){
-    return roomData?.settings?.partyMode || els.partyModeSelect?.value || 'party-owner';
+  function selectedQuizType(){
+    return roomData?.settings?.quizType || roomData?.settings?.partyMode || els.partyModeSelect?.value || 'party-owner';
   }
-  function isPartyGame(){
-    return String(roomData?.game?.mode || '').startsWith('party-');
+  function isPartyModeEnabled(){
+    const settings = roomData?.settings || {};
+    return settings.partyModeEnabled === true || settings.gameMode === 'party';
+  }
+  function isQuizGame(){
+    const mode = String(roomData?.game?.mode || '');
+    return mode.startsWith('party-') || mode.startsWith('quiz-');
   }
   function partyQuestionFor(mode){
-    return mode === 'party-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
+    return mode === 'party-year' || mode === 'quiz-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
   }
   function isWrongRevealActive(){
     const wr = roomData?.game?.wrongReveal;
@@ -206,6 +212,24 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     const playerTimes = Object.values(data?.players || {}).map(p=>Number(p?.lastSeen || 0)).filter(Boolean);
     return Math.max(Number(data?.meta?.updatedAt || 0), Number(data?.meta?.createdAt || 0), ...playerTimes, 0);
   }
+  function activeOnlinePlayers(data=roomData){
+    return Object.values(data?.players || {}).filter(p => {
+      const lastSeen = Number(p?.lastSeen || 0);
+      return p?.online === true && (!lastSeen || lastSeen > Date.now() - ACTIVE_PLAYER_WINDOW_MS);
+    });
+  }
+  async function closeRoomIfEmpty(roomId){
+    if(!db || roomId === ROOM_ID) return false;
+    const ref = getRoomRef(db, '', roomId);
+    const snap = await ref.get();
+    if(!snap.exists()) return false;
+    const data = snap.val() || {};
+    if(data?.meta?.status === 'closed') return true;
+    if(activeOnlinePlayers(data).length) return false;
+    await ref.child('meta').update({status:'closed',closedAt:serverTimestamp(),closedBy:'system',closeReason:'empty',updatedAt:serverTimestamp(),updatedBy:'system'});
+    setTimeout(()=>ref.remove().catch(err=>console.warn('[empty-lobby-remove]',err)), CLOSED_LOBBY_REMOVE_DELAY_MS);
+    return true;
+  }
   function scheduleLobbyExpiry(){
     if(lobbyCleanupTimer){ clearTimeout(lobbyCleanupTimer); lobbyCleanupTimer = null; }
     if(!roomData?.meta?.hostId || roomData?.meta?.status === 'closed') return;
@@ -246,6 +270,10 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
       }
       roomData = snap.val() || {};
       if(roomData?.meta?.status === 'closed'){ handleClosedLobby(); return; }
+      if(activeRoomId !== ROOM_ID && Object.keys(roomData?.players || {}).length && !activeOnlinePlayers().length){
+        closeRoomIfEmpty(activeRoomId).catch(err=>console.warn('[empty-lobby]',err));
+        return;
+      }
       closedRoomHandled = false;
       scheduleLobbyExpiry();
       migrateLegacyRoomPlaylists().catch(err=>console.warn('[playlist-migration]',err));
@@ -545,7 +573,11 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
   }
 
   function getSongs(){ const s=roomData.songBank; return Array.isArray(s)?s:Object.values(s||{}); }
+  function normalizedQuizType(mode){
+    return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
+  }
   function partyDeckFromPlaylistMix(mode){
+    mode = normalizedQuizType(mode);
     const entries = Object.values(roomData.playlistMix || {});
     if(mode === 'party-owner' && entries.length){
       return entries.flatMap(entry => {
@@ -561,6 +593,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     return getSongs().map(song => ({...song, ownerPlayerId:roomData?.meta?.hostId || player.id, ownerName:roomData?.players?.[roomData?.meta?.hostId]?.name || player.name || 'Spelare'}));
   }
   function partyChoicesFor(mode, deck, players){
+    mode = normalizedQuizType(mode);
     if(mode === 'party-year'){
       const year = Number(deck[0]?.year || 2000);
       return shuffle([year, year - 1, year + 1, year - 5].filter((v,i,a)=>v && a.indexOf(v)===i)).map(v => ({id:String(v), name:String(v)}));
@@ -595,8 +628,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     const players=activePlayersFrom(roomData.players || {});
     if(!players.length){ await upsertPlayer(); }
     const allPlayers=activePlayersFrom((await roomRef('players').get()).val()||{});
-    if(gameMode === 'party'){
-      await startPartyGame(allPlayers);
+    if(gameMode === 'quiz'){
+      await startQuizGame(allPlayers);
       return;
     }
     const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
@@ -608,8 +641,10 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
     await roomRef().update(updates);
   }
-  async function startPartyGame(allPlayers){
-    const mode = selectedPartyMode();
+  async function startQuizGame(allPlayers){
+    const quizType = selectedQuizType();
+    const mode = normalizedQuizType(quizType);
+    const partyModeEnabled = isPartyModeEnabled();
     const deck = shuffle(partyDeckFromPlaylistMix(mode)).map((s,i)=>({...s,drawId:'p_'+i+'_'+cleanKey(cardId(s))}));
     if(mode === 'party-owner'){
       const ownerCount = new Set(deck.map(song => song.ownerPlayerId || song.ownerName).filter(Boolean)).size;
@@ -621,11 +656,11 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     updates['meta/updatedAt']=serverTimestamp();
     updates['meta/updatedBy']=player.id;
     updates['meta/status']='playing';
-    updates.game={status:'playing',mode,startedAt:serverTimestamp(),turnPlayerId:player.id,turnNumber:0,deck,discard:[],currentCard:null,choices,answers:{},reveal:false,message:partyQuestionFor(mode)+'. Hosten drar f\u00f6rsta l\u00e5ten.',winnerId:null};
+    updates.game={status:'playing',mode,quizType:mode,partyModeEnabled,startedAt:serverTimestamp(),turnPlayerId:player.id,turnNumber:0,deck,discard:[],currentCard:null,choices,answers:{},reveal:false,message:partyQuestionFor(mode)+'. Hosten drar f\u00f6rsta l\u00e5ten.',winnerId:null};
     await roomRef().update(updates);
   }
   async function drawCard(){
-    if(isPartyGame()){
+    if(isQuizGame()){
       await drawPartyCard();
       return;
     }
@@ -639,7 +674,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     playCurrentSpotify(false);
   }
   async function drawPartyCard(){
-    if(!requireHost('Endast host kan dra n\u00e4sta partyl\u00e5t.')) return;
+    if(!requireHost('Endast host kan dra n\u00e4sta quizl\u00e5t.')) return;
     const game=roomData.game||{};
     const deck=Array.isArray(game.deck)?[...game.deck]:[];
     if(!deck.length && game.currentCard && game.reveal){
@@ -651,21 +686,21 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
       return;
     }
     const card=deck.shift();
-    const mode = game.mode || selectedPartyMode();
+    const mode = normalizedQuizType(game.mode || selectedQuizType());
     const choices = partyChoicesFor(mode, [card, ...deck].filter(Boolean), activePlayersFrom(roomData.players || {}));
     await roomRef('game').update({deck,currentCard:card || null,choices,answers:{},reveal:false,turnNumber:(game.turnNumber||0)+1,message:partyQuestionFor(mode)+'. V\u00e4lj ditt svar.'});
     playCurrentSpotify(false);
   }
   async function submitPartyAnswer(choiceId){
     const game=roomData.game||{};
-    if(!isPartyGame() || game.status !== 'playing' || !game.currentCard || game.reveal) return;
+    if(!isQuizGame() || game.status !== 'playing' || !game.currentCard || game.reveal) return;
     await roomRef('game/answers/'+player.id).set({playerId:player.id,playerName:player.name || 'Spelare',choiceId:String(choiceId),answeredAt:serverTimestamp()});
   }
   async function revealPartyRound(){
     if(!requireHost('Endast host kan visa svaret.')) return;
     const game=roomData.game||{}, card=game.currentCard;
-    if(!isPartyGame() || !card) return;
-    const correctId = game.mode === 'party-year' ? String(card.year) : String(card.ownerPlayerId || card.ownerName || '');
+    if(!isQuizGame() || !card) return;
+    const correctId = normalizedQuizType(game.mode) === 'party-year' ? String(card.year) : String(card.ownerPlayerId || card.ownerName || '');
     const updates = {'game/reveal':true,'game/correctChoiceId':correctId,'game/message':'R\u00e4tt svar: '+partyCorrectLabel(game, card),'meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id};
     Object.values(game.answers || {}).forEach(answer => {
       if(String(answer.choiceId) !== correctId) return;
@@ -676,7 +711,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     await roomRef().update(updates);
   }
   function partyCorrectLabel(game, card){
-    if(game?.mode === 'party-year') return String(card?.year || '');
+    if(normalizedQuizType(game?.mode) === 'party-year') return String(card?.year || '');
     return card?.ownerName || 'Ok\u00e4nd spelare';
   }
   async function setProposedIndex(index){
@@ -791,6 +826,33 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     await ref.child('meta').update({status:'closed',closedAt:serverTimestamp(),closedBy:player.id,closeReason:reason,updatedAt:serverTimestamp(),updatedBy:player.id});
     stopPresence();
     setTimeout(()=>ref.remove().catch(err=>console.warn('[close-lobby]',err)), CLOSED_LOBBY_REMOVE_DELAY_MS);
+  }
+  async function leaveLobby(){
+    const leavingRoomId = activeRoomId;
+    if(leavingRoomId === ROOM_ID) return;
+    connectFirebase();
+    if(els.leaveLobbyBtn) els.leaveLobbyBtn.disabled = true;
+    try{
+      if(lobbyCleanupTimer){ clearTimeout(lobbyCleanupTimer); lobbyCleanupTimer = null; }
+      stopRoomListener();
+      stopPresence();
+      await getRoomRef(db, 'players/'+player.id, leavingRoomId).remove();
+      await closeRoomIfEmpty(leavingRoomId);
+      roomData = {};
+      localStorage.removeItem(LS.startDone);
+      localStorage.removeItem(LS.lobbyRoom);
+      activeRoomId = ROOM_ID;
+      closedRoomHandled = false;
+      lobbyCleanupInProgress = false;
+      syncRoomUrl();
+      updateStartScreen();
+      render();
+      status(els.startStatus,'Du lämnade lobbyn.','ok');
+    }catch(err){
+      status(els.startStatus,'Kunde inte lämna lobbyn: '+err.message,'bad');
+    }finally{
+      if(els.leaveLobbyBtn) els.leaveLobbyBtn.disabled = false;
+    }
   }
 
   async function resetRoom(){
@@ -923,6 +985,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
         status(els.startStatus,'Kunde inte kopiera länken automatiskt.','warn');
       }
     };
+    if(els.leaveLobbyBtn) els.leaveLobbyBtn.onclick=leaveLobby;
     if(els.enterGameBtn) els.enterGameBtn.onclick=async()=>{
       await savePlayerNameFromStart();
       if(!roomData?.meta?.hostId && !await roomExists(activeRoomId)){
@@ -943,7 +1006,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     document.querySelectorAll('.modeButton[data-game-mode]').forEach(button => {
       button.onclick=()=>updateRoomSettings({gameMode:button.dataset.gameMode});
     });
-    if(els.partyModeSelect) els.partyModeSelect.onchange=()=>updateRoomSettings({partyMode:els.partyModeSelect.value,gameMode:'party'});
+    if(els.partyModeToggle) els.partyModeToggle.onchange=()=>updateRoomSettings({partyModeEnabled:!!els.partyModeToggle.checked,gameMode:'quiz'});
+    if(els.partyModeSelect) els.partyModeSelect.onchange=()=>updateRoomSettings({quizType:els.partyModeSelect.value,partyMode:els.partyModeSelect.value,gameMode:'quiz'});
     els.importPlaylistBtn.onclick=importPlaylist;
     els.createDemoBtn.onclick=createDemo;
     els.refreshPlaylistsBtn.onclick=refreshPlaylists;
@@ -951,7 +1015,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v71';
     if(els.addPlaylistBtn) els.addPlaylistBtn.onclick=addPlaylistToMix;
     els.startGameBtn.onclick=()=>{ if(roomData?.game?.status==='playing') endGame(); else startGame(); };
     els.drawCardBtn.onclick=drawCard;
-    els.confirmPlacementBtn.onclick=()=>{ if(isPartyGame()) revealPartyRound(); else confirmPlacement(); };
+    els.confirmPlacementBtn.onclick=()=>{ if(isQuizGame()) revealPartyRound(); else confirmPlacement(); };
     els.lockInBtn.onclick=lockIn;
     if(els.playSpotifyBtn) els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
     document.addEventListener('click', e=>{
