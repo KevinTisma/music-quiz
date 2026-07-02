@@ -1,10 +1,10 @@
-﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v70';
+﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v71';
 import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v70';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v70';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v71';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v71';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v70';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v71';
 
 export function createRenderer(ctx){
   const {

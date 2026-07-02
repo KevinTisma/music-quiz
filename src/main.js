@@ -1,12 +1,12 @@
-﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v70';
+﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v71';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v70';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v70';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v71';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v71';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v70';
+import { createRenderer } from './ui/render.js?v=active-room-start-v71';
 
 (() => {
   'use strict';
@@ -241,6 +241,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v70';
         roomData = {};
         if(activeRoomId !== ROOM_ID && localStorage.getItem(LS.startDone) === '1'){ handleClosedLobby(); return; }
         render();
+        updateStartScreen();
         return;
       }
       roomData = snap.val() || {};
@@ -249,6 +250,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v70';
       scheduleLobbyExpiry();
       migrateLegacyRoomPlaylists().catch(err=>console.warn('[playlist-migration]',err));
       render();
+      updateStartScreen();
     };
     roomListenerRef.on('value', roomListenerCallback);
   }
@@ -356,7 +358,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v70';
     }
     renderLobbySummary();
     const done = localStorage.getItem(LS.startDone) === '1';
-    const hasActiveRoom = activeRoomId !== ROOM_ID && !!roomData?.meta?.hostId && roomData?.meta?.status !== 'closed';
+    const hasActiveRoom = activeRoomId !== ROOM_ID && roomData?.meta?.status !== 'closed';
     document.body.classList.toggle('hasActiveRoom', hasActiveRoom);
     document.body.classList.toggle('startOpen', !done);
     els.startScreen?.classList.toggle('hidden', done);
