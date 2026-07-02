@@ -1,10 +1,10 @@
-﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v72';
+﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v77';
 import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v72';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v72';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v77';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v77';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v72';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v77';
 
 export function createRenderer(ctx){
   const {
@@ -75,9 +75,15 @@ export function createRenderer(ctx){
   function scheduleWrongRevealAdvance(){
     const wr = getRoomData()?.game?.wrongReveal;
     if(uiState.wrongRevealTimeout){ clearTimeout(uiState.wrongRevealTimeout); uiState.wrongRevealTimeout = null; }
-    if(!wr || !wr.until) return;
-    const ms = Number(wr.until) - Date.now();
-    if(ms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>render(), ms + 80); }
+    if(wr?.until){
+      const ms = Number(wr.until) - Date.now();
+      if(ms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>render(), ms + 80); return; }
+    }
+    const deadline = Number(getRoomData()?.game?.answerDeadline || 0);
+    if(deadline){
+      const dms = deadline - Date.now();
+      if(dms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>render(), Math.min(1000, dms) + 40); }
+    }
   }
 
   function renderTurn(){
@@ -205,22 +211,34 @@ export function createRenderer(ctx){
     const title = quizType === 'party-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
     setText(els.turnTitle, game.reveal && card ? 'R\u00e4tt svar: '+partyCorrectLabel(game, card) : title);
     setText(els.turnSub, partyView && isHost ? 'Hosten spelar musiken och styr n\u00e4sta steg.' : (answer ? 'Svar l\u00e5st.' : 'V\u00e4lj ditt svar.'));
-    setText(els.activePlayerBanner, partyView && isHost ? 'Host-vy' : 'Quiz-vy');
+    setText(els.activePlayerBanner, partyView && isHost ? 'Host-vy' : '');
     setText(els.roundPill, 'Runda '+(game.turnNumber || 1));
     if(els.activeTimeline) els.activeTimeline.innerHTML = '';
     if(els.ownTimeline) els.ownTimeline.innerHTML = '';
     if(!card){
-      els.drawCardWrap.innerHTML='<div class="partyPanel quizPanel"><h2>'+esc(title)+'</h2><p class="small">'+(isHost?'Tryck p\u00e5 Dra nytt kort f\u00f6r att starta rundan.':'V\u00e4ntar p\u00e5 hosten.')+'</p></div>';
+      els.drawCardWrap.innerHTML=
+        '<div class="partyPanel quizPanel quizEmptyPanel">' +
+          '<h2>'+esc(title)+'</h2>' +
+          '<p class="small">'+(isHost?'Starta rundan n\u00e4r alla \u00e4r redo.':'V\u00e4ntar p\u00e5 hosten.')+'</p>' +
+          (isHost ? '<button class="primary quizHostAction" type="button" data-quiz-host-action="draw">Dra f\u00f6rsta l\u00e5ten</button>' : '') +
+        '</div>';
       return;
     }
     const choices = Array.isArray(game.choices) ? game.choices : Object.values(game.choices || {});
     const answered = Object.keys(game.answers || {}).length;
     const total = activePlayersFrom(data.players || {}).length || 1;
+    const timeText = quizTimeText(game);
+    const progress = Math.max(0, Math.min(100, Math.round((answered / total) * 100)));
     if(partyView && isHost){
       els.drawCardWrap.innerHTML =
-        '<div class="partyHostGrid quizHostGrid">' +
-          '<div class="drawCard partyHostCard quizCoverCard"><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div>'+(game.reveal?'<div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>':'')+'</div><div><span class="yearHidden">'+(game.reveal?esc(partyCorrectLabel(game, card)):'Svar dolt')+'</span></div></div>' +
-          '<div class="partyPanel quizPanel"><h2>'+esc(title)+'</h2><p class="small">'+answered+'/'+total+' svar inne.</p>'+partyResultMarkup(game, correctId, choices)+'</div>' +
+        '<div class="partyPanel quizPanel quizHostPanel">' +
+          '<h2>'+esc(title)+'</h2>' +
+          '<div class="quizCardMedia"><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div>'+(game.reveal?'<div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>':'')+'</div>' +
+          '<div class="quizRoundStatus"><b>'+answered+'/'+total+'</b><span>svar inne</span>'+(timeText?'<small>'+esc(timeText)+'</small>':'')+'</div>' +
+          '<div class="quizProgress"><span style="width:'+progress+'%"></span></div>' +
+          (game.reveal ? '<p class="pill">Rätt svar: '+esc(partyCorrectLabel(game, card))+'</p>' : '') +
+          partyResultMarkup(game, correctId, choices) +
+          '<button class="primary quizHostAction" type="button" data-quiz-host-action="'+(game.reveal?'next':'reveal')+'">'+(game.reveal?'N\u00e4sta l\u00e5t':'Visa svar')+'</button>' +
         '</div>';
       return;
     }
@@ -228,6 +246,7 @@ export function createRenderer(ctx){
       '<div class="partyPanel partyPlayerPanel quizPanel">' +
         '<div class="quizCardMedia"><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div>' +
         '<h2>'+esc(title)+'</h2>' +
+        (timeText && !game.reveal ? '<div class="quizTimerPill">'+esc(timeText)+'</div>' : '') +
         '<div class="partyChoices">' +
           choices.map(choice => {
             const selected = answer && String(answer.choiceId) === String(choice.id);
@@ -237,10 +256,19 @@ export function createRenderer(ctx){
           }).join('') +
         '</div>' +
         partyResultMarkup(game, correctId, choices) +
+        (isHost ? '<button class="primary quizHostAction" type="button" data-quiz-host-action="'+(game.reveal?'next':'reveal')+'">'+(game.reveal?'N\u00e4sta l\u00e5t':'Visa svar')+'</button>' : '') +
       '</div>';
   }
   function normalizedQuizType(mode){
     return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
+  }
+  function quizTimeText(game){
+    if(game?.reveal) return '';
+    const deadline = Number(game?.answerDeadline || 0);
+    if(!deadline) return '';
+    const seconds = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+    if(seconds >= 60) return Math.ceil(seconds / 60)+' min kvar';
+    return seconds+' sek kvar';
   }
   function partyCorrectLabel(game, card){
     if(normalizedQuizType(game?.mode) === 'party-year') return String(card?.year || '');
@@ -263,7 +291,8 @@ export function createRenderer(ctx){
     const canDrag=isMeActive() && !wrong;
     const div=document.createElement('div'); div.className='drawCard'+(wrong?'':' '+cardVisibilityClass())+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
     const yearText = wrong ? ('Fel placering · '+esc(card.year)) : 'Årtal dolt';
-    div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div><div><span class="yearHidden">'+yearText+'</span></div>';
+    const timeText = quizTimeText(getRoomData()?.game || {});
+    div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>'+(timeText?'<div class="quizTimerPill">'+esc(timeText)+'</div>':'')+'</div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
     els.drawCardWrap.innerHTML=''; els.drawCardWrap.appendChild(div);
   }
@@ -390,6 +419,10 @@ export function createRenderer(ctx){
     if(els.partyModeSelect){
       els.partyModeSelect.value = selectedParty;
       els.partyModeSelect.disabled = !canEditHostSettings || selectedMode !== 'quiz';
+    }
+    if(els.quizTimerSelect){
+      els.quizTimerSelect.value = String(settings.gameTimerSeconds ?? settings.quizTimerSeconds ?? 0);
+      els.quizTimerSelect.disabled = !canEditHostSettings;
     }
     if(els.selectedPlaylistList){
       if(!entries.length){

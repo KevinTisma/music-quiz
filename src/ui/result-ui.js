@@ -2,7 +2,8 @@
 import { cardId, esc, lockedCount, pendingCount, timelineOf } from '../utils/helpers.js';
 
 export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb, isHost=false }){
-  const isPartyGame = String(roomData?.game?.mode || '').startsWith('party-');
+  const mode = String(roomData?.game?.mode || '');
+  const isPartyGame = mode.startsWith('party-') || mode.startsWith('quiz-');
   const playerScore = player => isPartyGame ? Number(player?.score || 0) : lockedCount(player);
   const sortedPlayers = players.slice().sort((a,b)=>{
     const scoreDiff = playerScore(b) - playerScore(a);

@@ -6,7 +6,8 @@ export function renderPlayerStrip({ playerStrip, players, roomData, viewedTimeli
   if(!players.length){ playerStrip.innerHTML='<p class="small">Inga spelare ännu.</p>'; return viewedTimelinePlayerId; }
   let activeViewedId = viewedTimelinePlayerId;
   if(!players.some(p=>p.id===activeViewedId)) activeViewedId = fallbackPlayerId;
-  const isPartyGame = String(roomData?.game?.mode || '').startsWith('party-');
+  const mode = String(roomData?.game?.mode || '');
+  const isPartyGame = mode.startsWith('party-') || mode.startsWith('quiz-');
   const answers = roomData?.game?.answers || {};
   const hasCurrentPartyCard = isPartyGame && !!roomData?.game?.currentCard && !roomData?.game?.reveal;
   players.forEach(p=>{

@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v71`
+- `timeline-game-v74`
 
 PWA-version byggd från:
 
@@ -70,14 +70,15 @@ Senast byggt 2026-07-02:
 - blandad spellista byggs genom att slå ihop alla entries i `playlistMix`; host startar spelet med den mixade kortleken
 - alla tillagda entries i `playlistMix` visas under rubriken `Blandade spellistor` med spellistenamn, spelare och låtantal
 - spelinställningar visas som stor central panel när man är inne i lobby/vänteläge
-- mode selection visar `Timeline-mode`, `Quiz-mode` och `Party-mode`; Timeline och Party är aktiva, Quiz är fortfarande låst/dummy
-- `Spelspecifika inställningar` har dropdown för Party mode med `Vems låt` och `Årtals Quiz`
-- hostens val sparas i `rooms/{roomId}/settings` som `gameMode` och `partyMode`
-- Party `Vems låt` kan startas från lobbyinställningarna
+- mode selection visar `Timeline-mode` och `Quiz-mode`; Party är inte längre eget spelläge utan en toggle ovanför quiz-typen
+- `Spelspecifika inställningar` har toggle för Party mode och dropdown `Quiz type` med `Vems låt` och `Årtals Quiz`
+- hostens val sparas i `rooms/{roomId}/settings` som `gameMode`, `quizType`, `partyMode` och `partyModeEnabled` för bakåtkompatibilitet
+- Quiz `Vems låt` kan startas från lobbyinställningarna och Party-toggle styr om host/gäst-vyer ska separeras
 - Party `Vems låt` bygger sin kortlek från `playlistMix`, där varje låt får `ownerPlayerId`, `ownerName` och spellistnamn från den spelare som lade till spellistan
 - hosten styr Party-rundan med `Dra nytt kort` / `Nästa låt` och `Visa svar`
 - spelare får ett enklare mobil-/Kahoot-liknande UI med stora svarsknappar
 - Party-svar sparas under `game/answers/{playerId}` och poäng delas ut när hosten visar svaret
+- v74: vanlig Quiz-vy visar stor albumcover med titel/artist och svarsalternativ för alla spelare; Party-toggle ger hosten en ren album/status-vy med svarsräkning och reveal-resultat i samma ruta
 - `Årtals Quiz` finns som valbar Party-grund och skapar årtalsalternativ för aktuell låt, men behöver fortfarande gameplay-polish och hårdtest
 - i Party-läge döljs `utilityMenu`/inställningsknappen för icke-host så spelarvyn blir renare
 - modeknapparna är vertikalt staplade i sin sektion och innehåller både stor titel och kort förklarande text
