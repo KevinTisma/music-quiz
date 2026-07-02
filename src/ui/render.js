@@ -291,7 +291,7 @@ export function createRenderer(ctx){
     const hostId = data?.meta?.hostId || '';
     const isHost = hostId === getPlayer().id;
     const gameStatus = data?.game?.status || 'lobby';
-    const entries = Object.values(data.playlistMix || {});
+    const entries = Object.values(data.playlistMix || {}).sort((a,b)=>Number(a.addedAt || 0)-Number(b.addedAt || 0));
     document.body.classList.toggle('isHost', isHost);
     document.body.classList.toggle('isGuest', !isHost);
     if(els.lobbySettingsNotice){
@@ -299,12 +299,19 @@ export function createRenderer(ctx){
     }
     if(els.selectedPlaylistList){
       if(!entries.length){
-        els.selectedPlaylistList.innerHTML = '<p class="tiny">Ingen spellista vald \u00e4n.</p>';
+        els.selectedPlaylistList.innerHTML =
+          '<div class="mixSummary"><b>Blandade spellistor</b><span class="pill">0 spellistor</span></div>' +
+          '<p class="tiny">Inga spellistor tillagda \u00e4n.</p>';
       }else{
         const totalSongs = entries.reduce((sum, entry) => sum + Number(entry.songCount || (entry.songs ? Object.keys(entry.songs).length : 0) || 0), 0);
         els.selectedPlaylistList.innerHTML =
-          '<div class="mixSummary"><b>Blandad spellista</b><span class="pill">'+entries.length+' spellistor \u00b7 '+totalSongs+' l\u00e5tar</span></div>' +
-          entries.map(entry => '<div class="mixPlaylistRow"><span>'+esc(entry.name || 'Spellista')+'</span><small>'+esc(entry.playerName || 'Spelare')+'</small></div>').join('');
+          '<div class="mixSummary"><b>Blandade spellistor</b><span class="pill">'+entries.length+' spellistor \u00b7 '+totalSongs+' l\u00e5tar</span></div>' +
+          '<div class="mixPlaylistRows">' +
+          entries.map(entry => {
+            const songCount = Number(entry.songCount || (entry.songs ? Object.keys(entry.songs).length : 0) || 0);
+            return '<div class="mixPlaylistRow"><span>'+esc(entry.name || 'Spellista')+'</span><small>'+esc(entry.playerName || 'Spelare')+' \u00b7 '+songCount+' l\u00e5tar</small></div>';
+          }).join('') +
+          '</div>';
       }
     }
     document.querySelectorAll('.hostOnlySetting input,.hostOnlySetting select,.hostOnlySetting button').forEach(control => {

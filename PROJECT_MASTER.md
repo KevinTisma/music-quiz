@@ -263,6 +263,20 @@ Behövs:
 
 ## Viktiga tekniska beslut hittills
 
+### Test och verifiering
+
+Beslut: test och verifiering ska prioriteras när viktiga funktioner ändras.
+
+Det gäller särskilt vid ändringar i:
+
+- databasstruktur
+- Firebase-logik
+- JavaScript-kod som styr appflöde
+- lobby, rum, spelare och game state
+- Spotify-integration
+
+Vid mindre ändringar, till exempel text, roadmap, enklare styling eller dokumentation, behövs normalt inte full funktionstestning.
+
 ### Appen ska bli PWA
 
 Beslut: ja.
@@ -281,6 +295,17 @@ Första version:
 
 - Firebase Hosting
 - Realtime Database
+Max 8–12 spelare per lobby i början
+Rensa gamla rooms
+Spara spellistor under users
+Kopiera inte stora spellistor till varje room i onödan
+Lyssna inte på hela databasen
+Ha en tydlig “beta”-status
+
+Vi bygger först för Firebase Spark/gratis.
+Målet är max 100 samtidiga anslutningar.
+Appen optimeras för små rum och låg datatrafik.
+När Spotify-auth behöver verifieras server-side eller när vi närmar oss 100 samtidiga anslutningar byter vi till Blaze.
 
 Senare kan Firestore övervägas om strukturen växer mycket.
 
@@ -331,3 +356,7 @@ Prio 2:
 Prio 3:
 
 - Firebase Hosting / publik testdeploy
+
+Nästa sak på agendan:
+Fortsätt jobba med CSS för Lobbyinställningar. 
+Justera så att varje gång man lägger till en spellista så ska den också visas under "blandade spellistor". Dvs att Alla spellistor som blir tillagda hamnar på en lista där.
