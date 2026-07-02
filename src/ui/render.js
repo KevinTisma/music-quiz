@@ -31,7 +31,7 @@ export function createRenderer(ctx){
 
   function render(){
     setText(els.redirectUriText, redirectUri());
-    els.playerNameInput.value = getPlayer().name;
+    if(els.playerNameInput) els.playerNameInput.value = getPlayer().name;
     refreshPlaylistsFromRoom();
     applyGameModeClasses();
     renderTurn(); renderPlayers();
@@ -169,12 +169,14 @@ export function createRenderer(ctx){
 
 
   function renderFinishedResults(){
+    const hostId = getRoomData()?.meta?.hostId || '';
     renderFinishedResultsScene({
       drawCardWrap:els.drawCardWrap,
       players:activePlayersFrom(getRoomData().players || {}),
       roomData:getRoomData(),
       coverForCard,
-      playerRgb
+      playerRgb,
+      isHost:hostId === getPlayer().id
     });
   }
 
@@ -318,6 +320,7 @@ export function createRenderer(ctx){
     els.lockInBtn.disabled=!meActive || hasCurrent || wrong || !pendingCount(me) || getRoomData()?.game?.status==='finished';
     if(els.playSpotifyBtn) els.playSpotifyBtn.disabled=!hasCurrent;
     els.startGameBtn.disabled=!connected || !isHost;
+    if(els.utilityEndGameBtn) els.utilityEndGameBtn.disabled=!connected || !isHost || !['playing','finished'].includes(getRoomData()?.game?.status);
     const canEditPlaylistMix = connected && getRoomData()?.game?.status !== 'playing' && getRoomData()?.game?.status !== 'finished';
     if(els.addPlaylistBtn) els.addPlaylistBtn.disabled=!canEditPlaylistMix || !els.savedPlaylistSelect?.value;
     if(els.savedPlaylistSelect) els.savedPlaylistSelect.disabled=!canEditPlaylistMix;

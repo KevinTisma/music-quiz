@@ -124,15 +124,26 @@
     body.isGuest .hostOnlySetting{opacity:.38;filter:saturate(.45);}
     body.isGuest .playlistPickerSetting{opacity:1;filter:none;}
     body.waitingMode .turnTitle{display:none!important;}
-    body.waitingMode .playlistArea{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(500px,calc(100vw - 32px))!important;z-index:45!important;}
-    body.waitingMode .playlistButton{display:none!important;}
-    body.waitingMode .playlistMenu{position:static!important;display:block!important;width:100%!important;max-height:calc(100vh - 48px);overflow:auto;border-radius:22px;padding:18px;background:rgba(19,26,43,.94);}
+    .utilitySettings{display:grid;gap:8px;}
+    .gameSettings{display:grid;gap:0;}
+    .utilityRows{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+    .utilityRows>div{border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.045);padding:9px 10px;min-width:0;}
+    .utilityRows b{display:block;margin-top:3px;font-size:.86rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .playlistMenu .utilitySettings{display:none;}
+    body:not(.waitingMode) .playlistMenu .gameSettings{display:none;}
+    body:not(.waitingMode) .playlistMenu .utilitySettings{display:grid;}
+    body.waitingMode .playlistArea{position:fixed!important;right:14px!important;bottom:14px!important;left:auto!important;top:auto!important;transform:none!important;width:auto!important;z-index:60!important;pointer-events:auto;}
+    body.waitingMode .playlistButton{display:flex!important;}
+    body.waitingMode .playlistMenu{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%)!important;display:block!important;width:min(500px,calc(100vw - 32px))!important;max-height:calc(100vh - 48px);overflow:auto;border-radius:22px;padding:18px;background:rgba(19,26,43,.94);z-index:45!important;}
+    body.waitingMode .playlistMenu .utilitySettings{display:none!important;}
+    body.waitingMode .playlistMenu .gameSettings{display:grid!important;}
     body.waitingMode .playlistMenu h3{text-align:center;margin-bottom:6px;}
     body.waitingMode .playlistMenu #lobbySettingsNotice{text-align:center;margin:0 0 14px;}
     body.waitingMode .gameShell{pointer-events:none;}
     body.waitingMode .playlistArea{pointer-events:auto;}
     @media(max-width:920px){
-      body.waitingMode .playlistArea{top:42%!important;width:min(460px,calc(100vw - 24px))!important;}
+      body.waitingMode .playlistMenu{top:48%!important;width:min(460px,calc(100vw - 24px))!important;}
+      .utilityRows{grid-template-columns:1fr;}
       .mixSummary{align-items:flex-start;flex-direction:column;}
       .mixPlaylistRow{grid-template-columns:1fr;}
     }

@@ -1,7 +1,7 @@
 ﻿import { WIN_SCORE } from '../config.js';
 import { cardId, esc, lockedCount, pendingCount, timelineOf } from '../utils/helpers.js';
 
-export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb }){
+export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb, isHost=false }){
   const sortedPlayers = players.slice().sort((a,b)=>{
     const scoreDiff = lockedCount(b) - lockedCount(a);
     if(scoreDiff) return scoreDiff;
@@ -18,6 +18,7 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
   const resultKey = JSON.stringify({
     playlist: roomData?.selectedPlaylistId || '',
     winner: roomData?.game?.winnerId || '',
+    isHost,
     players: sortedPlayers.map(p=>({
       id:p.id,
       name:p.name,
@@ -42,6 +43,12 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
     '<div class="planetResultsTitle">'+
       '<span>Spellista:'+(playlistName ? ' '+esc(playlistName) : '')+'</span>'+
       '<b>Slutresultat</b>'+
+      '<div class="planetResultActions">'+
+        '<button class="primary" type="button" data-result-action="play-again"'+(isHost?'':' disabled')+'>Spela igen</button>'+
+        '<button class="secondary" type="button" data-result-action="settings"'+(isHost?'':' disabled')+'>Ändra spelinställningar</button>'+
+        '<button class="danger" type="button" data-result-action="close-lobby"'+(isHost?'':' disabled')+'>Avsluta lobby</button>'+
+      '</div>'+
+      (isHost ? '' : '<p class="tiny planetHostHint">Väntar på host.</p>')+
     '</div>'+
     '<div class="planetList"></div>';
 

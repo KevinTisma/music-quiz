@@ -1306,3 +1306,44 @@
       background:rgb(var(--player-rgb))!important;
     }
 
+
+    /* v62: slutresultat-actions fÃ¶r ny runda, instÃ¤llningar och lobby-stÃ¤ngning */
+    .planetResultActions{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      flex-wrap:wrap!important;
+      gap:10px!important;
+      margin:18px auto 0!important;
+      max-width:min(720px,calc(100vw - 32px))!important;
+    }
+
+    .planetResultActions button{
+      min-width:142px!important;
+      border-radius:14px!important;
+      box-shadow:0 14px 34px rgba(0,0,0,.26)!important;
+    }
+
+    .planetResultActions button:disabled{
+      opacity:.42!important;
+      cursor:default!important;
+      filter:saturate(.45)!important;
+    }
+
+    .planetHostHint{
+      margin:10px 0 0!important;
+      text-align:center!important;
+      color:rgba(255,255,255,.62)!important;
+    }
+
+    @media(max-width:680px){
+      .planetResultActions{
+        display:grid!important;
+        grid-template-columns:1fr!important;
+      }
+
+      .planetResultActions button{
+        width:100%!important;
+      }
+    }
+
