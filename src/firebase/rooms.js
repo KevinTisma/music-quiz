@@ -9,6 +9,11 @@ export function getRoomRef(db, path='', roomId=ROOM_ID){
   return db.ref('rooms/'+safeRoomId+(path?'/'+path:''));
 }
 
+export function getUserRef(db, userId, path=''){
+  const safeUserId = String(userId || '').replace(/[.#$\[\]/]/g,'_').slice(0,120) || 'anonymous';
+  return db.ref('users/'+safeUserId+(path?'/'+path:''));
+}
+
 export function playerRoomPath(playerId, roomId=ROOM_ID){
   return 'rooms/'+normalizeRoomId(roomId)+'/players/'+playerId;
 }

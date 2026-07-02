@@ -13,7 +13,7 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
     return;
   }
 
-  const selectedPlaylist = roomData?.savedPlaylists?.[roomData?.selectedPlaylistId];
+  const selectedPlaylist = roomData?.selectedPlaylist;
   const playlistName = selectedPlaylist?.name ? selectedPlaylist.name : '';
   const resultKey = JSON.stringify({
     playlist: roomData?.selectedPlaylistId || '',

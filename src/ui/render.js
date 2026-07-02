@@ -11,6 +11,7 @@ export function createRenderer(ctx){
     els,
     uiState,
     getRoomData,
+    getUserPlaylists,
     getPlayer,
     getDb,
     redirectUri,
@@ -36,7 +37,7 @@ export function createRenderer(ctx){
     renderTurn(); renderPlayers();
     if(getRoomData()?.game?.status === 'finished') renderFinishedResults();
     else { renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); }
-    renderProfile(); renderBoards(); updateButtons(); handleAutoplay(); scheduleWrongRevealAdvance();
+    renderProfile(); renderBoards(); renderLobbySettings(); updateButtons(); handleAutoplay(); scheduleWrongRevealAdvance();
   }
   function applyGameModeClasses(){
     const status = getRoomData()?.game?.status || 'lobby';
@@ -45,7 +46,7 @@ export function createRenderer(ctx){
     document.body.classList.toggle('playingMode', status === 'playing');
   }
   function refreshPlaylistsFromRoom(){
-    refreshSavedPlaylistSelect(els.savedPlaylistSelect, getRoomData());
+    refreshSavedPlaylistSelect(els.savedPlaylistSelect, getUserPlaylists(), getRoomData());
   }
   function handleAutoplay(){
     const card = currentCard();
@@ -283,6 +284,31 @@ export function createRenderer(ctx){
       els.playerBoards.appendChild(board);
     });
   }
+  function renderLobbySettings(){
+    const data = getRoomData() || {};
+    const hostId = data?.meta?.hostId || '';
+    const isHost = hostId === getPlayer().id;
+    const gameStatus = data?.game?.status || 'lobby';
+    const entries = Object.values(data.playlistMix || {});
+    document.body.classList.toggle('isHost', isHost);
+    document.body.classList.toggle('isGuest', !isHost);
+    if(els.lobbySettingsNotice){
+      setText(els.lobbySettingsNotice, isHost ? 'V\u00e4lj spelinst\u00e4llningar och starta spelet.' : 'V\u00e4ntar p\u00e5 att spelet ska starta');
+    }
+    if(els.selectedPlaylistList){
+      if(!entries.length){
+        els.selectedPlaylistList.innerHTML = '<p class="tiny">Ingen spellista vald \u00e4n.</p>';
+      }else{
+        const totalSongs = entries.reduce((sum, entry) => sum + Number(entry.songCount || (entry.songs ? Object.keys(entry.songs).length : 0) || 0), 0);
+        els.selectedPlaylistList.innerHTML =
+          '<div class="mixSummary"><b>Blandad spellista</b><span class="pill">'+entries.length+' spellistor \u00b7 '+totalSongs+' l\u00e5tar</span></div>' +
+          entries.map(entry => '<div class="mixPlaylistRow"><span>'+esc(entry.name || 'Spellista')+'</span><small>'+esc(entry.playerName || 'Spelare')+'</small></div>').join('');
+      }
+    }
+    document.querySelectorAll('.hostOnlySetting input,.hostOnlySetting select,.hostOnlySetting button').forEach(control => {
+      control.disabled = !isHost || gameStatus === 'playing';
+    });
+  }
   function updateButtons(){
     const connected=!!getDb(), playing=getRoomData()?.game?.status==='playing', meActive=isMeActive(), hasCurrent=!!currentCard(), hasProposal=proposedIndex()!==null, me=getRoomData().players?.[getPlayer().id], wrong=isWrongRevealActive();
     const hostId = getRoomData()?.meta?.hostId || '';
@@ -292,8 +318,11 @@ export function createRenderer(ctx){
     els.lockInBtn.disabled=!meActive || hasCurrent || wrong || !pendingCount(me) || getRoomData()?.game?.status==='finished';
     if(els.playSpotifyBtn) els.playSpotifyBtn.disabled=!hasCurrent;
     els.startGameBtn.disabled=!connected || !isHost;
+    const canEditPlaylistMix = connected && getRoomData()?.game?.status !== 'playing' && getRoomData()?.game?.status !== 'finished';
+    if(els.addPlaylistBtn) els.addPlaylistBtn.disabled=!canEditPlaylistMix || !els.savedPlaylistSelect?.value;
+    if(els.savedPlaylistSelect) els.savedPlaylistSelect.disabled=!canEditPlaylistMix;
     if(getRoomData()?.game?.status==='playing'){ els.startGameBtn.textContent='Avsluta spel'; els.startGameBtn.className='danger'; }
-    else { els.startGameBtn.textContent='Starta'; els.startGameBtn.className='primary'; }
+    else { els.startGameBtn.textContent='Starta spel'; els.startGameBtn.className='primary'; }
   }
 
 

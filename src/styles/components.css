@@ -112,4 +112,29 @@
     .activeTimelineArea .timelineHeader{justify-content:flex-end!important;text-align:right!important;padding-right:0!important;margin-bottom:4px;}
     .activeTimelineArea .timelineHeader .pill{margin-left:auto;}
 
+    /* v20: central lobby settings with shared playlist mix */
+    .playlistAddRow{display:grid;grid-template-columns:1fr 44px;gap:8px;align-items:stretch;}
+    .iconButton{width:44px;min-width:44px;height:44px;display:grid;place-items:center;padding:0!important;font-size:1.55rem;line-height:1;font-weight:950;border-radius:12px!important;}
+    .selectedPlaylistList{display:grid;gap:8px;margin-top:12px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035);}
+    .mixSummary{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .mixSummary b{font-size:.92rem;}
+    .mixPlaylistRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(0,0,0,.12);}
+    .mixPlaylistRow span{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .mixPlaylistRow small{color:var(--muted);white-space:nowrap;}
+    body.isGuest .hostOnlySetting{opacity:.38;filter:saturate(.45);}
+    body.isGuest .playlistPickerSetting{opacity:1;filter:none;}
+    body.waitingMode .turnTitle{display:none!important;}
+    body.waitingMode .playlistArea{position:fixed!important;left:50%!important;right:auto!important;top:50%!important;bottom:auto!important;transform:translate(-50%,-50%)!important;width:min(500px,calc(100vw - 32px))!important;z-index:45!important;}
+    body.waitingMode .playlistButton{display:none!important;}
+    body.waitingMode .playlistMenu{position:static!important;display:block!important;width:100%!important;max-height:calc(100vh - 48px);overflow:auto;border-radius:22px;padding:18px;background:rgba(19,26,43,.94);}
+    body.waitingMode .playlistMenu h3{text-align:center;margin-bottom:6px;}
+    body.waitingMode .playlistMenu #lobbySettingsNotice{text-align:center;margin:0 0 14px;}
+    body.waitingMode .gameShell{pointer-events:none;}
+    body.waitingMode .playlistArea{pointer-events:auto;}
+    @media(max-width:920px){
+      body.waitingMode .playlistArea{top:42%!important;width:min(460px,calc(100vw - 24px))!important;}
+      .mixSummary{align-items:flex-start;flex-direction:column;}
+      .mixPlaylistRow{grid-template-columns:1fr;}
+    }
+
 

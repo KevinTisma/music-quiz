@@ -5,14 +5,14 @@ import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
-import { getRoomRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
+import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
 import { createRenderer } from './ui/render.js';
 
 (() => {
   'use strict';
 
 
-  let db = null, roomData = {}, roomListenerRef = null, roomListenerCallback = null, heartbeatTimer = null, presenceRef = null;
+  let db = null, roomData = {}, userPlaylists = {}, roomListenerRef = null, roomListenerCallback = null, userPlaylistsListenerRef = null, userPlaylistsListenerCallback = null, heartbeatTimer = null, presenceRef = null, migrationInProgress = false;
   const urlRoom = new URLSearchParams(window.location.search).get('room');
   let activeRoomId = normalizeRoomId(urlRoom || localStorage.getItem(LS.lobbyRoom) || ROOM_ID);
   let player = { id:getPlayerId(), name:localStorage.getItem(LS.playerName) || 'Spelare', avatarUrl:'' };
@@ -26,7 +26,7 @@ import { createRenderer } from './ui/render.js';
 
   const $ = id => document.getElementById(id);
   const els = {
-    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
+    spotifyLoginBtn:$('spotifyLoginBtn'), spotifyLogoutBtn:$('spotifyLogoutBtn'), connectFirebaseBtn:$('connectFirebaseBtn'), resetRoomBtn:$('resetRoomBtn'), playerNameInput:$('playerNameInput'), saveNameBtn:$('saveNameBtn'), autoPlaySpotifyToggle:$('autoPlaySpotifyToggle'), redirectUriText:$('redirectUriText'), connectionStatus:$('connectionStatus'), playlistInput:$('playlistInput'), importPlaylistBtn:$('importPlaylistBtn'), createDemoBtn:$('createDemoBtn'), savedPlaylistSelect:$('savedPlaylistSelect'), addPlaylistBtn:$('addPlaylistBtn'), selectedPlaylistList:$('selectedPlaylistList'), lobbySettingsNotice:$('lobbySettingsNotice'), selectPlaylistBtn:$('selectPlaylistBtn'), refreshPlaylistsBtn:$('refreshPlaylistsBtn'), playlistStatus:$('playlistStatus'), startGameBtn:$('startGameBtn'), drawCardBtn:$('drawCardBtn'), lockInBtn:$('lockInBtn'), playSpotifyBtn:$('playSpotifyBtn'), confirmPlacementBtn:$('confirmPlacementBtn'), turnTitle:$('turnTitle'), turnSub:$('turnSub'), playerStrip:$('playerStrip'), drawCardWrap:$('drawCardWrap'), gameStatus:$('gameStatus'), activePlayerBanner:$('activePlayerBanner'), activeTimelineTitle:$('activeTimelineTitle'), roundPill:$('roundPill'), activeTimeline:$('activeTimeline'), playerBoards:$('playerBoards'), ownTimeline:$('ownTimeline'), ownTimelineTitle:$('ownTimelineTitle'), ownTimelineToggle:$('ownTimelineToggle'), profileButton:$('profileButton'), profileMenu:$('profileMenu'), profileName:$('profileName'), profileSub:$('profileSub'), playlistButton:$('playlistButton'), playlistMenu:$('playlistMenu'), playlistButtonSub:$('playlistButtonSub'), showCoverToggle:$('showCoverToggle'), showArtistToggle:$('showArtistToggle'), showTitleToggle:$('showTitleToggle'), startScreen:$('startScreen'), startPlayerNameInput:$('startPlayerNameInput'), startSpotifyLoginBtn:$('startSpotifyLoginBtn'), testSpotifyBtn:$('testSpotifyBtn'), createLobbyBtn:$('createLobbyBtn'), joinLobbyBtn:$('joinLobbyBtn'), lobbyCodeInput:$('lobbyCodeInput'), startStatus:$('startStatus'), roomCodeText:$('roomCodeText'), enterGameBtn:$('enterGameBtn'), shareLinkInput:$('shareLinkInput'), copyShareLinkBtn:$('copyShareLinkBtn'), hostStatusText:$('hostStatusText'), firebasePathText:$('firebasePathText'), lobbyPlayers:$('lobbyPlayers')
   };
 
   function redirectUri(){ return window.location.origin + window.location.pathname; }
@@ -81,8 +81,8 @@ import { createRenderer } from './ui/render.js';
 
     addPool(roomData?.songBank);
     const selectedId = roomData?.selectedPlaylistId;
-    addPool(roomData?.savedPlaylists?.[selectedId]?.songs);
-    addPool(roomData?.savedPlaylists?.[cleanKey(selectedId)]?.songs);
+    addPool(userPlaylists?.[selectedId]?.songs);
+    addPool(userPlaylists?.[cleanKey(selectedId)]?.songs);
 
     const id = String(card?.id || '');
     const uri = String(card?.uri || '');
@@ -107,8 +107,13 @@ import { createRenderer } from './ui/render.js';
   function spotifyProfileCache(){
     try { return JSON.parse(localStorage.getItem(LS.spotifyProfile) || 'null'); } catch { return null; }
   }
+  function currentUserId(){
+    const spotifyId = spotifyProfileCache()?.spotifyId;
+    return cleanKey(spotifyId ? 'spotify_'+spotifyId : player.id);
+  }
   function applySpotifyProfile(profile){
     if(!profile) return false;
+    const previousUserId = currentUserId();
     const displayName = (profile.display_name || profile.id || '').trim();
     const avatarUrl = profile.images?.[0]?.url || '';
     const cached = { displayName: displayName || 'Spotify-spelare', avatarUrl, spotifyId: profile.id || '', updatedAt: now() };
@@ -117,6 +122,7 @@ import { createRenderer } from './ui/render.js';
     player.avatarUrl = cached.avatarUrl;
     localStorage.setItem(LS.playerName, player.name);
     if(els.playerNameInput) els.playerNameInput.value = player.name;
+    if(previousUserId !== currentUserId()) restartUserPlaylistsListener();
     return true;
   }
   async function syncSpotifyProfile(){
@@ -138,6 +144,7 @@ import { createRenderer } from './ui/render.js';
     db = getFirebaseDatabase();
     setupPresence();
     listenRoom();
+    listenUserPlaylists();
     upsertPlayer();
     return db;
   }
@@ -153,11 +160,28 @@ import { createRenderer } from './ui/render.js';
     }, 30000);
   }
   function roomRef(path=''){ if(!db) connectFirebase(); return getRoomRef(db, path, activeRoomId); }
+  function userRef(path=''){ if(!db) connectFirebase(); return getUserRef(db, currentUserId(), path); }
   function listenRoom(){
     if(roomListenerRef) return;
     roomListenerRef = roomRef();
-    roomListenerCallback = snap => { roomData = snap.val() || {}; render(); };
+    roomListenerCallback = snap => { roomData = snap.val() || {}; migrateLegacyRoomPlaylists().catch(err=>console.warn('[playlist-migration]',err)); render(); };
     roomListenerRef.on('value', roomListenerCallback);
+  }
+  function listenUserPlaylists(){
+    if(userPlaylistsListenerRef) return;
+    userPlaylistsListenerRef = userRef('playlists');
+    userPlaylistsListenerCallback = snap => { userPlaylists = snap.val() || {}; render(); };
+    userPlaylistsListenerRef.on('value', userPlaylistsListenerCallback);
+  }
+  function stopUserPlaylistsListener(){
+    if(userPlaylistsListenerRef && userPlaylistsListenerCallback) userPlaylistsListenerRef.off('value', userPlaylistsListenerCallback);
+    userPlaylistsListenerRef = null;
+    userPlaylistsListenerCallback = null;
+    userPlaylists = {};
+  }
+  function restartUserPlaylistsListener(){
+    stopUserPlaylistsListener();
+    if(db) listenUserPlaylists();
   }
   function syncRoomUrl(){
     localStorage.setItem(LS.lobbyRoom, activeRoomId);
@@ -190,6 +214,7 @@ import { createRenderer } from './ui/render.js';
     if(db) setupPresence();
     connectFirebase();
     listenRoom();
+    restartUserPlaylistsListener();
     const roomMeta = asHost ? {
       hostId:player.id,
       code:activeRoomId,
@@ -309,7 +334,26 @@ import { createRenderer } from './ui/render.js';
   }
   async function savePlaylist(pid,name,songs,source){
     connectFirebase();
-    await roomRef().update({ songBank:songs, selectedPlaylistId:pid, ['songBanks/'+cleanKey(pid)]:songs, ['savedPlaylists/'+cleanKey(pid)]:{id:pid,name,source:source||'manual',songCount:songs.length,importedAt:serverTimestamp(),songs} });
+    const id = cleanKey(pid);
+    const ownerId = currentUserId();
+    const playlist = {id:pid,name,source:source||'manual',songCount:songs.length,importedAt:serverTimestamp(),songs};
+    await userRef('playlists/'+id).set(playlist);
+    await savePlaylistToRoomMix(id, {id,ownerId,name,source:playlist.source}, songs);
+  }
+  async function migrateLegacyRoomPlaylists(){
+    if(migrationInProgress || !db || !roomData?.savedPlaylists) return;
+    migrationInProgress = true;
+    try{
+      const updates = {};
+      Object.entries(roomData.savedPlaylists || {}).forEach(([key,playlist]) => {
+        const id = cleanKey(playlist?.id || key);
+        updates['playlists/'+id] = {...playlist,id:playlist?.id || key,migratedFromRoom:activeRoomId,migratedAt:serverTimestamp()};
+      });
+      if(Object.keys(updates).length) await userRef().update(updates);
+      await roomRef().update({savedPlaylists:null,songBanks:null});
+    }finally{
+      migrationInProgress = false;
+    }
   }
   async function createDemo(){
     const songs=[
@@ -320,9 +364,44 @@ import { createRenderer } from './ui/render.js';
     await savePlaylist('demo-3-songs','Demo-spellista med 3 låtar',songs,'demo');
     status(els.playlistStatus,'Demo-spellista skapad.','ok');
   }
+  function playlistMixEntries(nextEntry=null){
+    const entries = {...(roomData.playlistMix || {})};
+    if(nextEntry) entries[nextEntry.key] = nextEntry.value;
+    return entries;
+  }
+  function songsFromPlaylistMix(entries=roomData.playlistMix || {}){
+    return Object.values(entries).flatMap(entry => {
+      const songs = entry?.songs;
+      return Array.isArray(songs) ? songs : Object.values(songs || {});
+    });
+  }
+  async function savePlaylistToRoomMix(id, playlist, songs){
+    const ownerId = currentUserId();
+    const key = cleanKey(ownerId+'_'+id);
+    const entry = {
+      id,
+      ownerId,
+      playerId:player.id,
+      playerName:player.name || 'Spelare',
+      name:playlist.name || id,
+      source:playlist.source || 'manual',
+      songCount:songs.length,
+      songs,
+      addedAt:serverTimestamp()
+    };
+    const entries = playlistMixEntries({key,value:entry});
+    const mixedSongs = songsFromPlaylistMix(entries);
+    await roomRef().update({
+      playlistMix:entries,
+      songBank:mixedSongs,
+      selectedPlaylistId:'mixed',
+      selectedPlaylist:{id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length}
+    });
+  }
   async function refreshPlaylists(){
     connectFirebase();
-    const snap=await roomRef('savedPlaylists').get();
+    await migrateLegacyRoomPlaylists();
+    const snap=await userRef('playlists').get();
     const playlists=snap.val()||{};
     const current=els.savedPlaylistSelect.value;
     els.savedPlaylistSelect.innerHTML='';
@@ -334,29 +413,48 @@ import { createRenderer } from './ui/render.js';
   async function selectPlaylist(){
     connectFirebase();
     const id=els.savedPlaylistSelect.value; if(!id) return;
-    const snap=await roomRef('savedPlaylists/'+id+'/songs').get();
+    const snap=await userRef('playlists/'+id+'/songs').get();
     let songs=snap.val(); if(!Array.isArray(songs)) songs=Object.values(songs||{});
     if(!songs.length) throw new Error('Spellistan saknar låtar.');
-    await roomRef().update({selectedPlaylistId:id,songBank:songs});
+    const playlist = userPlaylists?.[id] || {};
+    await roomRef().update({selectedPlaylistId:id,selectedPlaylist:{id,ownerId:currentUserId(),name:playlist.name||id,source:playlist.source||'manual',songCount:songs.length},songBank:songs});
     status(els.playlistStatus,'Vald spellista används nu.','ok');
+  }
+  async function addPlaylistToMix(){
+    connectFirebase();
+    try{
+      const id=els.savedPlaylistSelect?.value;
+      if(!id) throw new Error('Välj en spellista först.');
+      const snap=await userRef('playlists/'+id).get();
+      const playlist=snap.val() || userPlaylists?.[id] || {};
+      let songs=playlist.songs;
+      if(!Array.isArray(songs)) songs=Object.values(songs||{});
+      if(!songs.length) throw new Error('Spellistan saknar låtar.');
+      await savePlaylistToRoomMix(id, playlist, songs);
+      status(els.playlistStatus,'Spellistan lades till i den blandade spellistan.','ok');
+    }catch(err){
+      status(els.playlistStatus,'Kunde inte lägga till spellista: '+err.message,'bad');
+    }
   }
 
   function getSongs(){ const s=roomData.songBank; return Array.isArray(s)?s:Object.values(s||{}); }
   async function songsFromSelectedPlaylist(){
     const id=els.savedPlaylistSelect?.value;
     if(!id) return null;
-    const snap=await roomRef('savedPlaylists/'+id+'/songs').get();
+    const snap=await userRef('playlists/'+id+'/songs').get();
     let songs=snap.val();
     if(!Array.isArray(songs)) songs=Object.values(songs||{});
     if(!songs.length) return null;
-    await roomRef().update({selectedPlaylistId:id,songBank:songs});
+    const playlist = userPlaylists?.[id] || {};
+    await roomRef().update({selectedPlaylistId:id,selectedPlaylist:{id,ownerId:currentUserId(),name:playlist.name||id,source:playlist.source||'manual',songCount:songs.length},songBank:songs});
     return songs;
   }
   async function startGame(){
     connectFirebase();
     const hostId = roomData?.meta?.hostId || '';
     if(hostId !== player.id){ status(els.gameStatus,'Endast host kan starta spelet.','bad'); return; }
-    const selectedSongs = await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
+    const hasPlaylistMix = Object.keys(roomData.playlistMix || {}).length > 0;
+    const selectedSongs = hasPlaylistMix ? null : await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
     const songs=selectedSongs || getSongs(); if(!songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
     const players=activePlayersFrom(roomData.players || {});
     if(!players.length){ await upsertPlayer(); }
@@ -453,7 +551,7 @@ import { createRenderer } from './ui/render.js';
   }
   async function endGame(){
     connectFirebase();
-    const updates = {'game':null,'songBank':null,'selectedPlaylistId':null,'playlistImportDebug':null};
+    const updates = {'game':null,'songBank':null,'selectedPlaylistId':null,'selectedPlaylist':null,'playlistMix':null,'playlistImportDebug':null};
     const players = roomData.players || {};
     Object.keys(players).forEach(id => { updates['players/'+id+'/timeline'] = []; updates['players/'+id+'/score'] = 0; updates['players/'+id+'/ready'] = false; updates['players/'+id+'/activeProposal'] = null; });
     await roomRef().update(updates);
@@ -462,7 +560,7 @@ import { createRenderer } from './ui/render.js';
 
   async function resetRoom(){
     connectFirebase();
-    if(!confirm('Resetta rummet? Detta tar bort spel, spelare och sparade spellistor i lobby '+activeRoomId+'.')) return;
+    if(!confirm('Resetta rummet? Detta tar bort spel och spelare i lobby '+activeRoomId+'. Dina sparade spellistor finns kvar.')) return;
     await roomRef().remove(); roomData={}; await upsertPlayer({timeline:[],score:0}); status(els.connectionStatus,'Rummet är återställt.','ok');
   }
 
@@ -470,6 +568,7 @@ import { createRenderer } from './ui/render.js';
     els,
     uiState,
     getRoomData:()=>roomData,
+    getUserPlaylists:()=>userPlaylists,
     getPlayer:()=>player,
     getDb:()=>db,
     redirectUri,
@@ -566,6 +665,7 @@ import { createRenderer } from './ui/render.js';
     els.createDemoBtn.onclick=createDemo;
     els.refreshPlaylistsBtn.onclick=refreshPlaylists;
     els.selectPlaylistBtn.onclick=selectPlaylist;
+    if(els.addPlaylistBtn) els.addPlaylistBtn.onclick=addPlaylistToMix;
     els.startGameBtn.onclick=()=>{ if(roomData?.game?.status==='playing') endGame(); else startGame(); };
     els.drawCardBtn.onclick=drawCard;
     els.confirmPlacementBtn.onclick=confirmPlacement;
