@@ -1,10 +1,10 @@
-﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v77';
+import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v80';
 import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v77';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v77';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v80';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v80';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v77';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v80';
 
 export function createRenderer(ctx){
   const {
@@ -225,8 +225,9 @@ export function createRenderer(ctx){
       return;
     }
     const choices = Array.isArray(game.choices) ? game.choices : Object.values(game.choices || {});
-    const answered = Object.keys(game.answers || {}).length;
-    const total = activePlayersFrom(data.players || {}).length || 1;
+    const answerPlayers = quizAnswerPlayers(data);
+    const answered = answerPlayers.filter(p => !!game.answers?.[p.id]).length;
+    const total = answerPlayers.length || 1;
     const timeText = quizTimeText(game);
     const progress = Math.max(0, Math.min(100, Math.round((answered / total) * 100)));
     if(partyView && isHost){
@@ -262,6 +263,14 @@ export function createRenderer(ctx){
   function normalizedQuizType(mode){
     return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
   }
+  function quizAnswerPlayers(data=getRoomData()){
+    const players = activePlayersFrom(data.players || {});
+    const hostId = data?.meta?.hostId || '';
+    const game = data?.game || {};
+    const settings = data?.settings || {};
+    const partyMasterMode = game.partyModeEnabled === true || settings.partyModeEnabled === true || settings.gameMode === 'party';
+    return partyMasterMode ? players.filter(p => p.id !== hostId) : players;
+  }
   function quizTimeText(game){
     if(game?.reveal) return '';
     const deadline = Number(game?.answerDeadline || 0);
@@ -290,7 +299,7 @@ export function createRenderer(ctx){
     const wrong = isWrongRevealActive();
     const canDrag=isMeActive() && !wrong;
     const div=document.createElement('div'); div.className='drawCard'+(wrong?'':' '+cardVisibilityClass())+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
-    const yearText = wrong ? ('Fel placering · '+esc(card.year)) : 'Årtal dolt';
+    const yearText = wrong ? ('Fel placering - '+esc(card.year)) : 'ärtal dolt';
     const timeText = quizTimeText(getRoomData()?.game || {});
     div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>'+(timeText?'<div class="quizTimerPill">'+esc(timeText)+'</div>':'')+'</div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
@@ -326,7 +335,7 @@ export function createRenderer(ctx){
     if(!timeline.length && !card) els.activeTimeline.innerHTML='<p class="small">Tidslinjen är tom.</p>';
   }
   function makeDropSlot(index,selected,isEmptyTimeline){
-    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera första kortet här':'Placera här'; slot.dataset.index=index;
+    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera färsta kortet här':'Placera här'; slot.dataset.index=index;
     slot.addEventListener('click',()=>setProposedIndex(index));
     slot.addEventListener('dragover',e=>{ if(isMeActive() && currentCard()){ e.preventDefault(); slot.classList.add('active'); }});
     slot.addEventListener('dragleave',()=>slot.classList.remove('active'));
@@ -339,7 +348,7 @@ export function createRenderer(ctx){
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
     if(card.status==='proposed' && isMeActive() && currentCard() && !isWrongRevealActive()){
-      div.title='Dra kortet igen för att placera om det';
+      div.title='Dra kortet igen fär att placera om det';
       bindCardPointerDrag(div, currentCard());
     }
     return div;

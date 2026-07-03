@@ -1347,3 +1347,161 @@
       }
     }
 
+
+    /* v80: quiz-resultat som planetbåge runt solens osynliga omloppscirkel */
+    .quizResultsScene .planetSun{
+      left:50%!important;
+      top:52%!important;
+      width:min(38vmin,360px)!important;
+      height:min(38vmin,360px)!important;
+      transform:translate(-50%,-50%)!important;
+      box-shadow:0 0 92px rgba(255,138,24,.42)!important;
+    }
+
+    .quizResultsScene .planetOrbit{
+      left:50%!important;
+      top:52%!important;
+      width:min(68vmin,660px)!important;
+      height:min(68vmin,660px)!important;
+      transform:translate(-50%,-50%)!important;
+      opacity:.28!important;
+      border-color:rgba(255,255,255,.2)!important;
+    }
+
+    .quizResultsScene .planetOrbit2{
+      width:min(82vmin,790px)!important;
+      height:min(82vmin,790px)!important;
+      opacity:.16!important;
+    }
+
+    .quizResultsScene .planetOrbit3{
+      width:min(96vmin,920px)!important;
+      height:min(96vmin,920px)!important;
+      opacity:.1!important;
+    }
+
+    .quizResultsScene .planetResultsTitle{
+      margin-bottom:0!important;
+    }
+
+    .quizResultsScene .planetList{
+      position:absolute!important;
+      left:50%!important;
+      top:52%!important;
+      width:min(82vmin,790px)!important;
+      height:min(82vmin,790px)!important;
+      margin:0!important;
+      padding:0!important;
+      transform:translate(-50%,-50%)!important;
+      display:block!important;
+      z-index:5!important;
+      pointer-events:none!important;
+    }
+
+    .quizResultsScene .planetResult{
+      position:absolute!important;
+      left:50%!important;
+      top:50%!important;
+      width:min(360px,38vw)!important;
+      min-height:0!important;
+      display:grid!important;
+      grid-template-columns:92px minmax(0,1fr)!important;
+      grid-template-areas:
+        "planet text"
+        "planet timeline"!important;
+      gap:6px 16px!important;
+      align-items:center!important;
+      transform:
+        translate(-50%,-50%)
+        rotate(var(--quiz-angle))
+        translateX(var(--quiz-radius))
+        rotate(calc(-1 * var(--quiz-angle)))!important;
+      pointer-events:auto!important;
+    }
+
+    .quizResultsScene .planetResult{
+      --quiz-radius:min(41vmin,395px);
+      --quiz-angle:-90deg;
+    }
+
+    .quizResultsScene .planetShape{
+      grid-area:planet!important;
+    }
+
+    .quizResultsScene .planetResultText{
+      grid-area:text!important;
+      align-self:end!important;
+      border-radius:18px!important;
+      padding:10px 12px!important;
+      background:rgba(2,6,23,.52)!important;
+      backdrop-filter:blur(10px)!important;
+    }
+
+    .quizResultsScene .planetResultText small{
+      margin-left:44px!important;
+    }
+
+    .quizResultsScene .planetPlayerTimeline{
+      grid-area:timeline!important;
+      display:block!important;
+      padding:0!important;
+      overflow:visible!important;
+    }
+
+    .quizResultsScene .quizCorrectCount{
+      display:inline-flex!important;
+      align-items:center!important;
+      min-height:30px!important;
+      padding:7px 11px!important;
+      border-radius:999px!important;
+      background:rgba(245,255,61,.16)!important;
+      color:#f5ff3d!important;
+      border:1px solid rgba(245,255,61,.3)!important;
+      white-space:nowrap!important;
+    }
+
+    @media(max-width:900px){
+      .quizResultsScene{
+        overflow:auto!important;
+        padding-bottom:40px!important;
+      }
+
+      .quizResultsScene .planetSun{
+        top:46%!important;
+        width:min(48vmin,280px)!important;
+        height:min(48vmin,280px)!important;
+      }
+
+      .quizResultsScene .planetList{
+        position:relative!important;
+        left:auto!important;
+        top:auto!important;
+        width:min(520px,calc(100vw - 36px))!important;
+        height:auto!important;
+        margin:28px auto 0!important;
+        display:grid!important;
+        gap:14px!important;
+        transform:none!important;
+      }
+
+      .quizResultsScene .planetResult{
+        position:relative!important;
+        left:auto!important;
+        top:auto!important;
+        width:100%!important;
+        grid-template-columns:70px 1fr!important;
+        grid-template-areas:
+          "planet text"
+          "planet timeline"!important;
+        transform:none!important;
+      }
+
+      .quizResultsScene .planetResultText{
+        padding:8px 10px!important;
+      }
+
+      .quizResultsScene .planetResultText small{
+        margin-left:38px!important;
+      }
+    }
+

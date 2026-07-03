@@ -1,4 +1,4 @@
-﻿import { WIN_SCORE } from '../config.js';
+import { WIN_SCORE } from '../config.js';
 import { cardId, esc, lockedCount, pendingCount, timelineOf } from '../utils/helpers.js';
 
 export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb, isHost=false }){
@@ -37,7 +37,7 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
   if(existingScene && existingScene.dataset.resultKey === resultKey) return;
 
   const scene=document.createElement('section');
-  scene.className='planetResultsScene';
+  scene.className='planetResultsScene'+(isPartyGame ? ' quizResultsScene' : '');
   scene.dataset.resultKey=resultKey;
   scene.innerHTML=
     '<div class="planetStars"></div>'+
@@ -63,14 +63,23 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
     const item=document.createElement('article');
     item.className='planetResult planetRank'+rank+(roomData?.game?.winnerId===p.id?' winner':'');
     item.style.setProperty('--player-rgb', playerRgb(p.id));
+    if(isPartyGame){
+      const centerAngle = -90;
+      const spread = sortedPlayers.length <= 1 ? 0 : Math.min(260, (sortedPlayers.length - 1) * 58);
+      const startAngle = centerAngle - (spread / 2);
+      const angle = sortedPlayers.length <= 1 ? centerAngle : startAngle + (spread * i / (sortedPlayers.length - 1));
+      item.style.setProperty('--quiz-angle', angle+'deg');
+    }
     const tl = timelineOf(p).slice().sort((a,b)=>(Number(a.year)||0)-(Number(b.year)||0));
-    const timelineHtml = tl.length
-      ? tl.map(c=>{
-          const cover = coverForCard(c);
-          const img = cover ? '<img src="'+esc(cover)+'" alt="" loading="lazy">' : '';
-          return '<div class="planetTimelineCard '+esc(c.status||'locked')+'">'+img+'<span>'+esc(String(c.year || '?'))+'</span></div>';
-        }).join('')
-      : '<p class="planetTimelineEmpty">Ingen tidslinje</p>';
+    const timelineHtml = isPartyGame
+      ? '<p class="planetTimelineEmpty quizCorrectCount">'+playerScore(p)+' rätt i Quiz-mode</p>'
+      : (tl.length
+        ? tl.map(c=>{
+            const cover = coverForCard(c);
+            const img = cover ? '<img src="'+esc(cover)+'" alt="" loading="lazy">' : '';
+            return '<div class="planetTimelineCard '+esc(c.status||'locked')+'">'+img+'<span>'+esc(String(c.year || '?'))+'</span></div>';
+          }).join('')
+        : '<p class="planetTimelineEmpty">Ingen tidslinje</p>');
 
     item.innerHTML=
       '<div class="planetShape" aria-hidden="true"><span></span></div>'+
@@ -78,7 +87,7 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
         '<div><strong>'+rank+'</strong><b>'+esc(p.name||'Spelare')+'</b></div>'+
         '<small>'+(isPartyGame ? (playerScore(p)+' poäng') : (lockedCount(p)+'/'+WIN_SCORE+' låsta kort'))+'</small>'+
       '</div>'+
-      '<div class="planetPlayerTimeline" aria-label="Tidslinje för '+esc(p.name||'Spelare')+'">'+timelineHtml+'</div>';
+      '<div class="planetPlayerTimeline" aria-label="'+(isPartyGame ? 'Quizresultat för ' : 'Tidslinje för ')+esc(p.name||'Spelare')+'">'+timelineHtml+'</div>';
     list.appendChild(item);
   });
 

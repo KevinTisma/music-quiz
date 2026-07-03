@@ -1,12 +1,12 @@
-﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v77';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v80';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v77';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v77';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v80';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v80';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v77';
+import { createRenderer } from './ui/render.js?v=active-room-start-v80';
 
 (() => {
   'use strict';
@@ -73,6 +73,13 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   function isPartyModeEnabled(){
     const settings = roomData?.settings || {};
     return settings.partyModeEnabled === true || settings.gameMode === 'party';
+  }
+  function quizAnswerPlayers(data=roomData){
+    const players = activePlayersFrom(data.players || {});
+    const game = data.game || {};
+    const hostId = data.meta?.hostId || '';
+    const partyMasterMode = game.partyModeEnabled === true || data.settings?.partyModeEnabled === true || data.settings?.gameMode === 'party';
+    return partyMasterMode ? players.filter(p => p.id !== hostId) : players;
   }
   function selectedGameTimerSeconds(){
     const value = Number(roomData?.settings?.gameTimerSeconds ?? roomData?.settings?.quizTimerSeconds ?? els.quizTimerSelect?.value ?? 0);
@@ -186,7 +193,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   }
   function roomRef(path=''){ if(!db) connectFirebase(); return getRoomRef(db, path, activeRoomId); }
   function userRef(path=''){ if(!db) connectFirebase(); return getUserRef(db, currentUserId(), path); }
-  function requireHost(message='Endast host kan göra detta.'){
+  function requireHost(message='Endast host kan gära detta.'){
     const hostId = roomData?.meta?.hostId || '';
     if(hostId === player.id) return true;
     status(els.gameStatus, message, 'bad');
@@ -272,7 +279,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     activeRoomId = ROOM_ID;
     syncRoomUrl();
     updateStartScreen();
-    status(els.startStatus,'Lobbyn är avslutad. Skapa en ny lobby för att spela igen.','warn');
+    status(els.startStatus,'Lobbyn är avslutad. Skapa en ny lobby fär att spela igen.','warn');
   }
   function listenRoom(){
     if(roomListenerRef) return;
@@ -438,7 +445,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   }
   async function testSpotifyConnection(){
     try{
-      if(!validToken(readToken())) throw new Error('Koppla Spotify först.');
+      if(!validToken(readToken())) throw new Error('Koppla Spotify färst.');
       const profile = await spotifyFetch('/me');
       applySpotifyProfile(profile);
       await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
@@ -460,15 +467,15 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   async function importPlaylist(){
     const btn = els.importPlaylistBtn;
     try{
-      const pid=playlistIdFromInput(els.playlistInput.value); if(!pid) throw new Error('Klistra in en Spotify-spellista först.');
+      const pid=playlistIdFromInput(els.playlistInput.value); if(!pid) throw new Error('Klistra in en Spotify-spellista färst.');
       const appName=(els.playlistNameInput?.value || '').trim();
-      if(!appName) throw new Error('Skriv ett namn för spellistan i appen först.');
+      if(!appName) throw new Error('Skriv ett namn fär spellistan i appen färst.');
       const limit=50;
       let offset=0;
       let total=null;
       const songs=[];
       if(btn) btn.disabled = true;
-      status(els.playlistStatus,'Importerar hela spellistan. Hämtar första 50 låtarna...', 'warn');
+      status(els.playlistStatus,'Importerar hela spellistan. Hämtar färsta 50 låtarna...', 'warn');
       // Spotify ändrade playlist-endpointen 2026: /tracks är borttagen i Development Mode.
       // Den nya endpointen är /items och själva låten ligger i item i stället för track.
       while(total === null || offset < total){
@@ -479,10 +486,10 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
         const pageSongs=pageItems.map((it,i)=>normalizeTrack(it.item || it.track,offset+i)).filter(Boolean);
         songs.push(...pageSongs);
         offset += pageItems.length;
-        status(els.playlistStatus,'Importerar '+Math.min(offset,total || offset)+'/'+(total || '?')+' poster från Spotify. '+songs.length+' låtar med årtal hittade...', 'warn');
+        status(els.playlistStatus,'Importerar '+Math.min(offset,total || offset)+'/'+(total || '?')+' poster från Spotify. '+songs.length+' låtar med ärtal hittade...', 'warn');
         if(!pageItems.length) break;
       }
-      if(!songs.length) throw new Error('Hittade inga låtar med årtal i spellistan.');
+      if(!songs.length) throw new Error('Hittade inga låtar med ärtal i spellistan.');
       await savePlaylist(pid,appName.slice(0,48),songs,'spotify');
       status(els.playlistStatus,'Sparade "'+appName.slice(0,48)+'" med '+songs.length+' låtar. Välj den i listan och tryck + för att lägga till den i rummet.','ok');
     }catch(err){ console.error('[playlist-import]',err); status(els.playlistStatus,'Kunde inte importera: '+err.message,'bad'); }
@@ -567,7 +574,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   }
   async function selectPlaylist(){
     connectFirebase();
-    if(!requireHost('Endast host kan välja spellista för spelet.')) return;
+    if(!requireHost('Endast host kan välja spellista fär spelet.')) return;
     const id=els.savedPlaylistSelect.value; if(!id) return;
     const snap=await userRef('playlists/'+id+'/songs').get();
     let songs=snap.val(); if(!Array.isArray(songs)) songs=Object.values(songs||{});
@@ -580,7 +587,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     connectFirebase();
     try{
       const id=els.savedPlaylistSelect?.value;
-      if(!id) throw new Error('Välj en spellista först.');
+      if(!id) throw new Error('Välj en spellista färst.');
       const snap=await userRef('playlists/'+id).get();
       const playlist=snap.val() || userPlaylists?.[id] || {};
       let songs=playlist.songs;
@@ -625,10 +632,14 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
       if(id && !fromDeck.some(choice => choice.id === id)) fromDeck.push({id, name:song.ownerName || 'Spelare'});
     });
     const active = players.map(p => ({id:p.id, name:p.name || 'Spelare'}));
-    return (fromDeck.length ? fromDeck : active).slice(0,8);
+    const choices = [...active];
+    fromDeck.forEach(choice => {
+      if(!choices.some(activeChoice => activeChoice.id === choice.id)) choices.push(choice);
+    });
+    return choices.slice(0,8);
   }
   async function songsFromSelectedPlaylist(){
-    if(!requireHost('Endast host kan välja spellista för spelet.')) return null;
+    if(!requireHost('Endast host kan välja spellista fär spelet.')) return null;
     const id=els.savedPlaylistSelect?.value;
     if(!id) return null;
     const snap=await userRef('playlists/'+id+'/songs').get();
@@ -646,8 +657,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     const hasPlaylistMix = Object.keys(roomData.playlistMix || {}).length > 0;
     const selectedSongs = hasPlaylistMix ? null : await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
     const songs=selectedSongs || getSongs();
-    if(gameMode === 'quiz' && !hasPlaylistMix && !songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
-    if(gameMode !== 'quiz' && !songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
+    if(gameMode === 'quiz' && !hasPlaylistMix && !songs.length){ status(els.gameStatus,'Välj eller skapa en spellista färst.','bad'); return; }
+    if(gameMode !== 'quiz' && !songs.length){ status(els.gameStatus,'Välj eller skapa en spellista färst.','bad'); return; }
     const players=activePlayersFrom(roomData.players || {});
     if(!players.length){ await upsertPlayer(); }
     const allPlayers=activePlayersFrom((await roomRef('players').get()).val()||{});
@@ -661,7 +672,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     updates['meta/updatedAt']=serverTimestamp();
     updates['meta/updatedBy']=player.id;
     updates['meta/status']='playing';
-    updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,answerDeadline:null,gameTimerSeconds:selectedGameTimerSeconds(),message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
+    updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,answerDeadline:null,gameTimerSeconds:selectedGameTimerSeconds(),message:'Spelet startat. Aktiv spelare drar färsta kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
     await roomRef().update(updates);
   }
   async function startQuizGame(allPlayers){
@@ -690,7 +701,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     }
     if(!isMeActive()) return;
     const game=roomData.game||{};
-    if(game.currentCard){ status(els.gameStatus,'Placera och bekräfta det aktuella kortet först.','warn'); return; }
+    if(game.currentCard){ status(els.gameStatus,'Placera och bekräfta det aktuella kortet färst.','warn'); return; }
     const deck=Array.isArray(game.deck)?[...game.deck]:[];
     if(!deck.length){ status(els.gameStatus,'Kortleken är slut. Lås in eller starta om.','warn'); return; }
     const card=deck.shift();
@@ -729,7 +740,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     const game = roomData?.game || {};
     if(!isQuizGame() || game.status !== 'playing' || !game.currentCard || game.reveal || quizAutoRevealInProgress) return;
     if(roomData?.meta?.hostId !== player.id) return;
-    const players = activePlayersFrom(roomData.players || {});
+    const players = quizAnswerPlayers();
     const total = players.length || 1;
     const answered = Object.keys(game.answers || {}).length;
     const deadline = Number(game.answerDeadline || 0);
@@ -767,7 +778,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     const deck = [...(Array.isArray(game.deck)?game.deck:[]), ...shuffle(returnCards)];
     const nextId = nextPlayerId(activeId);
     const until = Date.now() + 5000;
-    await roomRef('game').update({wrongReveal:{card:{...game.currentCard,status:'wrong'},playerId:activeId,until,year:game.currentCard.year},answerDeadline:null,message:'Tiden gick ut. Rätt år var '+game.currentCard.year+'. Nästa spelares tur om 5 sekunder.'});
+    await roomRef('game').update({wrongReveal:{card:{...game.currentCard,status:'wrong'},playerId:activeId,until,year:game.currentCard.year},answerDeadline:null,message:'Tiden gick ut. Rätt är var '+game.currentCard.year+'. Nästa spelares tur om 5 sekunder.'});
     setTimeout(async()=>{
       const snap = await roomRef('game/wrongReveal').get();
       const wr = snap.val();
@@ -803,8 +814,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   async function confirmPlacement(){
     if(!isMeActive()) return;
     const game=roomData.game||{}, card=game.currentCard, idx=proposedIndex();
-    if(!card){ status(els.gameStatus,'Dra ett kort först.','warn'); return; }
-    if(idx===null){ status(els.gameStatus,'Dra kortet till en plats i tidslinjen först.','warn'); return; }
+    if(!card){ status(els.gameStatus,'Dra ett kort färst.','warn'); return; }
+    if(idx===null){ status(els.gameStatus,'Dra kortet till en plats i tidslinjen färst.','warn'); return; }
     const me=roomData.players?.[player.id]||{};
     const timeline=timelineOf(me);
     const proposed=timelineWithProposal(timeline,card,idx);
@@ -820,8 +831,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
       const deck=[...(Array.isArray(game.deck)?game.deck:[]),...shuffle(returnCards)];
       const nextId = nextPlayerId(player.id);
       const until = Date.now() + 5000;
-      await roomRef('game').update({wrongReveal:{card:{...card,status:'wrong'},playerId:player.id,until,year:card.year},message:'Fel placering. Rätt år var '+card.year+'. Nästa spelares tur om 5 sekunder.'});
-      status(els.gameStatus,'Fel. Rätt år var '+card.year+'. Du förlorar gula kort från rundan.','bad');
+      await roomRef('game').update({wrongReveal:{card:{...card,status:'wrong'},playerId:player.id,until,year:card.year},message:'Fel placering. Rätt är var '+card.year+'. Nästa spelares tur om 5 sekunder.'});
+      status(els.gameStatus,'Fel. Rätt är var '+card.year+'. Du färlorar gula kort från rundan.','bad');
       setTimeout(async()=>{
         const snap = await roomRef('game/wrongReveal').get();
         const wr = snap.val();
@@ -833,7 +844,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   async function lockIn(){
     if(!isMeActive()) return;
     const game=roomData.game||{}, me=roomData.players?.[player.id]||{};
-    if(game.currentCard){ status(els.gameStatus,'Placera aktuellt kort först, eller bekräfta fel/rätt.','warn'); return; }
+    if(game.currentCard){ status(els.gameStatus,'Placera aktuellt kort färst, eller bekräfta fel/rätt.','warn'); return; }
     const timeline=timelineOf(me);
     if(!timeline.some(c=>c.status==='pending')){ status(els.gameStatus,'Du har inga gula kort att låsa in. Dra ett kort eller passa turen.','warn'); return; }
     const locked=timeline.map(c=>({...c,status:'locked'}));
@@ -869,7 +880,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
   }
   async function returnToLobbySettings(){
     connectFirebase();
-    if(!requireHost('Endast host kan ändra spelinställningar.')) return;
+    if(!requireHost('Endast host kan Ändra spelinställningar.')) return;
     const updates = {'game':null,'meta/status':'lobby','meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id};
     Object.keys(roomData.players || {}).forEach(id => {
       updates['players/'+id+'/timeline'] = [];
@@ -884,7 +895,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     connectFirebase();
     if(lobbyCleanupInProgress) return;
     if(reason === 'manual' && !requireHost('Endast host kan avsluta lobbyn.')) return;
-    if(reason === 'manual' && !confirm('Avsluta lobbyn? Detta tar bort rummet för alla spelare.')) return;
+    if(reason === 'manual' && !confirm('Avsluta lobbyn? Detta tar bort rummet fär alla spelare.')) return;
     lobbyCleanupInProgress = true;
     const ref = roomRef();
     if(lobbyCleanupTimer){ clearTimeout(lobbyCleanupTimer); lobbyCleanupTimer = null; }
@@ -1034,7 +1045,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     };
     if(els.joinLobbyBtn) els.joinLobbyBtn.onclick=async()=>{
       const code = normalizeRoomId(els.lobbyCodeInput?.value || '');
-      if(code === ROOM_ID){ status(els.startStatus,'Skriv en lobbykod först.','warn'); return; }
+      if(code === ROOM_ID){ status(els.startStatus,'Skriv en lobbykod färst.','warn'); return; }
       await savePlayerNameFromStart();
       if(!await roomExists(code)){ status(els.startStatus,'Hittar ingen lobby med kod '+code+'.','bad'); return; }
       await switchRoom(code, false);
@@ -1054,7 +1065,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v77';
     if(els.enterGameBtn) els.enterGameBtn.onclick=async()=>{
       await savePlayerNameFromStart();
       if(!roomData?.meta?.hostId && !await roomExists(activeRoomId)){
-        status(els.startStatus,'Skapa en lobby eller gå med med en kod först.','warn');
+        status(els.startStatus,'Skapa en lobby eller gå med med en kod färst.','warn');
         return;
       }
       localStorage.setItem(LS.startDone,'1');

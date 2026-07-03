@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v74`
+- `timeline-game-v80`
 
 PWA-version byggd från:
 
@@ -119,15 +119,37 @@ Party-polish / hårdtest påbörjat 2026-07-02:
 - v68: modeknapparna, inklusive `Party-mode`, är klickbara för host när rummets `meta/status` är `lobby`; edit-låsningen går nu på lobby-status i stället för enbart `game/status`, som kunde ligga kvar/störa efter testspel.
 - v69: fixat mojibake/encoding i spel-UI:t så svenska tecken och punktseparatorer i timeline, knappar, statusar och resultat visas korrekt.
 - v70: startskärmens lobbydel byter till Aktivt Rum: <kod> när spelaren redan skapat eller gått med i en lobby; skapa/gå-med-kontrollerna göms för att undvika att samma spelare råkar skapa nya rum i loop.
+- v79: Party `Vems låt` är omtestat efter senaste polish. Cache-brytare är uppdaterad till `active-room-start-v79` och appversion till `timeline-game-v79`.
+- v80: Quiz-slutskärmen visar inte längre `Ingen tidslinje`; den visar antal rätt i Quiz-mode. Quiz-resultat placeras som planeter längs en centrerad båge runt solens osynliga omloppscirkel, och bågen expanderar symmetriskt från mitten oavsett antal spelare.
 
-Kvar efter avbrutet hårdtest:
+Party `Vems låt` verifierat 2026-07-03:
 
-- verifiera från ett helt färskt rum att `Runda 1` visas efter första draget
-- verifiera från ett helt färskt rum att hostens svarstatuslista visar `Svarat`/`Väntar` under pågående runda, inte bara poäng efter reveal
-- verifiera slutresultatsvyn för Party efter att hela kortleken tar slut
-- verifiera hostens `Nästa låt` efter sista reveal i liveklienterna
-- köra om host/gäst-testet efter vanlig reload och gärna efter deploy/cache-scenario
-- kontrollera att host-only-funktioner fortfarande nekas för gäster via UI och direkta debug-/funktionsanrop
+- färskt rum `KJQT2` skapades och testades med host + två testgäster mot Firebase
+- `playlistMix` fylldes med tre entries, en per spelare, och användes som kortlek för `Vems låt`
+- första dragna låten visade `Runda 1`
+- hostens Party-vy visade album/status i mitten och vänsterlistan visade poäng + svarstatus
+- gäster räknades korrekt som svarande; host räknas inte längre som nödvändigt svar i Party host-läge
+- auto-reveal fungerade när alla gäster svarat
+- poäng uppdaterades direkt efter reveal
+- `Nästa låt` fungerade genom hela kortleken och sista reveal gick vidare till slutresultat
+- slutresultatet sorterade Party efter poäng: testet gav `Guest B` först med `6 poäng`
+- host-only-flöden är fortsatt skyddade i funktionerna via `requireHost`, inte bara via UI
+- gäst-UI är kodverifierat: `body.partyMode.isGuest` döljer vänsterlista/playlist-area, `utilityMenu` och bottom dock
+- cache-brytaren kontrollerades lokalt: `index.html` och `src` pekar inte längre på gamla v77/v78-strängar
+- svenska tecken kontrollerades efter v79 och trasiga `�`/mojibake-strängar är borta från `index.html` och `src`
+- syntaxkontroll kördes på `src/main.js`, `src/ui/render.js`, `src/ui/player-ui.js` och `src/ui/result-ui.js`
+
+Fixat under v79-testet:
+
+- `Vems låt` behåller nu alla aktiva spelare som svarsalternativ hela rundan. Tidigare kunde alternativen krympa till bara låtägaren sent i leken om bara en spelares låtar återstod i decken.
+- versions-/cache-bumpen skrevs om som UTF-8 och svenska UI-strängar återställdes efter att några tecken råkat bli ersättningstecken.
+
+Kvar efter v79-testet:
+
+- kör ett riktigt test med 2-3 separata browserprofiler/enheter, eftersom senaste testet använde en riktig host-browser och Firebase-injicerade testgäster
+- verifiera deployad/GitHub Pages-miljö efter commit så v79-cachebrytaren verkligen slår igenom utanför lokal server
+- kontrollera guest-begränsningar i en riktig gästbrowser, inklusive att starta/avsluta/resetta inte går via UI
+- testa direkta debug-/funktionsanrop som guest i en riktig gästprofil om debugytan finns tillgänglig där
 - kontrollera att `Årtals Quiz` inte regresserat av Party-score/render-ändringarna
 
 ## Viktig begränsning just nu
@@ -423,15 +445,15 @@ if (mode === 'party-owner') renderPartyOwnerGame();
 
 Nästa kodchatt bör vara:
 
-- Hårdtest och polish av Party-mode + stabilisering av multiplayer/lobby
+- Deploy/verklig klientverifiering efter v79 + stabilisering av multiplayer/lobby
 
 Målet i den chatten:
 
-- testa `Vems låt` med minst 2-3 riktiga klienter
-- verifiera att host kan välja Party och `Vems låt` från lobby, starta runda, visa svar och gå till nästa låt
-- verifiera att gäster i Party-läge bara ser svarsvyn och inte `utilityMenu`
-- verifiera att poäng delas ut korrekt när hosten visar svaret
-- förbättra host-TV-vyn och slutresultatsvyn för Party
+- deploya/committa v79 och verifiera att cache-brytaren slår igenom på GitHub Pages
+- testa `Vems låt` med minst 2-3 riktiga browserprofiler/enheter
+- verifiera gäst-UI i riktig gästbrowser: bara svarsvy, ingen vänsterlista, inget `utilityMenu`
+- verifiera att guest inte kan starta/avsluta/resetta via UI eller direkta debug-/funktionsanrop
+- förbättra host-TV-vyn om den fortfarande känns för stor eller har överflödiga knappar
 - färdigställa/polisha `Årtals Quiz`
 - hårdtesta beta-reglerna för `users/{userId}/playlists` och `rooms/{roomId}`
 - bestäm exakt policy för room-livslängd och serverstyrd cleanup
@@ -446,7 +468,7 @@ Målet i den chatten:
 
 Prio 1:
 
-- hårdtesta Party `Vems låt` med flera klienter, inklusive host/gäst-UI och poäng
+- verifiera Party `Vems låt` i riktig deployad miljö med 2-3 separata browserprofiler/enheter efter v79
 
 Prio 2:
 
@@ -465,15 +487,11 @@ Prio 5:
 - Firebase Hosting / publik testdeploy
 
 Nästa sak på agendan:
-Fortsätt verifiera Party `Vems låt` efter v64-polish:
+Fortsätt från v79-verifieringen:
 
-- starta ett helt färskt rum med 2-3 klienter
-- låt alla klienter lägga till varsin spellista i `playlistMix`
-- verifiera att första dragna låten visar `Runda 1`
-- verifiera att gäster i Party-läge bara ser svarsvyn, utan vänsterlista och utan `utilityMenu`
-- verifiera att hostens vänstra lista visar poäng samt vilka spelare som har svarat och vilka som saknas
-- verifiera att poäng visas rätt i UI direkt efter reveal
-- verifiera att `Nästa låt` går vidare korrekt och att sista reveal leder till slutresultat
-- verifiera att slutresultatsvyn sorterar Party efter poäng
-- testa att guest fortfarande inte kan starta/avsluta/resetta via UI eller direkta funktionsanrop
-- kontrollera att cache-brytaren räcker i vanlig browser/deployad miljö
+- committa/deploya v79 och kontrollera GitHub Pages i vanlig browser
+- starta ett nytt rum med 2-3 riktiga klienter/profiler/enheter
+- verifiera att gäster i riktig gästbrowser bara ser svarsvyn, utan vänsterlista och utan `utilityMenu`
+- verifiera att guest inte kan starta/avsluta/resetta via UI i riktig gästbrowser
+- försök direkta debug-/funktionsanrop som guest om debugytan är tillgänglig i profilen
+- kör ett snabbt regressionspass på `Årtals Quiz`
