@@ -1,10 +1,10 @@
-import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v80';
+import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v89';
 import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v80';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v80';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v89';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v89';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v80';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v89';
 
 export function createRenderer(ctx){
   const {
@@ -335,7 +335,7 @@ export function createRenderer(ctx){
     if(!timeline.length && !card) els.activeTimeline.innerHTML='<p class="small">Tidslinjen är tom.</p>';
   }
   function makeDropSlot(index,selected,isEmptyTimeline){
-    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera färsta kortet här':'Placera här'; slot.dataset.index=index;
+    const slot=document.createElement('button'); slot.type='button'; slot.className='dropSlot'+(selected===index?' selected':'')+(isEmptyTimeline?' emptySlot':''); slot.title=isEmptyTimeline?'Placera första kortet här':'Placera här'; slot.dataset.index=index;
     slot.addEventListener('click',()=>setProposedIndex(index));
     slot.addEventListener('dragover',e=>{ if(isMeActive() && currentCard()){ e.preventDefault(); slot.classList.add('active'); }});
     slot.addEventListener('dragleave',()=>slot.classList.remove('active'));
@@ -348,7 +348,7 @@ export function createRenderer(ctx){
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
     if(card.status==='proposed' && isMeActive() && currentCard() && !isWrongRevealActive()){
-      div.title='Dra kortet igen fär att placera om det';
+      div.title='Dra kortet igen för att placera om det';
       bindCardPointerDrag(div, currentCard());
     }
     return div;
@@ -432,6 +432,10 @@ export function createRenderer(ctx){
     if(els.quizTimerSelect){
       els.quizTimerSelect.value = String(settings.gameTimerSeconds ?? settings.quizTimerSeconds ?? 0);
       els.quizTimerSelect.disabled = !canEditHostSettings;
+    }
+    if(els.quizSongLimitSelect){
+      els.quizSongLimitSelect.value = String(settings.quizSongLimit ?? 'all');
+      els.quizSongLimitSelect.disabled = !canEditHostSettings || selectedMode !== 'quiz';
     }
     if(els.selectedPlaylistList){
       if(!entries.length){

@@ -1,43 +1,326 @@
-﻿.startScreen{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px;background:rgba(8,13,25,.92);overflow:auto}
+.startScreen{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  display:grid;
+  place-items:center;
+  padding:24px;
+  background:transparent;
+  overflow:auto;
+}
 .startScreen.hidden{display:none!important}
-.startBackdrop{position:fixed;inset:0;background:radial-gradient(circle at 20% 15%,rgba(125,211,252,.24),transparent 24rem),radial-gradient(circle at 82% 22%,rgba(64,217,139,.18),transparent 26rem),linear-gradient(135deg,#080d19,#151827 58%,#1b1225)}
-.startPanel{position:relative;width:min(1040px,100%);display:grid;grid-template-columns:minmax(260px,.9fr) minmax(320px,1.25fr);gap:18px;align-items:stretch}
-.startHero,.startSteps,.startFooter{border:1px solid var(--border);background:rgba(19,26,43,.88);backdrop-filter:blur(18px);box-shadow:var(--shadow)}
-.startHero{border-radius:28px;padding:34px;display:flex;flex-direction:column;justify-content:flex-end;min-height:520px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(19,26,43,.90)),repeating-linear-gradient(135deg,rgba(125,211,252,.12),rgba(125,211,252,.12) 18px,rgba(250,204,21,.10) 18px,rgba(250,204,21,.10) 36px,rgba(255,75,160,.10) 36px,rgba(255,75,160,.10) 54px)}
-.startKicker{width:max-content;border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:7px 11px;background:rgba(0,0,0,.18);color:var(--text);font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-.startHero h1{margin:18px 0 10px;font-size:clamp(2.4rem,5vw,5.2rem);line-height:.86;letter-spacing:0;font-weight:950}
-.startHero p{margin:0;color:rgba(245,247,251,.82);font-size:1rem;line-height:1.45;max-width:34rem}
-.startSteps{border-radius:28px;padding:16px;display:grid;gap:12px}
-.startStep{display:grid;grid-template-columns:42px 1fr;gap:13px;padding:16px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.045);border-radius:18px}
-.stepNumber{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),var(--ok));color:#07111d;font-weight:950}
-.startStep h2{margin:0 0 10px;font-size:1.05rem}
+.startBackdrop{
+  position:fixed;
+  inset:0;
+  background:radial-gradient(ellipse at center,rgba(8,13,25,.74) 0 34%,rgba(8,13,25,.50) 58%,rgba(8,13,25,.25) 100%);
+  backdrop-filter:blur(12px) saturate(.82);
+}
+.startBackdrop::before{
+  content:'';
+  position:absolute;
+  inset:-12%;
+  background:
+    radial-gradient(circle at 4% 18%,rgba(255,75,160,.34) 0 14rem,transparent 20rem),
+    radial-gradient(circle at 96% 10%,rgba(37,99,235,.30) 0 15rem,transparent 21rem),
+    radial-gradient(circle at 18% 98%,rgba(110,231,183,.24) 0 12rem,transparent 19rem),
+    radial-gradient(circle at 90% 90%,rgba(124,29,255,.28) 0 14rem,transparent 21rem);
+  mask-image:radial-gradient(circle at 50% 50%,transparent 0 32%,rgba(0,0,0,.22) 48%,#000 76%);
+  filter:blur(34px);
+  opacity:.7;
+}
+.startBackdrop::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(ellipse at center,rgba(8,13,25,.72) 0 34%,rgba(8,13,25,.34) 62%,transparent 100%);
+  opacity:.85;
+}
+.startPanel{
+  position:relative;
+  width:min(1100px,100%);
+  display:grid;
+  grid-template-columns:minmax(300px,.92fr) minmax(340px,1.25fr);
+  gap:20px;
+  align-items:stretch;
+}
+.startHero,.startSteps,.startFooter{
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(11,17,32,.76);
+  backdrop-filter:blur(20px);
+  box-shadow:var(--shadow);
+}
+.startHero{
+  position:relative;
+  overflow:hidden;
+  border-radius:28px;
+  padding:36px;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  min-height:560px;
+  background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(11,17,32,.86)),conic-gradient(from 210deg at 48% 40%,#7dd3fc,#c084fc,#ff4ba0,#facc15,#40d98b,#7dd3fc);
+}
+.startHero::before{
+  content:'';
+  position:absolute;
+  inset:18px;
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:22px;
+  pointer-events:none;
+}
+.startHero::after{
+  content:'';
+  position:absolute;
+  left:-18%;
+  right:-18%;
+  top:12%;
+  height:34%;
+  background:repeating-linear-gradient(135deg,rgba(8,13,25,.72) 0 24px,rgba(255,255,255,.12) 24px 48px);
+  transform:rotate(-8deg);
+  mix-blend-mode:soft-light;
+}
+.startHero>*{
+  position:relative;
+  z-index:1;
+}
+.startKicker{
+  width:max-content;
+  max-width:100%;
+  border:1px solid rgba(255,255,255,.28);
+  border-radius:999px;
+  padding:8px 12px;
+  background:rgba(8,13,25,.44);
+  color:#f5ff3d;
+  font-size:.78rem;
+  font-weight:950;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+}
+.startHero h1{
+  margin:18px 0 12px;
+  font-size:clamp(2.55rem,5.4vw,5.6rem);
+  line-height:.88;
+  letter-spacing:0;
+  font-weight:1000;
+  text-wrap:balance;
+}
+.startHero p{
+  margin:0;
+  color:rgba(245,247,251,.88);
+  font-size:1.04rem;
+  line-height:1.45;
+  max-width:34rem;
+}
+.startSteps{
+  border-radius:28px;
+  padding:18px;
+  display:grid;
+  gap:14px;
+}
+.startStep{
+  position:relative;
+  overflow:hidden;
+  display:grid;
+  grid-template-columns:48px 1fr;
+  gap:14px;
+  padding:17px;
+  border:1px solid rgba(255,255,255,.14);
+  background:linear-gradient(135deg,rgba(255,255,255,.10),rgba(255,255,255,.035));
+  border-radius:20px;
+}
+.startStep::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(90deg,rgba(125,211,252,.18),transparent 34%,rgba(192,132,252,.14));
+  opacity:.72;
+  pointer-events:none;
+}
+.startStep>*{
+  position:relative;
+  z-index:1;
+}
+.stepNumber{
+  width:48px;
+  height:48px;
+  border-radius:16px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,var(--accent),var(--ok));
+  color:#07111d;
+  font-weight:1000;
+  box-shadow:0 14px 34px rgba(0,0,0,.24);
+}
+.startStep:nth-child(2) .stepNumber{background:linear-gradient(135deg,#facc15,#ff4ba0)}
+.startStep:nth-child(3) .stepNumber{background:linear-gradient(135deg,#c084fc,#7dd3fc)}
+.startStep h2{
+  margin:0 0 10px;
+  font-size:1.12rem;
+}
 .startStep .small{margin:0 0 10px}
-.startActions{display:flex;flex-wrap:wrap;gap:8px}
-.spotifyConnectedButton{padding:9px 12px;border-radius:12px;border:1px solid rgba(64,217,139,.82);background:transparent;color:var(--ok);font-size:.88rem;font-weight:900}
+.startActions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:9px;
+}
+.startScreen .primary,.startScreen .secondary,.startScreen .success{
+  border:1px solid rgba(255,255,255,.22);
+  font-weight:950;
+  box-shadow:0 12px 28px rgba(0,0,0,.22);
+  transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;
+}
+.startScreen .primary:hover,.startScreen .secondary:hover,.startScreen .success:hover{
+  transform:translateY(-2px);
+  filter:saturate(1.08);
+  box-shadow:0 16px 34px rgba(0,0,0,.28);
+}
+.startScreen .primary{
+  background:linear-gradient(135deg,#7dd3fc,#c084fc 52%,#ff4ba0);
+  color:#06111f;
+}
+.startScreen .secondary{
+  background:linear-gradient(135deg,rgba(255,255,255,.15),rgba(125,211,252,.15));
+  color:#f5f7fb;
+}
+.startScreen .success{
+  background:linear-gradient(135deg,#40d98b,#facc15);
+  color:#07111d;
+  border-color:rgba(255,255,255,.28);
+}
+.spotifyConnectedButton{
+  padding:9px 12px;
+  border-radius:12px;
+  border:1px solid rgba(64,217,139,.82);
+  background:rgba(64,217,139,.12);
+  color:var(--ok);
+  font-size:.88rem;
+  font-weight:900;
+}
 .spotifyConnectedButton:disabled{opacity:1;cursor:default}
-.lobbyChoiceGrid{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:end}
-.lobbyChoiceGrid>.success{height:43px}
-.joinLobbyRow{display:grid;grid-template-columns:1fr auto;gap:8px}
-.roomCodeLine{margin:12px 0 0;color:var(--muted);font-size:.86rem}
-.roomCodeLine b{color:var(--text);letter-spacing:.08em}
-.activeRoomLine{display:none;padding:12px 14px;border:1px solid rgba(110,231,183,.35);border-radius:14px;background:rgba(110,231,183,.10);color:var(--text);font-weight:900;align-items:center;justify-content:space-between;gap:12px}
-.activeRoomLine b{color:rgb(110,231,183);font-size:1.05rem}
+.lobbyChoiceGrid{
+  display:grid;
+  grid-template-columns:150px 1fr;
+  gap:10px;
+  align-items:end;
+}
+.lobbyChoiceGrid>.success{height:45px}
+.joinLobbyRow{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+}
+.roomCodeLine{
+  margin:12px 0 0;
+  color:var(--muted);
+  font-size:.86rem;
+}
+.roomCodeLine b{
+  color:var(--text);
+  letter-spacing:.08em;
+}
+.activeRoomLine{
+  display:none;
+  padding:12px 14px;
+  border:1px solid rgba(110,231,183,.45);
+  border-radius:16px;
+  background:linear-gradient(135deg,rgba(110,231,183,.22),rgba(125,211,252,.10));
+  color:var(--text);
+  font-weight:900;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.activeRoomLine b{
+  color:rgb(110,231,183);
+  font-size:1.05rem;
+}
 body.hasActiveRoom .lobbyChoiceGrid{display:none}
 body.hasActiveRoom .activeRoomLine{display:flex}
-.leaveLobbyBtn{min-height:32px;padding:7px 10px;border-radius:10px;font-size:.78rem;white-space:nowrap}
-.lobbyShareBox{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:12px}
+.leaveLobbyBtn{
+  min-height:32px;
+  padding:7px 10px;
+  border-radius:10px;
+  font-size:.78rem;
+  white-space:nowrap;
+}
+.lobbyShareBox{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:8px;
+  align-items:end;
+  margin-top:12px;
+}
 .lobbyShareBox input{font-size:.82rem}
-.lobbyMetaLine{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
-.lobbyPlayers{display:grid;gap:8px;margin-top:12px;max-height:168px;overflow:auto}
-.lobbyPlayer{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:9px 10px;border:1px solid rgba(255,255,255,.10);border-radius:12px;background:rgba(255,255,255,.045)}
-.lobbyPlayerName{font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.lobbyPlayerBadges{display:flex;gap:6px;align-items:center}
-.lobbyPlayerBadges .pill{font-size:.68rem;padding:5px 7px}
-.startFooter{grid-column:2;border-radius:20px;padding:12px 16px;display:flex;gap:12px;justify-content:space-between;align-items:center}
-.startFooter .status{margin:0;min-height:0}
+.lobbyMetaLine{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  align-items:center;
+  margin-top:10px;
+}
+.lobbyPlayers{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+  max-height:168px;
+  overflow:auto;
+}
+.lobbyPlayer{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  padding:9px 10px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:12px;
+  background:rgba(255,255,255,.045);
+}
+.lobbyPlayerName{
+  font-weight:850;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.lobbyPlayerBadges{
+  display:flex;
+  gap:6px;
+  align-items:center;
+}
+.lobbyPlayerBadges .pill{
+  font-size:.68rem;
+  padding:5px 7px;
+}
+.startFooter{
+  grid-column:2;
+  border-radius:20px;
+  padding:13px 16px;
+  display:flex;
+  gap:12px;
+  justify-content:space-between;
+  align-items:center;
+  background:linear-gradient(135deg,rgba(19,26,43,.92),rgba(125,211,252,.13),rgba(192,132,252,.12));
+}
+.startFooter .status{
+  margin:0;
+  min-height:0;
+}
 .startFooter .primary{white-space:nowrap}
 body.startOpen{overflow:hidden}
-body.startOpen .profileArea,body.startOpen .playlistArea{display:none!important}
+body.startOpen::before,
+body.startOpen::after{
+  content:none!important;
+  display:none!important;
+}
+body.startOpen .gameShell,
+body.startOpen .bottomDock,
+body.startOpen .ownTimelineDock,
+body.startOpen .profileArea,
+body.startOpen .playlistArea,
+body.startOpen .playlistMenu,
+body.startOpen .utilityMenu,
+body.startOpen .profileMenu{
+  display:none!important;
+}
 
 body.waitingMode .playlistMenu{
   width:min(1120px,calc(100vw - 32px))!important;
@@ -68,7 +351,7 @@ body.waitingMode .playlistMenu .modeSelector{
 @media(max-width:840px){
   .startScreen{padding:14px}
   .startPanel{grid-template-columns:1fr}
-  .startHero{min-height:260px;padding:26px}
+  .startHero{min-height:300px;padding:26px}
   .startSteps{padding:12px}
   .startFooter{grid-column:auto;flex-direction:column;align-items:stretch}
   .startFooter .primary{width:100%}
@@ -82,7 +365,147 @@ body.waitingMode .playlistMenu .modeSelector{
 }
 
 @media(max-width:520px){
+  .startHero h1{font-size:clamp(2.2rem,15vw,3.6rem)}
   .startStep{grid-template-columns:1fr}
-  .stepNumber{width:34px;height:34px}
+  .stepNumber{width:38px;height:38px;border-radius:13px}
   .joinLobbyRow{grid-template-columns:1fr}
+}
+
+/* v83: renare startvy med solid hero, tydligare input-kontrast och hel footer-knapp */
+.startHero{
+  background:#facc15!important;
+  color:#07111d!important;
+}
+.startHero::after{
+  content:none!important;
+  display:none!important;
+}
+.startHero::before{
+  content:none!important;
+  display:none!important;
+}
+.startHero h1,
+.startHero p{
+  color:#07111d!important;
+}
+.startKicker{
+  display:none!important;
+}
+.stepNumber,
+.startStep:nth-child(2) .stepNumber,
+.startStep:nth-child(3) .stepNumber{
+  background:transparent!important;
+  color:#ffffff!important;
+  border:2px solid rgba(255,255,255,.9)!important;
+  box-shadow:none!important;
+}
+.startStep{
+  background:#182238!important;
+  border-color:rgba(255,255,255,.24)!important;
+}
+.startStep::before{
+  background:none!important;
+}
+.startStep input,
+.startStep select,
+.lobbyShareBox input{
+  background:#07111d!important;
+  border-color:rgba(125,211,252,.42)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.035)!important;
+}
+.startStep input:focus,
+.startStep select:focus,
+.lobbyShareBox input:focus{
+  border-color:#7dd3fc!important;
+  box-shadow:0 0 0 3px rgba(125,211,252,.18)!important;
+}
+.startScreen .primary,
+.startScreen .secondary,
+.startScreen .success{
+  background:#40d98b!important;
+  color:#07111d!important;
+  border-color:rgba(255,255,255,.24)!important;
+}
+.startScreen .secondary{
+  background:#26324d!important;
+  color:#f5f7fb!important;
+}
+.startFooter{
+  position:relative!important;
+  min-height:66px!important;
+  cursor:pointer!important;
+  background:#facc15!important;
+  border-color:rgba(255,255,255,.34)!important;
+  color:#07111d!important;
+  justify-content:center!important;
+  text-align:center!important;
+  transition:transform .16s ease,filter .16s ease,box-shadow .16s ease!important;
+}
+.startFooter:hover{
+  transform:translateY(-2px)!important;
+  filter:saturate(1.06)!important;
+}
+.startFooter .primary{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#07111d!important;
+  font-weight:1000!important;
+  padding:0!important;
+  width:100%!important;
+  min-height:48px!important;
+  font-size:clamp(1.25rem,2.4vw,1.9rem)!important;
+  display:grid!important;
+  place-items:center!important;
+}
+.startFooter .status{
+  position:absolute!important;
+  left:16px!important;
+  right:16px!important;
+  bottom:7px!important;
+  color:rgba(7,17,29,.72)!important;
+  font-weight:800!important;
+  max-width:none!important;
+  font-size:.72rem!important;
+  pointer-events:none!important;
+}
+
+html.startOpen,
+body.startOpen{
+  overflow:hidden!important;
+}
+html.startOpen body::before,
+html.startOpen body::after,
+body.startOpen::before,
+body.startOpen::after{
+  content:none!important;
+  display:none!important;
+}
+html.startOpen .gameShell,
+html.startOpen .bottomDock,
+html.startOpen .ownTimelineDock,
+html.startOpen .profileArea,
+html.startOpen .playlistArea,
+html.startOpen .playlistMenu,
+html.startOpen .utilityMenu,
+html.startOpen .profileMenu,
+body.startOpen .gameShell,
+body.startOpen .bottomDock,
+body.startOpen .ownTimelineDock,
+body.startOpen .profileArea,
+body.startOpen .playlistArea,
+body.startOpen .playlistMenu,
+body.startOpen .utilityMenu,
+body.startOpen .profileMenu,
+html:has(#startScreen:not(.hidden)) .gameShell,
+html:has(#startScreen:not(.hidden)) .bottomDock,
+html:has(#startScreen:not(.hidden)) .ownTimelineDock,
+html:has(#startScreen:not(.hidden)) .profileArea,
+html:has(#startScreen:not(.hidden)) .playlistArea,
+html:has(#startScreen:not(.hidden)) .playlistMenu,
+html:has(#startScreen:not(.hidden)) .utilityMenu,
+html:has(#startScreen:not(.hidden)) .profileMenu{
+  display:none!important;
+  visibility:hidden!important;
+  pointer-events:none!important;
 }

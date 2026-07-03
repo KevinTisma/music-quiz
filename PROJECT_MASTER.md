@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v80`
+- `timeline-game-v85`
 
 PWA-version byggd från:
 
@@ -121,6 +121,11 @@ Party-polish / hårdtest påbörjat 2026-07-02:
 - v70: startskärmens lobbydel byter till Aktivt Rum: <kod> när spelaren redan skapat eller gått med i en lobby; skapa/gå-med-kontrollerna göms för att undvika att samma spelare råkar skapa nya rum i loop.
 - v79: Party `Vems låt` är omtestat efter senaste polish. Cache-brytare är uppdaterad till `active-room-start-v79` och appversion till `timeline-game-v79`.
 - v80: Quiz-slutskärmen visar inte längre `Ingen tidslinje`; den visar antal rätt i Quiz-mode. Quiz-resultat placeras som planeter längs en centrerad båge runt solens osynliga omloppscirkel, och bågen expanderar symmetriskt från mitten oavsett antal spelare.
+- v81: Lobbyinställningar har fått `Antal låtar i Quiz-mode` med valen 25, 50, 100 och `Hela spellistan`. Valet sparas som `settings.quizSongLimit` och quiz-kortleken kapas vid spelstart; standard är fortsatt hela spellistan.
+- v82: första entrésidan/startskärmen har fått en mer appnära Wrapped-inspirerad design med färgstark hero-yta, grafiska stegkort och tydligare färgknappar i samma palett som resten av appen.
+- v83: startskärmen polerades vidare: vänstra hero-rutan är solid grön med vit text, `Music Timeline`-eyebrow är borttagen, stegnumren är enfärgade, inputs har högre kontrast och hela footer-rutan fungerar som klickbar `Fortsätt till spel`-knapp.
+- v84: startskärmen justerades efter visuell review: hero-rutan är gul med svart text, den inre vita hero-linjen är borttagen, nummerbrickorna är transparenta med vit border/siffra och `Fortsätt till spel` är större och centrerad över hela footer-knappen.
+- v85: startskärmens bakgrund gjordes lugnare och mer lik appens huvudbakgrund, med fadeade/ur-fokus-former placerade mot kanterna och en renare mitt bakom entrépanelen.
 
 Party `Vems låt` verifierat 2026-07-03:
 
