@@ -1,12 +1,12 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v89';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v93';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v89';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v89';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v93';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v93';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v89';
+import { createRenderer } from './ui/render.js?v=active-room-start-v93';
 
 (() => {
   'use strict';
@@ -75,8 +75,12 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     return settings.partyModeEnabled === true || settings.gameMode === 'party';
   }
   function quizAnswerPlayers(data=roomData){
-    const players = activePlayersFrom(data.players || {});
     const game = data.game || {};
+    const answerPlayerIds = Array.isArray(game.answerPlayerIds) ? game.answerPlayerIds.filter(Boolean) : [];
+    if(answerPlayerIds.length){
+      return answerPlayerIds.map(id => data.players?.[id] || {id, name:'Spelare'});
+    }
+    const players = sortPlayers(data.players || {});
     const hostId = data.meta?.hostId || '';
     const partyMasterMode = game.partyModeEnabled === true || data.settings?.partyModeEnabled === true || data.settings?.gameMode === 'party';
     return partyMasterMode ? players.filter(p => p.id !== hostId) : players;
@@ -541,7 +545,13 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
   function songsFromPlaylistMix(entries=roomData.playlistMix || {}){
     return Object.values(entries).flatMap(entry => {
       const songs = entry?.songs;
-      return Array.isArray(songs) ? songs : Object.values(songs || {});
+      const list = Array.isArray(songs) ? songs : Object.values(songs || {});
+      return list.map(song => ({
+        ...song,
+        ownerPlayerId: song?.ownerPlayerId || entry.playerId || entry.ownerId || '',
+        ownerName: song?.ownerName || entry.playerName || entry.name || 'Spelare',
+        ownerPlaylistName: song?.ownerPlaylistName || entry.name || 'Spellista'
+      }));
     });
   }
   async function savePlaylistToRoomMix(id, playlist, songs){
@@ -561,11 +571,19 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     const result = await roomRef('playlistMix').transaction(current => ({...(current || {}), [key]:entry}));
     const entries = result?.snapshot?.val() || playlistMixEntries({key,value:entry});
     const mixedSongs = songsFromPlaylistMix(entries);
+    roomData = {
+      ...roomData,
+      playlistMix:entries,
+      songBank:mixedSongs,
+      selectedPlaylistId:'mixed',
+      selectedPlaylist:{id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length}
+    };
     await roomRef().update(roomActorUpdates({
       songBank:mixedSongs,
       selectedPlaylistId:'mixed',
       selectedPlaylist:{id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length}
     }));
+    return {entries,mixedSongs};
   }
   async function refreshPlaylists(){
     connectFirebase();
@@ -611,21 +629,37 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
   function normalizedQuizType(mode){
     return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
   }
+  async function ensureHostPlaylistInOwnerMix(){
+    if(normalizedQuizType(selectedQuizType()) !== 'party-owner') return;
+    const id=els.savedPlaylistSelect?.value;
+    if(!id) return;
+    const entries = Object.values(roomData.playlistMix || {});
+    if(entries.some(entry => entry?.id === id && entry?.playerId === player.id)) return;
+    const snap=await userRef('playlists/'+id).get();
+    const playlist=snap.val() || userPlaylists?.[id] || {};
+    let songs=playlist.songs;
+    if(!Array.isArray(songs)) songs=Object.values(songs||{});
+    if(!songs.length) return;
+    await savePlaylistToRoomMix(id, playlist, songs);
+  }
   function partyDeckFromPlaylistMix(mode){
     mode = normalizedQuizType(mode);
     const entries = Object.values(roomData.playlistMix || {});
-    if(mode === 'party-owner' && entries.length){
+    if(entries.length){
       return entries.flatMap(entry => {
-        const songs = Array.isArray(entry?.songs) ? entry.songs : Object.values(entry?.songs || {});
-        return songs.map(song => ({
-          ...song,
-          ownerPlayerId:entry.playerId || entry.ownerId || '',
-          ownerName:entry.playerName || entry.name || 'Spelare',
-          ownerPlaylistName:entry.name || 'Spellista'
-        }));
-      });
-    }
+      const songs = Array.isArray(entry?.songs) ? entry.songs : Object.values(entry?.songs || {});
+      return songs.map(song => ({
+        ...song,
+        ownerPlayerId:song?.ownerPlayerId || entry.playerId || entry.ownerId || '',
+        ownerName:song?.ownerName || entry.playerName || entry.name || 'Spelare',
+        ownerPlaylistName:song?.ownerPlaylistName || entry.name || 'Spellista'
+      }));
+    });
+  }
     return getSongs().map(song => ({...song, ownerPlayerId:roomData?.meta?.hostId || player.id, ownerName:roomData?.players?.[roomData?.meta?.hostId]?.name || player.name || 'Spelare'}));
+  }
+  function canPlayerAnswerQuiz(data, playerId){
+    return quizAnswerPlayers(data).some(p => p.id === playerId);
   }
   function partyChoicesFor(mode, deck, players){
     mode = normalizedQuizType(mode);
@@ -661,6 +695,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     connectFirebase();
     if(!requireHost('Endast host kan starta spelet.')) return;
     const gameMode = selectedGameMode();
+    if(gameMode === 'quiz') await ensureHostPlaylistInOwnerMix().catch(err=>console.warn('[host-mix]',err));
     const hasPlaylistMix = Object.keys(roomData.playlistMix || {}).length > 0;
     const selectedSongs = hasPlaylistMix ? null : await songsFromSelectedPlaylist().catch(err=>{ console.warn('[playlist-select]',err); return null; });
     const songs=selectedSongs || getSongs();
@@ -668,7 +703,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     if(gameMode !== 'quiz' && !songs.length){ status(els.gameStatus,'Välj eller skapa en spellista först.','bad'); return; }
     const players=activePlayersFrom(roomData.players || {});
     if(!players.length){ await upsertPlayer(); }
-    const allPlayers=activePlayersFrom((await roomRef('players').get()).val()||{});
+    const playerSnapshot = (await roomRef('players').get()).val() || {};
+    const allPlayers = gameMode === 'quiz' ? sortPlayers(playerSnapshot).filter(p => p.id) : activePlayersFrom(playerSnapshot);
     if(gameMode === 'quiz'){
       await startQuizGame(allPlayers);
       return;
@@ -676,10 +712,11 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
     const updates={};
     allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
+    const firstPlayer = shuffle(allPlayers)[0] || {id:player.id,name:player.name};
     updates['meta/updatedAt']=serverTimestamp();
     updates['meta/updatedBy']=player.id;
     updates['meta/status']='playing';
-    updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:allPlayers[0]?.id || player.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,answerDeadline:null,gameTimerSeconds:selectedGameTimerSeconds(),message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
+    updates.game={status:'playing',startedAt:serverTimestamp(),turnPlayerId:firstPlayer.id,turnNumber:1,deck,discard:[],currentCard:null,proposedIndex:null,answerDeadline:null,gameTimerSeconds:selectedGameTimerSeconds(),message:'Spelet startat. Aktiv spelare drar första kortet.',winnerId:null,cardVisibility:readVisibilityToggles(),wrongReveal:null};
     await roomRef().update(updates);
   }
   async function startQuizGame(allPlayers){
@@ -696,12 +733,15 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
       if(ownerCount < 2){ status(els.playlistStatus,'Vems l\u00e5t funkar b\u00e4st n\u00e4r minst tv\u00e5 spelare har lagt till varsin spellista.','warn'); }
     }
     const choices = partyChoicesFor(mode, deck, allPlayers);
+    const hostId = roomData?.meta?.hostId || player.id;
+    const answerPlayers = partyModeEnabled ? allPlayers.filter(p => p.id !== hostId) : allPlayers;
+    const answerPlayerIds = answerPlayers.map(p => p.id).filter(Boolean);
     const updates={};
     allPlayers.forEach(p=>{ updates['players/'+p.id+'/score']=0; updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
     updates['meta/updatedAt']=serverTimestamp();
     updates['meta/updatedBy']=player.id;
     updates['meta/status']='playing';
-    updates.game={status:'playing',mode,quizType:mode,partyModeEnabled,gameTimerSeconds,quizTimerSeconds:gameTimerSeconds,quizSongLimit,startedAt:serverTimestamp(),turnPlayerId:player.id,turnNumber:0,deck,discard:[],currentCard:null,choices,answers:{},reveal:false,answerDeadline:null,message:partyQuestionFor(mode)+'. Hosten drar f\u00f6rsta l\u00e5ten.',winnerId:null};
+    updates.game={status:'playing',mode,quizType:mode,partyModeEnabled,gameTimerSeconds,quizTimerSeconds:gameTimerSeconds,quizSongLimit,answerPlayerIds,startedAt:serverTimestamp(),turnPlayerId:player.id,turnNumber:0,deck,discard:[],currentCard:null,choices,answers:{},reveal:false,answerDeadline:null,message:partyQuestionFor(mode)+'. Hosten drar f\u00f6rsta l\u00e5ten.',winnerId:null};
     await roomRef().update(updates);
   }
   async function drawCard(){
@@ -744,6 +784,10 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
   async function submitPartyAnswer(choiceId){
     const game=roomData.game||{};
     if(!isQuizGame() || game.status !== 'playing' || !game.currentCard || game.reveal) return;
+    if(!canPlayerAnswerQuiz(roomData, player.id)){
+      status(els.gameStatus,'Hosten styr rundan och svarar inte i Party-läget.','warn');
+      return;
+    }
     await roomRef('game/answers/'+player.id).set({playerId:player.id,playerName:player.name || 'Spelare',choiceId:String(choiceId),answeredAt:serverTimestamp()});
   }
   async function maybeAutoRevealQuiz(){
@@ -751,8 +795,9 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     if(!isQuizGame() || game.status !== 'playing' || !game.currentCard || game.reveal || quizAutoRevealInProgress) return;
     if(roomData?.meta?.hostId !== player.id) return;
     const players = quizAnswerPlayers();
-    const total = players.length || 1;
-    const answered = Object.keys(game.answers || {}).length;
+    const total = players.length;
+    if(!total) return;
+    const answered = players.filter(p => !!game.answers?.[p.id]).length;
     const deadline = Number(game.answerDeadline || 0);
     const timeIsUp = !!deadline && Date.now() >= deadline;
     if(answered < total && !timeIsUp) return;
@@ -765,7 +810,9 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v89';
     if(!isQuizGame() || !card) return;
     const correctId = normalizedQuizType(game.mode) === 'party-year' ? String(card.year) : String(card.ownerPlayerId || card.ownerName || '');
     const updates = {'game/reveal':true,'game/correctChoiceId':correctId,'game/answerDeadline':null,'game/message':'R\u00e4tt svar: '+partyCorrectLabel(game, card),'meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id};
+    const expectedAnswerIds = new Set(quizAnswerPlayers().map(p => p.id));
     Object.values(game.answers || {}).forEach(answer => {
+      if(expectedAnswerIds.size && !expectedAnswerIds.has(answer.playerId)) return;
       if(String(answer.choiceId) !== correctId) return;
       const id = answer.playerId;
       const currentScore = Number(roomData.players?.[id]?.score || 0);

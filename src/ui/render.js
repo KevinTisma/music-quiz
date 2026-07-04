@@ -1,10 +1,10 @@
-import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v89';
-import { cardId, esc, lockedCount, pendingCount, setText, timelineOf } from '../utils/helpers.js';
+import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v93';
+import { cardId, esc, lockedCount, pendingCount, setText, sortPlayers, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v89';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v89';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v93';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v93';
 import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v89';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v93';
 
 export function createRenderer(ctx){
   const {
@@ -264,9 +264,13 @@ export function createRenderer(ctx){
     return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
   }
   function quizAnswerPlayers(data=getRoomData()){
-    const players = activePlayersFrom(data.players || {});
-    const hostId = data?.meta?.hostId || '';
     const game = data?.game || {};
+    const answerPlayerIds = Array.isArray(game.answerPlayerIds) ? game.answerPlayerIds.filter(Boolean) : [];
+    if(answerPlayerIds.length){
+      return answerPlayerIds.map(id => data.players?.[id] || {id, name:'Spelare'});
+    }
+    const players = sortPlayers(data.players || {});
+    const hostId = data?.meta?.hostId || '';
     const settings = data?.settings || {};
     const partyMasterMode = game.partyModeEnabled === true || settings.partyModeEnabled === true || settings.gameMode === 'party';
     return partyMasterMode ? players.filter(p => p.id !== hostId) : players;

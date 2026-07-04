@@ -1,6 +1,6 @@
-import { DEFAULT_CLIENT_ID, LS, SPOTIFY_SCOPES } from '../config.js?v=active-room-start-v89';
+import { DEFAULT_CLIENT_ID, LS, SPOTIFY_SCOPES } from '../config.js?v=active-room-start-v93';
 import { base64url, now, randomString, sha256 } from '../utils/helpers.js';
-import { saveToken } from './spotify-api.js?v=active-room-start-v89';
+import { saveToken } from './spotify-api.js?v=active-room-start-v93';
 
 export async function loginSpotify(redirectUri, returnUrl=window.location.href){
   const verifier=randomString(96), challenge=base64url(await sha256(verifier)), state=randomString(24);
