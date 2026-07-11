@@ -1,4 +1,4 @@
-﻿export const VERSION = 'timeline-game-v109';
+﻿export const VERSION = 'timeline-game-v110';
 export const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
 export const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
 const FIREBASE_API_KEY = ['AI', 'zaSyBaflhTRGerXgwMprOtgGauXxEMKhZ5odQ'].join('');

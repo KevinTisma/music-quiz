@@ -1,12 +1,12 @@
-﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v109';
+﻿import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v110';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v109';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v109';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v110';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v110';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { ensureFirebaseAuth, getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v109';
+import { createRenderer } from './ui/render.js?v=active-room-start-v110';
 
 (() => {
   'use strict';
@@ -85,10 +85,10 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
     const players = sortPlayers(data.players || {});
     const hostId = data.meta?.hostId || '';
     const partyMasterMode = game.partyModeEnabled === true || data.settings?.partyModeEnabled === true || data.settings?.gameMode === 'party';
-    return partyMasterMode  players.filter(p => p.id !== hostId) : players;
+    return partyMasterMode ? players.filter(p => p.id !== hostId) : players;
   }
   function selectedGameTimerSeconds(){
-    const value = Number(roomData?.settings?.gameTimerSeconds  roomData?.settings?.quizTimerSeconds  els.quizTimerSelect?.value  0);
+    const value = Number(roomData?.settings?.gameTimerSeconds ?? roomData?.settings?.quizTimerSeconds ?? els.quizTimerSelect?.value ?? 0);
     return [0,30,60,120].includes(value) ? value : 0;
   }
   function selectedQuizSongLimit(){
@@ -173,7 +173,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
   function selectedPlaylistOwner(){
     const players = roomData?.players || {};
     const selectedId = isHostPlayer() ? (els.playlistOwnerSelect?.value || player.id) : player.id;
-    const owner = players[selectedId] || (selectedId === player.id  player : null) || {id:selectedId,name:'Spelare'};
+    const owner = players[selectedId] || (selectedId === player.id ? player : null) || {id:selectedId,name:'Spelare'};
     return {attributedPlayerId:owner.id || player.id, attributedPlayerName:owner.name || player.name || 'Spelare'};
   }
   function showPlaylistUpdateNotice(message, type='ok'){
@@ -850,7 +850,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
     const players=activePlayersFrom(roomData.players || {});
     if(!players.length){ await upsertPlayer(); }
     const playerSnapshot = (await roomRef('players').get()).val() || {};
-    const allPlayers = gameMode === 'quiz'  sortPlayers(playerSnapshot).filter(p => p.id) : activePlayersFrom(playerSnapshot);
+    const allPlayers = gameMode === 'quiz' ? sortPlayers(playerSnapshot).filter(p => p.id) : activePlayersFrom(playerSnapshot);
     if(gameMode === 'quiz'){
       await startQuizGame(allPlayers);
       return;
@@ -958,7 +958,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
     const game=liveGame, card=game.currentCard;
     if(!isQuizGame() || !card) return;
     if(game.reveal) return;
-    const correctId = normalizedQuizType(game.mode) === 'party-year'  String(card.year) : String(card.ownerPlayerId || card.ownerName || '');
+    const correctId = normalizedQuizType(game.mode) === 'party-year' ? String(card.year) : String(card.ownerPlayerId || card.ownerName || '');
     const updates = {'game/reveal':true,'game/correctChoiceId':correctId,'game/answerDeadline':null,'game/message':'R\u00e4tt svar: '+partyCorrectLabel(game, card),'meta/updatedAt':serverTimestamp(),'meta/updatedBy':player.id,'meta/updatedByUid':currentAuthUid()};
     const expectedAnswerIds = new Set(quizAnswerPlayers({...roomData, game}).map(p => p.id));
     Object.values(game.answers || {}).forEach(answer => {
