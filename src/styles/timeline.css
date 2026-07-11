@@ -1277,6 +1277,9 @@
     .powerupButton:hover{transform:translateY(-2px);box-shadow:0 18px 38px rgba(var(--tone),.20),inset 0 0 0 1px rgba(255,255,255,.10);}
     .powerupIcon{width:48px;height:48px;display:grid;place-items:center;border-radius:999px;background:#fff;color:#08111b;font-style:normal;font-weight:950;font-size:.82rem;letter-spacing:0;box-shadow:0 8px 0 rgba(0,0,0,.24);}
     .powerupButton b,.powerupButton small{display:block;}
+    .powerupIcon svg,.powerupAwardToast em svg{width:62%;height:62%;display:block;fill:none;stroke:currentColor;stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round;}
+    .powerupIcon svg path:first-child,.powerupIcon svg rect:first-child,.powerupIcon svg circle:first-child,.powerupAwardToast em svg path:first-child,.powerupAwardToast em svg rect:first-child,.powerupAwardToast em svg circle:first-child{fill:currentColor;fill-opacity:.14;}
+    .powerupIcon svg text,.powerupAwardToast em svg text{fill:currentColor;stroke:none;font-size:8px;font-weight:950;font-family:system-ui,sans-serif;}
     .powerupButton b{font-size:.9rem;line-height:1.02;text-transform:uppercase;font-weight:950;letter-spacing:0;}
     .powerupButton small{margin-top:4px;font-size:.68rem;line-height:1.12;color:rgba(255,255,255,.78);font-weight:850;}
     .powerupButton strong{width:32px;height:32px;display:grid;place-items:center;border-radius:999px;background:#ffcf1a;color:#08111b;border:2px solid rgba(0,0,0,.18);font-size:.9rem;font-weight:950;box-shadow:0 7px 0 rgba(0,0,0,.22);}
@@ -1308,6 +1311,9 @@
     .tlCard.hasPowerup .cover img{opacity:.88;filter:saturate(.92) contrast(.96);}
     .drawCard.hasPowerup::after,.tlCard.hasPowerup::after{content:'';position:absolute;inset:-7px;border-radius:inherit;pointer-events:none;border:3px solid var(--powerup-glow,rgba(125,211,252,.92));box-shadow:0 0 0 2px rgba(255,255,255,.12),0 0 36px var(--powerup-glow,rgba(125,211,252,.40)),0 0 76px var(--powerup-glow-soft,rgba(125,211,252,.42)),inset 0 0 24px var(--powerup-glow-soft,rgba(125,211,252,.24));animation:powerupCardGlow 1.7s ease-in-out infinite alternate;z-index:2;}
     @keyframes powerupCardGlow{from{opacity:.76;filter:saturate(1);}to{opacity:1;filter:saturate(1.35);}}
+    .tlCard.secureSelectable{cursor:pointer;border-color:rgba(250,204,21,.98)!important;box-shadow:0 0 0 3px rgba(250,204,21,.24),0 0 34px rgba(250,204,21,.34),0 18px 44px rgba(0,0,0,.36)!important;animation:secureSelectablePulse .9s ease-in-out infinite alternate;}
+    .tlCard.secureSelectable::after{content:'SÄKRA';position:absolute;right:8px;bottom:8px;z-index:4;border-radius:999px;padding:4px 7px;background:#ffcf1a;color:#08111b;font-size:.62rem;font-weight:950;letter-spacing:0;box-shadow:0 7px 0 rgba(0,0,0,.18);}
+    @keyframes secureSelectablePulse{from{transform:translateY(0);}to{transform:translateY(-4px);}}
     .powerup-steal{--powerup-glow:rgba(125,211,252,.95);--powerup-glow-soft:rgba(125,211,252,.34);}
     .powerup-pressure{--powerup-glow:rgba(255,75,160,.95);--powerup-glow-soft:rgba(255,75,160,.34);}
     .powerup-secondChance{--powerup-glow:rgba(168,85,247,.95);--powerup-glow-soft:rgba(168,85,247,.34);}
@@ -1485,6 +1491,11 @@
     .timeline.timelineLong .dropSlot{
       scroll-snap-align:center!important;
       flex:0 0 auto!important;
+    }
+
+    body.draggingTimelineCard .activeTimelineArea .timeline.timelineLong{
+      scroll-snap-type:none!important;
+      scroll-behavior:auto!important;
     }
 
     .timeline.timelineLong::-webkit-scrollbar{

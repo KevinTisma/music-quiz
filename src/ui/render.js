@@ -29,14 +29,26 @@ export function createRenderer(ctx){
     spotifyProfileCache
   } = ctx;
   const POWERUPS = {
-    steal:{label:'Sno kort', hint:'Ta ett gult kort från en annan spelare', icon:'<>', tone:'cyan'},
-    pressure:{label:'10 sekunder', hint:'Sätt press på aktiv spelare', icon:'10', tone:'pink'},
-    secondChance:{label:'Dubbelchans', hint:'Få ett nytt försök på samma kort', icon:'2x', tone:'violet'},
-    hint:{label:'Årtalsledtråd', hint:'Visa årtiondet, till exempel 199X', icon:'19X', tone:'blue'},
-    shield:{label:'Skydda rundan', hint:'Behåll gula kort även om du missar', icon:'◇', tone:'green'},
-    secure:{label:'Säkra gult kort', hint:'Lås ett gult kort direkt', icon:'✓', tone:'gold'},
-    forceLock:{label:'Tvinga låsning', hint:'Tvinga en spelare att låsa gula kort', icon:'!', tone:'red'}
+    steal:{label:'Sno kort', hint:'Ta ett gult kort från en annan spelare', icon:'thief', tone:'cyan'},
+    pressure:{label:'10 sekunder', hint:'Sätt press på aktiv spelare', icon:'clock', tone:'pink'},
+    secondChance:{label:'Dubbelchans', hint:'Få ett nytt försök på samma kort', icon:'retry', tone:'violet'},
+    hint:{label:'Årtalsledtråd', hint:'Visa årtiondet, till exempel 199X', icon:'hint', tone:'blue'},
+    shield:{label:'Skydda rundan', hint:'Behåll gula kort även om du missar', icon:'shield', tone:'green'},
+    secure:{label:'Säkra gult kort', hint:'Lås ett gult kort direkt', icon:'cardLock', tone:'gold'},
+    forceLock:{label:'Tvinga låsning', hint:'Tvinga en spelare att låsa gula kort', icon:'lock', tone:'red'}
   };
+  const POWERUP_ICONS = {
+    thief:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11c2.2-2 4.8-3 8-3s5.8 1 8 3l-1.7 5.5c-.4 1.2-1.5 2-2.8 2-1.7 0-2.8-.8-3.5-2.4-.7 1.6-1.8 2.4-3.5 2.4-1.3 0-2.4-.8-2.8-2L4 11Z"/><path d="M8.2 12.7c1.7-.7 2.9-.6 3.8.4-.9 1-2.1 1.1-3.8.4M15.8 12.7c-1.7-.7-2.9-.6-3.8.4.9 1 2.1 1.1 3.8.4" fill="#fff"/><path d="M8 7.5 10 4h4l2 3.5"/></svg>',
+    clock:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 13V8.5M12 13l3.4 2M9 3.8h6M7.2 5.2 5.8 3.8M16.8 5.2l1.4-1.4"/></svg>',
+    retry:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8.5A7 7 0 1 1 5.4 16"/><path d="M7 4v4.5h4.5"/><text x="12" y="16" text-anchor="middle">2</text></svg>',
+    hint:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M8 14.5c-1.3-1-2-2.5-2-4.1A6 6 0 0 1 18 10.4c0 1.6-.7 3.1-2 4.1-.7.6-1 1.2-1 2H9c0-.8-.3-1.4-1-2Z"/><path d="M9.2 10.7h5.6M10.2 8.6h3.6"/></svg>',
+    shield:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 19 6v5.7c0 4.4-2.9 7.3-7 8.8-4.1-1.5-7-4.4-7-8.8V6l7-2.5Z"/><path d="m8.8 12.1 2.2 2.2 4.3-5"/></svg>',
+    cardLock:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="6" width="12" height="15" rx="2"/><path d="M8 10h4M8 13h3"/><rect x="13" y="11" width="7" height="6" rx="1.4"/><path d="M15 11V9.6a1.5 1.5 0 0 1 3 0V11"/></svg>',
+    lock:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7.8a4 4 0 0 1 8 0V10M12 14v2.5"/></svg>'
+  };
+  function powerupIcon(meta){
+    return POWERUP_ICONS[meta?.icon] || esc(meta?.icon || '');
+  }
 
   function render(){
     setText(els.redirectUriText, redirectUri());
@@ -143,7 +155,7 @@ export function createRenderer(ctx){
       document.body.appendChild(toast);
     }
     toast.className = 'powerupAwardToast powerupTone-'+meta.tone;
-    toast.innerHTML = '<em>'+esc(meta.icon)+'</em><span><small>Ny powerup</small><b>'+esc(meta.label)+(count > 1 ? ' x'+count : '')+'</b></span>';
+    toast.innerHTML = '<em>'+powerupIcon(meta)+'</em><span><small>Ny powerup</small><b>'+esc(meta.label)+(count > 1 ? ' x'+count : '')+'</b></span>';
     clearTimeout(uiState.powerupToastTimer);
     uiState.powerupToastTimer = setTimeout(()=>toast.classList.add('leaving'), 2200);
     setTimeout(()=>{ if(toast.classList.contains('leaving')) toast.remove(); }, 2850);
@@ -174,13 +186,41 @@ export function createRenderer(ctx){
     list.innerHTML = entries.map(([type,meta]) => {
       const count = Number(inventory[type] || 0);
       if(count <= 0) return '';
-      return '<button class="powerupButton powerupTone-'+meta.tone+'" type="button" data-powerup-use="'+esc(type)+'"><em class="powerupIcon">'+esc(meta.icon)+'</em><span><b>'+esc(meta.label)+'</b><small>'+esc(meta.hint)+'</small></span><strong>'+count+'</strong></button>';
+      return '<button class="powerupButton powerupTone-'+meta.tone+'" type="button" data-powerup-use="'+esc(type)+'"><em class="powerupIcon">'+powerupIcon(meta)+'</em><span><b>'+esc(meta.label)+'</b><small>'+esc(meta.hint)+'</small></span><strong>'+count+'</strong></button>';
     }).join('');
   }
 
   function bindCardPointerDrag(cardEl, card){
-    let offsetX=0,offsetY=0,dragging=false,lastX=0,rot=0,original={}, placeholder=null;
+    let offsetX=0,offsetY=0,dragging=false,lastX=0,lastPointerX=0,lastPointerY=0,rot=0,original={}, placeholder=null,autoScrollFrame=null;
     function clearActiveSlots(){ document.querySelectorAll('.dropSlot').forEach(s=>s.classList.remove('active')); }
+    function updateActiveSlot(){
+      clearActiveSlots();
+      const slot=slotAt(lastPointerX,lastPointerY);
+      if(slot){ slot.classList.add('active'); }
+    }
+    function stopAutoScroll(){
+      if(autoScrollFrame){ cancelAnimationFrame(autoScrollFrame); autoScrollFrame=null; }
+    }
+    function autoScrollStep(){
+      autoScrollFrame=null;
+      if(!dragging) return;
+      const tl = els.activeTimeline;
+      if(!tl) return;
+      const rect = tl.getBoundingClientRect();
+      const edge = Math.min(150, Math.max(74, rect.width * 0.18));
+      let velocity = 0;
+      if(lastPointerX < rect.left + edge) velocity = -Math.ceil((1 - Math.max(0,lastPointerX - rect.left) / edge) * 22);
+      else if(lastPointerX > rect.right - edge) velocity = Math.ceil((1 - Math.max(0,rect.right - lastPointerX) / edge) * 22);
+      if(velocity && tl.scrollWidth > tl.clientWidth){
+        const before = tl.scrollLeft;
+        tl.scrollLeft = Math.max(0, Math.min(tl.scrollWidth - tl.clientWidth, tl.scrollLeft + velocity));
+        if(tl.scrollLeft !== before) updateActiveSlot();
+      }
+      autoScrollFrame = requestAnimationFrame(autoScrollStep);
+    }
+    function startAutoScroll(){
+      if(!autoScrollFrame) autoScrollFrame = requestAnimationFrame(autoScrollStep);
+    }
     function slotAt(x,y){
       const oldPointer = cardEl.style.pointerEvents;
       cardEl.style.pointerEvents = 'none';
@@ -208,7 +248,7 @@ export function createRenderer(ctx){
       if(!isMeActive() || !currentCard() || isWrongRevealActive()) return;
       e.preventDefault();
       const rect=cardEl.getBoundingClientRect();
-      offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top; lastX=e.clientX; rot=0;
+      offsetX=e.clientX-rect.left; offsetY=e.clientY-rect.top; lastX=e.clientX; lastPointerX=e.clientX; lastPointerY=e.clientY; rot=0;
       original={position:cardEl.style.position,left:cardEl.style.left,top:cardEl.style.top,width:cardEl.style.width,height:cardEl.style.height,zIndex:cardEl.style.zIndex,pointerEvents:cardEl.style.pointerEvents,transition:cardEl.style.transition,transform:cardEl.style.transform};
       placeholder=document.createElement('div');
       placeholder.className='dragStaticPlaceholder';
@@ -229,22 +269,23 @@ export function createRenderer(ctx){
       uiState.dragCardId=cardId(card);
       document.body.classList.add('draggingTimelineCard');
       dragging=true;
+      startAutoScroll();
     });
     cardEl.addEventListener('pointermove', e=>{
       if(!dragging) return;
       e.preventDefault();
+      lastPointerX=e.clientX; lastPointerY=e.clientY;
       const dx=e.clientX-lastX; lastX=e.clientX;
       rot = Math.max(-6, Math.min(6, rot*0.72 + dx*0.18));
       cardEl.style.left=(e.clientX-offsetX)+'px';
       cardEl.style.top=(e.clientY-offsetY)+'px';
       cardEl.style.setProperty('--drag-rot', rot.toFixed(2)+'deg');
-      clearActiveSlots();
-      const slot=slotAt(e.clientX,e.clientY);
-      if(slot){ slot.classList.add('active'); }
+      updateActiveSlot();
     });
     function end(e){
       if(!dragging) return;
       e.preventDefault();
+      stopAutoScroll();
       const slot=slotAt(e.clientX,e.clientY);
       if(slot && slot.dataset.index !== undefined){ setProposedIndex(Number(slot.dataset.index)); }
       clearActiveSlots();
@@ -425,7 +466,10 @@ export function createRenderer(ctx){
   function makeTimelineCard(card){
     const statusClass = card.status || 'locked';
     const powerupClass = card.powerup ? ' hasPowerup powerup-'+card.powerup : '';
-    const div=document.createElement('div'); div.className='tlCard '+statusClass+(statusClass === 'locked' ? '' : ' '+cardVisibilityClass())+powerupClass;
+    const secureSelectClass = uiState.securePowerupSelecting && card.status === 'pending' ? ' secureSelectable' : '';
+    const div=document.createElement('div'); div.className='tlCard '+statusClass+(statusClass === 'locked' ? '' : ' '+cardVisibilityClass())+powerupClass+secureSelectClass;
+    div.dataset.cardId = cardId(card);
+    if(secureSelectClass) div.dataset.secureCardId = cardId(card);
     const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';

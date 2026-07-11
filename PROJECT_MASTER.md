@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v115`
+- `timeline-game-v118`
 
 PWA-version byggd från:
 
@@ -142,6 +142,9 @@ Party-polish / hårdtest påbörjat 2026-07-02:
 - v113: fixat lobbyinställningarnas Spotify-importkort så fältrubrikerna ligger ovanför respektive fält igen. Fixat även Timeline-drag med timer: timer-renderingen bygger inte längre om kort/tidslinje medan spelaren håller i kortet, så kortet hoppar inte tillbaka varje sekund.
 - v114: powerups har fått tydligare feedback och mer grafisk stil. När spelaren får en powerup visas en animerad `Ny powerup`-toast, och powerup-korten i högerpanelen är omgjorda med bold typografi, starkare färgfält, count-badge och dramatiska former som matchar appens formspråk bättre.
 - v115: spelkort som innehåller powerup har fått glassy/transparent insida så kortets glow syns tydligare. Powerup-signalen ligger nu främst i en starkare animerad glow-ring runt kortet i stället för i färgstark kortbakgrund.
+- v116: `Säkra gult kort` använder nu klick-val i tidslinjen i stället för prompt. Spelaren aktiverar powerupen och klickar sedan direkt på ett gult kort; valbara kort markeras med gul puls och `SÄKRA`-badge.
+- v117: Timeline-drag har auto-scroll. När spelaren håller ett kort nära vänster/höger kant av den aktiva tidslinjen scrollar raden automatiskt åt det hållet, och scroll-snap stängs av under drag för att placeringen ska kännas lugnare.
+- v118: powerup-ikonerna är utbytta från textmarkörer till passande SVG-ikoner: tjuvmask för `Sno kort`, klocka för `10 sekunder`, lås för `Tvinga låsning`, samt egna symboler för dubbelchans, årtalsledtråd, skydd och säkra gult kort.
 
 Party `Vems låt` verifierat 2026-07-03:
 

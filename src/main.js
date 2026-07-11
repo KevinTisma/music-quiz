@@ -1,4 +1,4 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v115';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v118';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
 import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v108';
 import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v108';
@@ -6,7 +6,7 @@ import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { ensureFirebaseAuth, getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v115';
+import { createRenderer } from './ui/render.js?v=active-room-start-v118';
 
 (() => {
   'use strict';
@@ -1228,24 +1228,34 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v115';
     await roomRef().update({...spend,'game/roundShield':{playerId:player.id},'game/message':(player.name||'Spelare')+' skyddar sina gula kort den här rundan.'});
   }
   async function useSecurePowerUp(){
-    const spend = spendPowerupUpdates('secure');
-    if(!spend) return;
     if(!isMeActive()){ status(els.gameStatus,'Säkra gult kort används på din egen tur.','warn'); return; }
     const me = roomData.players?.[player.id] || {};
     const timeline = timelineOf(me);
-    const pending = timeline.map((card,index)=>({card,index})).filter(item=>item.card.status==='pending');
+    const pending = timeline.filter(card=>card.status==='pending');
     if(!pending.length){ status(els.gameStatus,'Du har inget gult kort att säkra.','warn'); return; }
-    const cardNumber = pending.length === 1 ? 1 : Number(prompt('Vilket gult kort vill du säkra?\n'+numberedChoice(pending,item=>(item.card.title||'Okänd låt')+' - '+(item.card.artist||'Okänd artist')+' ('+(item.card.year||'?')+')')));
-    const selected = pending[cardNumber - 1];
-    if(!selected) return;
-    const nextTimeline = timeline.map((card,index)=>index === selected.index ? {...card,status:'locked'} : card);
+    uiState.securePowerupSelecting = true;
+    status(els.gameStatus,'Klicka på det gula kortet du vill säkra.','warn');
+    render();
+  }
+  async function securePendingCard(cardKey){
+    if(!uiState.securePowerupSelecting) return;
+    const spend = spendPowerupUpdates('secure');
+    if(!spend) return;
+    if(!isMeActive()){ uiState.securePowerupSelecting = false; render(); status(els.gameStatus,'Säkra gult kort används på din egen tur.','warn'); return; }
+    const me = roomData.players?.[player.id] || {};
+    const timeline = timelineOf(me);
+    const selectedIndex = timeline.findIndex(card=>card.status === 'pending' && String(cardId(card)) === String(cardKey));
+    if(selectedIndex < 0){ status(els.gameStatus,'Välj ett av dina gula kort.','warn'); return; }
+    const nextTimeline = timeline.map((card,index)=>index === selectedIndex ? {...card,status:'locked'} : card);
     const score = nextTimeline.filter(card=>card.status==='locked').length;
     const updates = {...spend,['players/'+player.id+'/timeline']:nextTimeline,['players/'+player.id+'/score']:score,'game/message':(player.name||'Spelare')+' säkrade ett gult kort.'};
     if(score >= selectedTimelineWinScore()){
       updates['game/status']='finished'; updates['game/winnerId']=player.id; updates['game/message']=(me.name||player.name)+' vann med '+score+' låsta kort.';
       updates['meta/status']='finished'; updates['meta/updatedAt']=serverTimestamp(); updates['meta/updatedBy']=player.id; updates['meta/updatedByUid']=currentAuthUid();
     }
+    uiState.securePowerupSelecting = false;
     await roomRef().update(updates);
+    render();
   }
   async function useForceLockPowerUp(){
     const spend = spendPowerupUpdates('forceLock');
@@ -1579,6 +1589,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v115';
     els.lockInBtn.onclick=lockIn;
     if(els.playSpotifyBtn) els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
     document.addEventListener('click', e=>{
+      const secureCardId = e.target?.closest?.('[data-secure-card-id]')?.dataset?.secureCardId;
+      if(secureCardId){ securePendingCard(secureCardId).catch(err=>status(els.gameStatus,'Kunde inte säkra kort: '+(err?.message || err),'bad')); return; }
       const powerupType = e.target?.closest?.('[data-powerup-use]')?.dataset?.powerupUse;
       if(powerupType){ usePowerUp(powerupType).catch(err=>status(els.gameStatus,'Kunde inte använda powerup: '+(err?.message || err),'bad')); return; }
       const removeMixKey = e.target?.closest?.('[data-remove-mix-playlist]')?.dataset?.removeMixPlaylist;
