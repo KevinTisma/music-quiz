@@ -290,6 +290,16 @@ body.hasActiveRoom .activeRoomLine{display:flex}
   font-size:.68rem;
   padding:5px 7px;
 }
+.lobbyPlayerBadges .readyPill{
+  border-color:rgba(64,217,139,.55);
+  background:rgba(64,217,139,.18);
+  color:#c8f9da;
+}
+.lobbyPlayerBadges .waitingPill{
+  border-color:rgba(255,255,255,.12);
+  background:rgba(255,255,255,.045);
+  color:rgba(226,232,240,.68);
+}
 .startFooter{
   grid-column:2;
   border-radius:20px;

@@ -1,7 +1,13 @@
-export const VERSION = 'timeline-game-v93';
+export const VERSION = 'timeline-game-v103';
 export const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
 export const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
-export const FIREBASE_CONFIG = { databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app' };
+export const FIREBASE_CONFIG = {
+  apiKey: '',
+  authDomain: '',
+  projectId: 'music-quiz-bd465',
+  appId: '',
+  databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app'
+};
 export const ROOM_ID = 'active';
 export const WIN_SCORE = 7;
 export const VIEWED_TIMELINE_KEY = 'timeline_viewed_player_v1';

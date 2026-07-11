@@ -8,9 +8,12 @@ export function renderPlayerStrip({ playerStrip, players, roomData, viewedTimeli
   if(!players.some(p=>p.id===activeViewedId)) activeViewedId = fallbackPlayerId;
   const mode = String(roomData?.game?.mode || '');
   const isPartyGame = mode.startsWith('party-') || mode.startsWith('quiz-');
+  const roomStatus = roomData?.meta?.status || roomData?.game?.status || 'lobby';
+  const isLobby = roomStatus === 'lobby';
   const answers = roomData?.game?.answers || {};
   const hostId = roomData?.meta?.hostId || '';
   const settings = roomData?.settings || {};
+  const winScore = Number(roomData?.game?.winScore || settings.timelineWinScore || WIN_SCORE);
   const partyMasterMode = roomData?.game?.partyModeEnabled === true || settings.partyModeEnabled === true || settings.gameMode === 'party';
   const hasCurrentPartyCard = isPartyGame && !!roomData?.game?.currentCard && !roomData?.game?.reveal;
   players.forEach(p=>{
@@ -20,10 +23,10 @@ export function renderPlayerStrip({ playerStrip, players, roomData, viewedTimeli
     const hasAnswered = !!answers[p.id];
     div.className='playerTile'+(p.id===roomData?.game?.turnPlayerId?' active':'')+(roomData?.game?.winnerId===p.id?' winner':'')+(p.id===activeViewedId?' viewing':'')+(isPartyGame ? ' partyPlayerTile' : '')+(hasCurrentPartyCard && isAnsweringPlayer ? (hasAnswered ? ' answered' : ' waiting') : '');
     div.style.setProperty('--player-rgb', playerRgb(p.id));
-    div.title=isPartyGame ? (isAnsweringPlayer ? (hasAnswered ? 'Svar inne' : 'Väntar på svar') : 'Spelmaster') : 'Visa '+(p.name||'spelarens')+' tidslinje';
+    div.title=isLobby ? (p.ready ? 'Redo' : 'Väntar') : (isPartyGame ? (isAnsweringPlayer ? (hasAnswered ? 'Svar inne' : 'Väntar på svar') : 'Spelmaster') : 'Visa '+(p.name||'spelarens')+' tidslinje');
     const hostBadge = p.id === roomData?.meta?.hostId ? ' <span class="scoreLabel">Host</span>' : '';
-    const score = isPartyGame ? Number(p.score || 0) : lockedCount(p);
-    const scoreLabel = isPartyGame ? ' poäng' : ' / '+WIN_SCORE;
+    const score = isLobby ? (p.ready ? 'Redo' : 'Väntar') : (isPartyGame ? Number(p.score || 0) : lockedCount(p));
+    const scoreLabel = isLobby ? '' : (isPartyGame ? ' poäng' : ' / '+winScore);
     const answerStatus = isPartyGame && hasCurrentPartyCard && isAnsweringPlayer ? '<div class="partyAnswerStatus">'+(hasAnswered ? 'Svarat' : 'Väntar')+'</div>' : '';
     div.innerHTML='<div class="playerName">'+esc(p.name||'Spelare')+hostBadge+'</div><div class="playerScore">'+score+'<span class="scoreLabel">'+scoreLabel+'</span></div>'+answerStatus;
     div.addEventListener('click',()=>{ localStorage.setItem(VIEWED_TIMELINE_KEY,p.id); onSelectPlayer(p.id); });

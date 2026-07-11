@@ -1,10 +1,10 @@
-import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v93';
+import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v103';
 import { cardId, esc, lockedCount, pendingCount, setText, sortPlayers, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v93';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v93';
-import { refreshSavedPlaylistSelect } from './playlist-ui.js';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v93';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v103';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v103';
+import { refreshSavedPlaylistSelect } from './playlist-ui.js?v=active-room-start-v103';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v103';
 
 export function createRenderer(ctx){
   const {
@@ -34,6 +34,7 @@ export function createRenderer(ctx){
     if(els.playerNameInput) els.playerNameInput.value = getPlayer().name;
     refreshPlaylistsFromRoom();
     applyGameModeClasses();
+    resetViewedTimelineWhenGameEnds();
     renderTurn(); renderPlayers();
     if(getRoomData()?.game?.status === 'finished') renderFinishedResults();
     else if(isQuizGame()) renderPartyGame();
@@ -46,6 +47,13 @@ export function createRenderer(ctx){
   function isQuizGame(){
     const mode = String(getRoomData()?.game?.mode || '');
     return mode.startsWith('party-') || mode.startsWith('quiz-');
+  }
+  function resetViewedTimelineWhenGameEnds(){
+    const status = getRoomData()?.game?.status || 'lobby';
+    if(status === 'playing') return;
+    if(uiState.viewedTimelinePlayerId === getPlayer().id) return;
+    uiState.viewedTimelinePlayerId = getPlayer().id;
+    localStorage.removeItem(VIEWED_TIMELINE_KEY);
   }
   function isPartyPresentation(){
     const game = getRoomData()?.game || {};
@@ -230,9 +238,10 @@ export function createRenderer(ctx){
     const total = answerPlayers.length || 1;
     const timeText = quizTimeText(game);
     const progress = Math.max(0, Math.min(100, Math.round((answered / total) * 100)));
+    const visibilityClass = cardVisibilityClass();
     if(partyView && isHost){
       els.drawCardWrap.innerHTML =
-        '<div class="partyPanel quizPanel quizHostPanel">' +
+        '<div class="partyPanel quizPanel quizHostPanel '+visibilityClass+'">' +
           '<h2>'+esc(title)+'</h2>' +
           '<div class="quizCardMedia"><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div>'+(game.reveal?'<div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>':'')+'</div>' +
           '<div class="quizRoundStatus"><b>'+answered+'/'+total+'</b><span>svar inne</span>'+(timeText?'<small>'+esc(timeText)+'</small>':'')+'</div>' +
@@ -244,7 +253,7 @@ export function createRenderer(ctx){
       return;
     }
     els.drawCardWrap.innerHTML =
-      '<div class="partyPanel partyPlayerPanel quizPanel">' +
+      '<div class="partyPanel partyPlayerPanel quizPanel '+visibilityClass+'">' +
         '<div class="quizCardMedia"><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div></div>' +
         '<h2>'+esc(title)+'</h2>' +
         (timeText && !game.reveal ? '<div class="quizTimerPill">'+esc(timeText)+'</div>' : '') +
@@ -302,7 +311,7 @@ export function createRenderer(ctx){
     }
     const wrong = isWrongRevealActive();
     const canDrag=isMeActive() && !wrong;
-    const div=document.createElement('div'); div.className='drawCard'+(wrong?'':' '+cardVisibilityClass())+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
+    const div=document.createElement('div'); div.className='drawCard '+cardVisibilityClass()+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
     const yearText = wrong ? ('Fel placering - '+esc(card.year)) : 'ärtal dolt';
     const timeText = quizTimeText(getRoomData()?.game || {});
     div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>'+(timeText?'<div class="quizTimerPill">'+esc(timeText)+'</div>':'')+'</div><div><span class="yearHidden">'+yearText+'</span></div>';
@@ -347,7 +356,8 @@ export function createRenderer(ctx){
     return slot;
   }
   function makeTimelineCard(card){
-    const div=document.createElement('div'); div.className='tlCard '+(card.status||'locked');
+    const statusClass = card.status || 'locked';
+    const div=document.createElement('div'); div.className='tlCard '+statusClass+(statusClass === 'locked' ? '' : ' '+cardVisibilityClass());
     const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
@@ -366,7 +376,8 @@ export function createRenderer(ctx){
     const tl=timelineOf(viewed);
     const isMine=viewed.id===getPlayer().id;
     const title=(isMine?'Din tidslinje':((viewed.name||'Spelare')+'s tidslinje'));
-    setText(els.ownTimelineTitle,title+' · '+lockedCount(viewed)+'/'+WIN_SCORE);
+    const winScore = Number(getRoomData()?.game?.winScore || getRoomData()?.settings?.timelineWinScore || WIN_SCORE);
+    setText(els.ownTimelineTitle,title+' · '+lockedCount(viewed)+'/'+winScore);
     els.ownTimeline.innerHTML='';
     if(!tl.length){ els.ownTimeline.innerHTML='<p class="tiny">'+(isMine?'Din':'Spelarens')+' tidslinje är tom. Första kortet kan läggas var som helst.</p>'; return; }
     tl.forEach(c=>els.ownTimeline.appendChild(makeTimelineCard(c)));
@@ -392,11 +403,12 @@ export function createRenderer(ctx){
   function renderBoards(){
     const players=activePlayersFrom(getRoomData().players || {}); els.playerBoards.innerHTML='';
     if(!players.length){ els.playerBoards.innerHTML='<p class="small">Inga spelare ännu.</p>'; return; }
+    const winScore = Number(getRoomData()?.game?.winScore || getRoomData()?.settings?.timelineWinScore || WIN_SCORE);
     players.forEach(p=>{
       const board=document.createElement('div'); board.className='playerBoard'+(p.id===getRoomData()?.game?.turnPlayerId?' active':'');
       const tl=timelineOf(p);
       const preview = p.activeProposal?.card && Number.isInteger(p.activeProposal?.index) ? timelineWithProposal(tl,p.activeProposal.card,p.activeProposal.index) : tl;
-      board.innerHTML='<div class="playerBoardHead"><h3>'+esc(p.name||'Spelare')+'</h3><span class="pill">'+lockedCount(p)+'/'+WIN_SCORE+' låsta · '+pendingCount(p)+' risk</span></div><div class="miniTimeline"></div>';
+      board.innerHTML='<div class="playerBoardHead"><h3>'+esc(p.name||'Spelare')+'</h3><span class="pill">'+lockedCount(p)+'/'+winScore+' låsta · '+pendingCount(p)+' risk</span></div><div class="miniTimeline"></div>';
       const mt=board.querySelector('.miniTimeline');
       if(!preview.length) mt.innerHTML='<p class="tiny">Tom tidslinje</p>'; else preview.forEach(c=>mt.appendChild(makeTimelineCard(c)));
       els.playerBoards.appendChild(board);
@@ -415,21 +427,44 @@ export function createRenderer(ctx){
     const selectedMode = settings.gameMode === 'party' ? 'quiz' : (settings.gameMode || 'timeline');
     const selectedParty = settings.quizType || settings.partyMode || 'party-owner';
     const partyModeEnabled = settings.partyModeEnabled === true || settings.gameMode === 'party';
-    const entries = Object.values(data.playlistMix || {}).sort((a,b)=>Number(a.addedAt || 0)-Number(b.addedAt || 0));
+    const entries = Object.entries(data.playlistMix || {}).map(([key,value]) => ({key,...(value || {})})).sort((a,b)=>Number(a.addedAt || 0)-Number(b.addedAt || 0));
     document.body.classList.toggle('isHost', isHost);
     document.body.classList.toggle('isGuest', !isHost);
     if(els.lobbySettingsNotice){
       setText(els.lobbySettingsNotice, isHost ? 'V\u00e4lj spelinst\u00e4llningar och starta spelet.' : 'L\u00e4gg till en egen spellista eller v\u00e4nta p\u00e5 hosten.');
     }
+    if(els.playlistOwnerSelect){
+      const currentOwner = els.playlistOwnerSelect.value || getPlayer().id;
+      const players = sortPlayers(data.players || {}).filter(p => p.id);
+      els.playlistOwnerSelect.innerHTML = players.map(p => '<option value="'+esc(p.id)+'">'+esc(p.name || 'Spelare')+(p.id === getPlayer().id ? ' (du)' : '')+'</option>').join('');
+      els.playlistOwnerSelect.value = players.some(p => p.id === currentOwner) ? currentOwner : getPlayer().id;
+      els.playlistOwnerSelect.disabled = !isHost || !isLobby;
+      document.querySelectorAll('.hostAttributionControl').forEach(control => {
+        control.style.display = isHost && isLobby ? '' : 'none';
+      });
+    }
     document.querySelectorAll('.modeButton[data-game-mode]').forEach(button => {
       button.classList.toggle('active', button.dataset.gameMode === selectedMode);
       button.disabled = !canEditHostSettings;
     });
+    const showSetting = (control, visible) => {
+      if(!control) return;
+      control.style.display = visible ? '' : 'none';
+      if(control.id){
+        const label = document.querySelector('label[for="'+control.id+'"]');
+        if(label) label.style.display = visible ? '' : 'none';
+      }
+    };
+    const showQuizSettings = selectedMode === 'quiz';
+    const showTimelineSettings = selectedMode === 'timeline';
     if(els.partyModeToggle){
+      const partyToggleLine = els.partyModeToggle.closest('.partyToggleLine');
+      if(partyToggleLine) partyToggleLine.style.display = showQuizSettings ? '' : 'none';
       els.partyModeToggle.checked = partyModeEnabled;
       els.partyModeToggle.disabled = !canEditHostSettings || selectedMode !== 'quiz';
     }
     if(els.partyModeSelect){
+      showSetting(els.partyModeSelect, showQuizSettings);
       els.partyModeSelect.value = selectedParty;
       els.partyModeSelect.disabled = !canEditHostSettings || selectedMode !== 'quiz';
     }
@@ -438,8 +473,14 @@ export function createRenderer(ctx){
       els.quizTimerSelect.disabled = !canEditHostSettings;
     }
     if(els.quizSongLimitSelect){
+      showSetting(els.quizSongLimitSelect, showQuizSettings);
       els.quizSongLimitSelect.value = String(settings.quizSongLimit ?? 'all');
       els.quizSongLimitSelect.disabled = !canEditHostSettings || selectedMode !== 'quiz';
+    }
+    if(els.timelineWinScoreSelect){
+      showSetting(els.timelineWinScoreSelect, showTimelineSettings);
+      els.timelineWinScoreSelect.value = String(settings.timelineWinScore ?? WIN_SCORE);
+      els.timelineWinScoreSelect.disabled = !canEditHostSettings || selectedMode !== 'timeline';
     }
     if(els.selectedPlaylistList){
       if(!entries.length){
@@ -453,7 +494,10 @@ export function createRenderer(ctx){
           '<div class="mixPlaylistRows">' +
           entries.map(entry => {
             const songCount = Number(entry.songCount || (entry.songs ? Object.keys(entry.songs).length : 0) || 0);
-            return '<div class="mixPlaylistRow"><span>'+esc(entry.name || 'Spellista')+'</span><small>'+esc(entry.playerName || 'Spelare')+' \u00b7 '+songCount+' l\u00e5tar</small></div>';
+            const canRemove = isLobby && (canEditHostSettings || entry.playerId === getPlayer().id || entry.attributedPlayerId === getPlayer().id || entry.createdByPlayerId === getPlayer().id);
+            const removeButton = canRemove ? '<button class="mixRemoveButton" type="button" data-remove-mix-playlist="'+esc(entry.key)+'" title="Ta bort spellista" aria-label="Ta bort '+esc(entry.name || 'spellista')+'">\u00d7</button>' : '';
+            const creatorText = entry.createdByName && entry.createdByName !== entry.playerName ? ' \u00b7 skapad av '+esc(entry.createdByName) : '';
+            return '<div class="mixPlaylistRow"><div><span>'+esc(entry.name || 'Spellista')+'</span><small>'+esc(entry.playerName || 'Spelare')+' \u00b7 '+songCount+' l\u00e5tar'+creatorText+'</small></div>'+removeButton+'</div>';
           }).join('') +
           '</div>';
       }
@@ -488,14 +532,24 @@ export function createRenderer(ctx){
       els.lockInBtn.textContent='L\u00e5s kort';
     }
     if(els.playSpotifyBtn) els.playSpotifyBtn.disabled=!hasCurrent;
-    els.startGameBtn.disabled=!connected || !isHost || !isLobby;
+    const meReady = !!me?.ready;
+    els.startGameBtn.disabled=!connected || !isLobby;
     if(els.utilityEndGameBtn) els.utilityEndGameBtn.disabled=!connected || !isHost || !['playing','finished'].includes(getRoomData()?.game?.status);
     if(els.utilityCloseLobbyBtn) els.utilityCloseLobbyBtn.disabled=!connected || !isHost;
     const canEditPlaylistMix = connected && isLobby;
     if(els.addPlaylistBtn) els.addPlaylistBtn.disabled=!canEditPlaylistMix || !els.savedPlaylistSelect?.value;
     if(els.savedPlaylistSelect) els.savedPlaylistSelect.disabled=!canEditPlaylistMix;
-    if(getRoomData()?.game?.status==='playing'){ els.startGameBtn.textContent='Avsluta spel'; els.startGameBtn.className='danger'; }
-    else { els.startGameBtn.textContent='Starta spel'; els.startGameBtn.className='primary'; }
+    if(getRoomData()?.game?.status==='playing'){
+      els.startGameBtn.textContent=isHost ? 'Avsluta spel' : 'Redo';
+      els.startGameBtn.className=isHost ? 'danger' : 'secondary';
+      els.startGameBtn.disabled=!connected || !isHost;
+    }else if(isHost){
+      els.startGameBtn.textContent='Starta spel';
+      els.startGameBtn.className='primary';
+    }else{
+      els.startGameBtn.textContent=meReady ? 'Redo ✓' : 'Redo';
+      els.startGameBtn.className=meReady ? 'success' : 'primary';
+    }
   }
 
 

@@ -125,14 +125,23 @@
     .settingGroup{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.10);}
     .settingGroup h5{margin:0 0 8px;font-size:.8rem;color:var(--muted);font-weight:900;}
     .playlistAddRow{display:grid;grid-template-columns:1fr 44px;gap:8px;align-items:stretch;}
+    .inlinePlaylistStatus{margin:0;min-height:18px;font-size:.82rem;}
+    .playlistUpdateNotice{min-height:18px;margin:0;color:var(--muted);font-size:.78rem;font-weight:850;}
+    .playlistUpdateNotice.ok{color:var(--ok);}
+    .playlistUpdateNotice.warn{color:var(--warn);}
+    .playlistUpdateNotice.bad{color:var(--bad);}
+    .hostAttributionControl{margin-top:4px;}
     .iconButton{width:44px;min-width:44px;height:44px;display:grid;place-items:center;padding:0!important;font-size:1.55rem;line-height:1;font-weight:950;border-radius:12px!important;}
     .selectedPlaylistList{display:grid;gap:8px;margin-top:12px;padding:10px;border:1px solid rgba(255,255,255,.10);border-radius:14px;background:rgba(255,255,255,.035);}
     .mixSummary{display:flex;align-items:center;justify-content:space-between;gap:10px;}
     .mixSummary b{font-size:.92rem;}
     .mixPlaylistRows{display:grid;gap:7px;}
     .mixPlaylistRow{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:10px;background:rgba(0,0,0,.12);}
+    .mixPlaylistRow>div{min-width:0;display:grid;gap:2px;}
     .mixPlaylistRow span{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .mixPlaylistRow small{color:var(--muted);white-space:nowrap;}
+    .mixPlaylistRow small{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .mixRemoveButton{width:30px;height:30px;border-radius:999px;padding:0;display:grid;place-items:center;font-size:1.2rem;line-height:1;background:rgba(255,107,107,.16);border:1px solid rgba(255,107,107,.45);color:#ffd7d7;box-shadow:none;}
+    .mixRemoveButton:hover{background:rgba(255,107,107,.28);border-color:rgba(255,107,107,.72);}
     body.isGuest .hostOnlySetting{opacity:.38;filter:saturate(.45);}
     body.isGuest .playlistPickerSetting{opacity:1;filter:none;}
     body.waitingMode .turnTitle{display:none!important;}

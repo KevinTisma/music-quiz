@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v85`
+- `timeline-game-v103`
 
 PWA-version byggd från:
 
@@ -49,6 +49,17 @@ Nuvarande app är fortfarande främst ett Classic Timeline-spel med:
 - spelinställningspanelen är uppdelad horisontellt på desktop i tre sektioner: mode selection, Spotify-import och spelspecifika inställningar
 - mixade spellistor där flera spelare kan lägga till egna sparade spellistor till samma rum
 - första Party-mode-flödet för `Vems låt`, där hosten spelar/skärmdelar och spelare svarar i ett enklare Kahoot-liknande UI
+
+Senast byggt 2026-07-11:
+
+- Firebase Auth-stöd har lagts till via anonym inloggning, separat från Spotify OAuth.
+- Realtime Database-reglerna har bytts till en striktare `auth.uid`-modell:
+  - användare kan bara läsa/skriva sina egna `users/{uid}/playlists`
+  - rum får `hostUid`, spelare får `uid`, och medlemskap markeras under `rooms/{roomId}/memberUids/{uid}`
+  - host kan styra lobby/spel, medan gäster bara kan skriva i rummet de är medlem i
+  - vanliga spelare kan bara ta bort egna/attribuerade entries i `playlistMix`
+- Spotify används fortsatt för musik/profil, men Firebase-behörighet baseras nu på Firebase Auth.
+- Kvar före deploy av strikta regler: fyll i `apiKey`, `authDomain` och `appId` i `FIREBASE_CONFIG`, och aktivera Anonymous Auth i Firebase Console.
 
 Senast byggt 2026-07-02:
 

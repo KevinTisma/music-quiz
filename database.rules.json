@@ -3,14 +3,12 @@
     ".read": false,
     ".write": false,
     "users": {
-      "$userId": {
-        ".read": true,
-        ".write": "newData.hasChild('playlists') || !newData.exists()",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
         "playlists": {
-          ".read": true,
           "$playlistId": {
-            ".write": "newData.exists() && newData.child('ownerId').val() === $userId",
-            ".validate": "newData.hasChildren(['id', 'ownerId', 'name', 'source', 'songCount', 'songs']) && newData.child('ownerId').val() === $userId && newData.child('name').isString() && newData.child('name').val().length <= 80 && newData.child('source').isString() && newData.child('songCount').isNumber() && newData.child('songCount').val() >= 0 && newData.child('songCount').val() <= 1000",
+            ".validate": "newData.hasChildren(['id', 'ownerId', 'ownerUid', 'name', 'source', 'songCount', 'songs']) && newData.child('ownerId').val() === $uid && newData.child('ownerUid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 80 && newData.child('source').isString() && newData.child('songCount').isNumber() && newData.child('songCount').val() >= 0 && newData.child('songCount').val() <= 1000",
             "songs": {
               "$songId": {
                 ".validate": "newData.hasChildren(['title', 'artist', 'year']) && newData.child('title').isString() && newData.child('artist').isString() && newData.child('year').isNumber() && newData.child('year').val() >= 1900 && newData.child('year').val() <= 2100"
@@ -29,48 +27,63 @@
     "rooms": {
       ".indexOn": ["meta/status", "meta/updatedAt"],
       "$roomId": {
-        ".read": true,
-        ".write": "!newData.exists() && data.child('meta/status').val() === 'closed'",
+        ".read": "auth != null",
+        ".write": "auth != null && !newData.exists() && data.child('meta/status').val() === 'closed' && (data.child('meta/hostUid').val() === auth.uid || data.child('memberUids/' + auth.uid).val() === true)",
         ".validate": "$roomId.matches(/^[A-Z0-9-]{1,18}$/)",
         "meta": {
-          ".write": "(!data.exists() && newData.child('hostId').isString() && newData.child('hostId').val().length > 0 && newData.child('status').val() === 'lobby' && newData.child('code').val() === $roomId && newData.child('updatedBy').val() === newData.child('hostId').val()) || (data.exists() && newData.child('hostId').val() === data.child('hostId').val() && ((newData.child('updatedBy').val() === data.child('hostId').val()) || (data.child('status').val() === 'lobby' && newData.child('status').val() === data.child('status').val() && root.child('rooms/' + $roomId + '/players/' + newData.child('updatedBy').val()).exists()) || (data.child('status').val() === 'playing' && newData.child('status').val() === 'finished' && root.child('rooms/' + $roomId + '/players/' + newData.child('updatedBy').val()).exists()) || (newData.child('closeReason').val() === 'timeout' && root.child('rooms/' + $roomId + '/players/' + newData.child('closedBy').val()).exists()) || (newData.child('closedBy').val() === data.child('hostId').val())))",
-          ".validate": "newData.hasChildren(['hostId', 'code', 'status', 'updatedAt']) && newData.child('hostId').isString() && newData.child('code').val() === $roomId && newData.child('status').val().matches(/^(lobby|playing|finished|closed)$/)"
+          ".write": "auth != null && ((!data.exists() && newData.child('hostUid').val() === auth.uid && newData.child('hostId').isString() && newData.child('hostId').val().length > 0 && newData.child('status').val() === 'lobby' && newData.child('code').val() === $roomId && newData.child('updatedByUid').val() === auth.uid) || (data.exists() && newData.child('hostUid').val() === data.child('hostUid').val() && ((data.child('hostUid').val() === auth.uid) || (root.child('rooms/' + $roomId + '/memberUids/' + auth.uid).val() === true && newData.child('status').val() === 'closed' && newData.child('closeReason').val().matches(/^(empty|timeout)$/)))))",
+          ".validate": "newData.hasChildren(['hostId', 'hostUid', 'code', 'status', 'updatedAt', 'updatedByUid']) && newData.child('hostUid').isString() && newData.child('code').val() === $roomId && newData.child('status').val().matches(/^(lobby|playing|finished|closed)$/)"
+        },
+        "memberUids": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && (newData.val() === true || !newData.exists())",
+            ".validate": "newData.val() === true"
+          }
         },
         "players": {
           "$playerId": {
-            ".write": "!newData.exists() || (newData.child('id').val() === $playerId && root.child('rooms/' + $roomId + '/meta/status').val() !== 'closed')",
-            ".validate": "!newData.exists() || (newData.hasChildren(['id', 'name', 'online', 'lastSeen']) && newData.child('id').val() === $playerId && newData.child('name').isString() && newData.child('name').val().length <= 32 && newData.child('online').isBoolean())"
+            ".write": "auth != null && ((!newData.exists() && (data.child('uid').val() === auth.uid || root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid)) || (newData.exists() && newData.child('id').val() === $playerId && newData.child('uid').val() === auth.uid && root.child('rooms/' + $roomId + '/meta/status').val() !== 'closed'))",
+            ".validate": "!newData.exists() || (newData.hasChildren(['id', 'uid', 'name', 'online', 'lastSeen']) && newData.child('id').val() === $playerId && newData.child('uid').val() === auth.uid && newData.child('name').isString() && newData.child('name').val().length <= 32 && newData.child('online').isBoolean())"
           }
         },
+        "settings": {
+          ".write": "auth != null && root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid && root.child('rooms/' + $roomId + '/meta/status').val() === 'lobby'"
+        },
         "playlistMix": {
-          ".write": "root.child('rooms/' + $roomId + '/meta/status').val() === 'lobby' || newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val()",
           "$entryId": {
-            ".validate": "newData.hasChildren(['id', 'ownerId', 'playerId', 'playerName', 'name', 'songCount', 'songs']) && newData.child('ownerId').isString() && newData.child('playerId').isString() && newData.child('playerName').isString() && newData.child('playerName').val().length <= 32 && newData.child('name').isString() && newData.child('name').val().length <= 80 && newData.child('songCount').isNumber() && newData.child('songCount').val() >= 0 && newData.child('songCount').val() <= 1000"
+            ".write": "auth != null && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || (root.child('rooms/' + $roomId + '/meta/status').val() === 'lobby' && ((!newData.exists() && (data.child('ownerUid').val() === auth.uid || data.child('createdByUid').val() === auth.uid)) || (newData.exists() && (newData.child('ownerUid').val() === auth.uid || newData.child('createdByUid').val() === auth.uid)))))",
+            ".validate": "!newData.exists() || (newData.hasChildren(['id', 'ownerId', 'ownerUid', 'playerId', 'playerName', 'name', 'songCount', 'songs']) && newData.child('ownerUid').isString() && newData.child('playerId').isString() && newData.child('playerName').isString() && newData.child('playerName').val().length <= 32 && newData.child('name').isString() && newData.child('name').val().length <= 80 && newData.child('songCount').isNumber() && newData.child('songCount').val() >= 0 && newData.child('songCount').val() <= 1000)"
           }
         },
         "selectedPlaylistId": {
-          ".write": "newData.parent().child('meta/status').val() === 'lobby' || newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val()",
-          ".validate": "newData.isString()"
+          ".write": "auth != null && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || (root.child('rooms/' + $roomId + '/meta/status').val() === 'lobby' && root.child('rooms/' + $roomId + '/memberUids/' + auth.uid).val() === true))",
+          ".validate": "newData.isString() || !newData.exists()"
         },
         "selectedPlaylist": {
-          ".write": "newData.parent().child('meta/status').val() === 'lobby' || newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val()",
-          ".validate": "newData.hasChildren(['id', 'ownerId', 'name', 'source', 'songCount']) && newData.child('name').isString() && newData.child('songCount').isNumber()"
+          ".write": "auth != null && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || (root.child('rooms/' + $roomId + '/meta/status').val() === 'lobby' && root.child('rooms/' + $roomId + '/memberUids/' + auth.uid).val() === true))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['id', 'ownerId', 'name', 'source', 'songCount']) && newData.child('name').isString() && newData.child('songCount').isNumber())"
         },
         "songBank": {
-          ".write": "newData.parent().child('meta/status').val() === 'lobby' || newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val()"
+          ".write": "auth != null && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || (root.child('rooms/' + $roomId + '/meta/status').val() === 'lobby' && root.child('rooms/' + $roomId + '/memberUids/' + auth.uid).val() === true))"
         },
         "game": {
-          ".write": "newData.parent().child('meta/status').val() !== 'closed'",
-          ".validate": "!newData.exists() || (newData.hasChildren(['status', 'turnPlayerId', 'turnNumber']) && newData.child('status').val().matches(/^(playing|finished)$/))"
+          ".write": "auth != null && root.child('rooms/' + $roomId + '/meta/status').val() !== 'closed' && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || root.child('rooms/' + $roomId + '/players/' + data.child('turnPlayerId').val() + '/uid').val() === auth.uid)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['status']) && newData.child('status').val().matches(/^(playing|finished)$/))",
+          "answers": {
+            "$playerId": {
+              ".write": "auth != null && root.child('rooms/' + $roomId + '/players/' + $playerId + '/uid').val() === auth.uid",
+              ".validate": "newData.hasChildren(['playerId', 'uid', 'choiceId', 'answeredAt']) && newData.child('playerId').val() === $playerId && newData.child('uid').val() === auth.uid"
+            }
+          }
         },
         "savedPlaylists": {
-          ".write": "newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val() || !newData.exists()"
+          ".write": "auth != null && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || !newData.exists())"
         },
         "songBanks": {
-          ".write": "newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val() || !newData.exists()"
+          ".write": "auth != null && (root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid || !newData.exists())"
         },
         "$other": {
-          ".write": "newData.parent().child('meta/updatedBy').val() === data.parent().child('meta/hostId').val()",
+          ".write": "auth != null && root.child('rooms/' + $roomId + '/meta/hostUid').val() === auth.uid",
           ".validate": true
         }
       }

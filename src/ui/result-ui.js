@@ -4,6 +4,7 @@ import { cardId, esc, lockedCount, pendingCount, timelineOf } from '../utils/hel
 export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb, isHost=false }){
   const mode = String(roomData?.game?.mode || '');
   const isPartyGame = mode.startsWith('party-') || mode.startsWith('quiz-');
+  const winScore = Number(roomData?.game?.winScore || roomData?.settings?.timelineWinScore || WIN_SCORE);
   const playerScore = player => isPartyGame ? Number(player?.score || 0) : lockedCount(player);
   const sortedPlayers = players.slice().sort((a,b)=>{
     const scoreDiff = playerScore(b) - playerScore(a);
@@ -21,6 +22,7 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
   const resultKey = JSON.stringify({
     playlist: roomData?.selectedPlaylistId || '',
     winner: roomData?.game?.winnerId || '',
+      winScore,
       isHost,
       mode: roomData?.game?.mode || '',
       players: sortedPlayers.map(p=>({
@@ -85,7 +87,7 @@ export function renderFinishedResultsScene({ drawCardWrap, players, roomData, co
       '<div class="planetShape" aria-hidden="true"><span></span></div>'+
       '<div class="planetResultText">'+
         '<div><strong>'+rank+'</strong><b>'+esc(p.name||'Spelare')+'</b></div>'+
-        '<small>'+(isPartyGame ? (playerScore(p)+' poäng') : (lockedCount(p)+'/'+WIN_SCORE+' låsta kort'))+'</small>'+
+        '<small>'+(isPartyGame ? (playerScore(p)+' poäng') : (lockedCount(p)+'/'+winScore+' låsta kort'))+'</small>'+
       '</div>'+
       '<div class="planetPlayerTimeline" aria-label="'+(isPartyGame ? 'Quizresultat för ' : 'Tidslinje för ')+esc(p.name||'Spelare')+'">'+timelineHtml+'</div>';
     list.appendChild(item);
