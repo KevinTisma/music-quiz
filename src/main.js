@@ -1,4 +1,4 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v108';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v112';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
 import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v108';
 import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v108';
@@ -6,7 +6,7 @@ import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { ensureFirebaseAuth, getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v108';
+import { createRenderer } from './ui/render.js?v=active-room-start-v112';
 
 (() => {
   'use strict';
@@ -28,6 +28,43 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     wrongRevealTimeout:null,
     viewedTimelinePlayerId:localStorage.getItem(VIEWED_TIMELINE_KEY) || player.id
   };
+  const POWERUPS = {
+    steal:{label:'Sno kort', short:'Sno', icon:'<>', tone:'cyan'},
+    pressure:{label:'10 sekunder', short:'10s', icon:'10', tone:'pink'},
+    secondChance:{label:'Dubbelchans', short:'2x', icon:'2x', tone:'violet'},
+    hint:{label:'Årtalsledtråd', short:'19X', icon:'19X', tone:'blue'},
+    shield:{label:'Skydda rundan', short:'Skydd', icon:'◇', tone:'green'},
+    secure:{label:'Säkra gult kort', short:'Säkra', icon:'✓', tone:'gold'},
+    forceLock:{label:'Tvinga låsning', short:'Lås', icon:'!', tone:'red'}
+  };
+  const POWERUP_TYPES = Object.keys(POWERUPS);
+  function randomPowerupType(seed=''){
+    const n = [...String(seed || Math.random())].reduce((sum,ch)=>sum+ch.charCodeAt(0),0);
+    return POWERUP_TYPES[n % POWERUP_TYPES.length];
+  }
+  function maybeAttachPowerup(card,index){
+    if(!card || card.powerup) return card;
+    const key = card.drawId || card.id || card.uri || card.title || index;
+    const n = [...String(key)].reduce((sum,ch)=>sum+ch.charCodeAt(0),0) + Number(index || 0);
+    return n % 5 === 0 ? {...card,powerup:randomPowerupType(key)} : card;
+  }
+  function powerupInventory(p=player){
+    return {...(roomData?.players?.[p.id]?.powerups || {})};
+  }
+  function addPowerupToUpdates(updates,playerId,type,count=1){
+    if(!type || !POWERUPS[type]) return;
+    const current = Number(roomData?.players?.[playerId]?.powerups?.[type] || 0);
+    updates['players/'+playerId+'/powerups/'+type] = Math.max(0,current + count);
+  }
+  function spendPowerupUpdates(type){
+    const current = Number(roomData?.players?.[player.id]?.powerups?.[type] || 0);
+    if(current <= 0){ status(els.gameStatus,'Du har inte den powerupen.','warn'); return null; }
+    return {['players/'+player.id+'/powerups/'+type]:current - 1};
+  }
+  function maskedYear(card){
+    const year = String(card?.year || '');
+    return year.length >= 3 ? year.slice(0,3)+'X' : '????';
+  }
 
   const $ = id => document.getElementById(id);
   const els = {
@@ -855,7 +892,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
       await startQuizGame(allPlayers);
       return;
     }
-    const deck=shuffle(songs).map((s,i)=>({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))}));
+    const deck=shuffle(songs).map((s,i)=>maybeAttachPowerup({...s,drawId:'d_'+i+'_'+cleanKey(cardId(s))},i));
     const updates={};
     allPlayers.forEach(p=>{ updates['players/'+p.id+'/timeline']=[]; updates['players/'+p.id+'/ready']=false; updates['players/'+p.id+'/activeProposal']=null; });
     const firstPlayer = shuffle(allPlayers)[0] || {id:player.id,name:player.name};
@@ -903,9 +940,12 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     const deck=Array.isArray(game.deck)?[...game.deck]:[];
     if(!deck.length){ status(els.gameStatus,'Kortleken är slut. Lås in eller starta om.','warn'); return; }
     const card=deck.shift();
-    const timerSeconds = Number(game.gameTimerSeconds || selectedGameTimerSeconds() || 0);
+    const forcedTimer = game.powerupNextTimer?.playerId === player.id ? Number(game.powerupNextTimer.seconds || 0) : 0;
+    const timerSeconds = forcedTimer || Number(game.gameTimerSeconds || selectedGameTimerSeconds() || 0);
     const answerDeadline = timerSeconds > 0 ? Date.now() + timerSeconds * 1000 : null;
-    await roomRef().update({'game/deck':deck,'game/currentCard':card,'game/proposedIndex':null,'game/answerDeadline':answerDeadline,'game/wrongReveal':null,'game/message':'Dra kortet till rätt plats i tidslinjen.',['players/'+player.id+'/activeProposal']:null});
+    const updates = {'game/deck':deck,'game/currentCard':card,'game/proposedIndex':null,'game/answerDeadline':answerDeadline,'game/wrongReveal':null,'game/powerupHint':null,'game/secondChance':null,'game/message':forcedTimer ? 'Powerup aktiv: du har 10 sekunder.' : 'Dra kortet till rätt plats i tidslinjen.',['players/'+player.id+'/activeProposal']:null};
+    if(forcedTimer) updates['game/powerupNextTimer']=null;
+    await roomRef().update(updates);
     playCurrentSpotify(false);
   }
   async function drawPartyCard(){
@@ -981,16 +1021,18 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     const timeline = timelineOf(active);
     const pending = timeline.filter(c=>c.status==='pending');
     const locked = timeline.filter(c=>c.status==='locked');
-    const returnCards = [...pending, game.currentCard].map(c=>{ const x={...c}; delete x.status; return x; });
+    const shieldActive = game.roundShield?.playerId === activeId;
+    const keptTimeline = shieldActive ? timeline : locked;
+    const returnCards = (shieldActive ? [game.currentCard] : [...pending, game.currentCard]).map(c=>{ const x={...c}; delete x.status; return x; });
     const deck = [...(Array.isArray(game.deck)?game.deck:[]), ...shuffle(returnCards)];
     const nextId = nextPlayerId(activeId);
     const until = Date.now() + 5000;
-    await roomRef('game').update({wrongReveal:{card:{...game.currentCard,status:'wrong'},playerId:activeId,until,year:game.currentCard.year},answerDeadline:null,message:'Tiden gick ut. Rätt är var '+game.currentCard.year+'. Nästa spelares tur om 5 sekunder.'});
+    await roomRef('game').update({wrongReveal:{card:{...game.currentCard,status:'wrong'},playerId:activeId,until,year:game.currentCard.year},answerDeadline:null,powerupHint:null,secondChance:null,roundShield:null,message:shieldActive ? 'Tiden gick ut, men Skydda rundan räddade dina gula kort. Rätt är var '+game.currentCard.year+'. Nästa spelares tur om 5 sekunder.' : 'Tiden gick ut. Rätt är var '+game.currentCard.year+'. Nästa spelares tur om 5 sekunder.'});
     setTimeout(async()=>{
       const snap = await roomRef('game/wrongReveal').get();
       const wr = snap.val();
       if(!wr || wr.until !== until) return;
-      await roomRef().update({['players/'+activeId+'/timeline']:locked,['players/'+activeId+'/activeProposal']:null,'game/deck':deck,'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Tiden gick ut. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
+      await roomRef().update({['players/'+activeId+'/timeline']:keptTimeline,['players/'+activeId+'/activeProposal']:null,'game/deck':deck,'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/powerupHint':null,'game/secondChance':null,'game/roundShield':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':shieldActive ? 'Tiden gick ut, men Skydda rundan räddade de gula korten. Nästa spelares tur.' : 'Tiden gick ut. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
     }, 5000);
   }
   function partyCorrectLabel(game, card){
@@ -1028,23 +1070,61 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     const proposed=timelineWithProposal(timeline,card,idx);
     const correct=isSortedByYear(proposed);
     if(correct){
-      const newTimeline=[...timeline]; newTimeline.splice(idx,0,{...card,status:'pending'});
-      await roomRef().update({['players/'+player.id+'/timeline']:newTimeline,['players/'+player.id+'/activeProposal']:null,'game/currentCard':null,'game/proposedIndex':null,'game/message':'Rätt. Dra ett till kort eller lås in dina gula kort.'});
-      status(els.gameStatus,'Rätt. Kortet är gult och riskeras tills du låser in.','ok');
+      const earnedPowerup = card.powerup && POWERUPS[card.powerup] ? card.powerup : null;
+      const timelineCard = {...card,status:'pending'};
+      delete timelineCard.powerup;
+      const newTimeline=[...timeline]; newTimeline.splice(idx,0,timelineCard);
+      const updates={['players/'+player.id+'/timeline']:newTimeline,['players/'+player.id+'/activeProposal']:null,'game/currentCard':null,'game/proposedIndex':null,'game/powerupHint':null,'game/secondChance':null};
+      if(earnedPowerup) addPowerupToUpdates(updates,player.id,earnedPowerup);
+      const nowMs = Date.now();
+      const streak = roomData?.game?.speedStreak || {};
+      const keepStreak = streak.playerId === player.id && Number(streak.startedAt || 0) && nowMs - Number(streak.startedAt || 0) <= 10000;
+      const streakCount = keepStreak ? Number(streak.count || 0) + 1 : 1;
+      if(streakCount >= 3){
+        addPowerupToUpdates(updates,player.id,'pressure');
+        updates['game/speedStreak']={playerId:player.id,count:0,startedAt:null};
+      }else{
+        updates['game/speedStreak']={playerId:player.id,count:streakCount,startedAt:keepStreak ? Number(streak.startedAt || nowMs) : nowMs};
+      }
+      const resumeId = roomData?.game?.powerupResumeTurnPlayerId || null;
+      if(resumeId){
+        updates['game/turnPlayerId']=resumeId;
+        updates['game/powerupResumeTurnPlayerId']=null;
+      }
+      const earnedText = earnedPowerup ? ' Powerup: '+POWERUPS[earnedPowerup].label+'.' : '';
+      const speedText = streakCount >= 3 ? ' Speedbonus: 10 sekunder.' : '';
+      updates['game/message']='Rätt. Dra ett till kort eller lås in dina gula kort.'+earnedText+speedText;
+      await roomRef().update(updates);
+      status(els.gameStatus,'Rätt.'+earnedText+speedText,'ok');
     }else{
+      const secondChance = game.secondChance || {};
+      const canRetry = secondChance.playerId === player.id && String(secondChance.cardId || '') === String(cardId(card)) && !secondChance.used;
+      if(canRetry){
+        await roomRef().update({
+          'game/proposedIndex':null,
+          'game/secondChance/used':true,
+          'game/message':'Dubbelchans aktiv. Försök placera samma kort igen.',
+          ['players/'+player.id+'/activeProposal']:null
+        });
+        status(els.gameStatus,'Dubbelchans. Du får försöka igen.','warn');
+        return;
+      }
+      const shieldActive = game.roundShield?.playerId === player.id;
       const pending=timeline.filter(c=>c.status==='pending');
       const locked=timeline.filter(c=>c.status==='locked');
-      const returnCards=[...pending,card].map(c=>{ const x={...c}; delete x.status; return x; });
+      const keptTimeline = shieldActive ? timeline : locked;
+      const returnCards=(shieldActive ? [card] : [...pending,card]).map(c=>{ const x={...c}; delete x.status; return x; });
       const deck=[...(Array.isArray(game.deck)?game.deck:[]),...shuffle(returnCards)];
-      const nextId = nextPlayerId(player.id);
+      const nextId = game.powerupResumeTurnPlayerId || nextPlayerId(player.id);
       const until = Date.now() + 5000;
-      await roomRef('game').update({wrongReveal:{card:{...card,status:'wrong'},playerId:player.id,until,year:card.year},message:'Fel placering. Rätt är var '+card.year+'. Nästa spelares tur om 5 sekunder.'});
-      status(els.gameStatus,'Fel. Rätt är var '+card.year+'. Du förlorar gula kort från rundan.','bad');
+      const wrongMessage = shieldActive ? 'Fel placering, men Skydda rundan räddade dina gula kort. Rätt är var '+card.year+'. Nästa spelares tur om 5 sekunder.' : 'Fel placering. Rätt är var '+card.year+'. Nästa spelares tur om 5 sekunder.';
+      await roomRef('game').update({wrongReveal:{card:{...card,status:'wrong'},playerId:player.id,until,year:card.year},message:wrongMessage,powerupHint:null,secondChance:null,roundShield:null});
+      status(els.gameStatus,shieldActive ? 'Fel, men dina gula kort är skyddade.' : 'Fel. Rätt är var '+card.year+'. Du förlorar gula kort från rundan.','bad');
       setTimeout(async()=>{
         const snap = await roomRef('game/wrongReveal').get();
         const wr = snap.val();
         if(!wr || wr.until !== until) return;
-        await roomRef().update({['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/activeProposal']:null,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/turnPlayerId':nextId,'game/turnNumber':(game.turnNumber||1)+1,'game/message':'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
+        await roomRef().update({['players/'+player.id+'/timeline']:keptTimeline,['players/'+player.id+'/activeProposal']:null,'game/deck':deck,'game/discard':[...(game.discard||[])],'game/currentCard':null,'game/proposedIndex':null,'game/wrongReveal':null,'game/powerupHint':null,'game/secondChance':null,'game/roundShield':null,'game/turnPlayerId':nextId,'game/powerupResumeTurnPlayerId':null,'game/turnNumber':(game.turnNumber||1)+1,'game/message':shieldActive ? 'Skydda rundan räddade de gula korten. Nästa spelares tur.' : 'Fel placering. Gula kort från rundan gick tillbaka. Nästa spelares tur.'});
       }, 5000);
     }
   }
@@ -1057,7 +1137,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     const locked=timeline.map(c=>({...c,status:'locked'}));
     const score=locked.length;
     const winScore = selectedTimelineWinScore();
-    const updates={['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/score']:score,['players/'+player.id+'/activeProposal']:null};
+    const updates={['players/'+player.id+'/timeline']:locked,['players/'+player.id+'/score']:score,['players/'+player.id+'/activeProposal']:null,'game/roundShield':null,'game/secondChance':null,'game/powerupHint':null};
     if(score>=winScore){
       updates['game/status']='finished'; updates['game/winnerId']=player.id; updates['game/message']=(me.name||player.name)+' vann med '+score+' låsta kort.';
       updates['meta/status']='finished'; updates['meta/updatedAt']=serverTimestamp();
@@ -1065,6 +1145,126 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
       updates['meta/updatedByUid']=currentAuthUid();
     }else{
       updates['game/turnPlayerId']=nextPlayerId(player.id); updates['game/turnNumber']=(game.turnNumber||1)+1; updates['game/message']='Kort låsta. Nästa spelares tur.';
+    }
+    await roomRef().update(updates);
+  }
+  async function usePowerUp(type){
+    if(!POWERUPS[type]) return;
+    await ensureFirebaseReady();
+    if(isQuizGame() || roomData?.game?.status !== 'playing'){
+      status(els.gameStatus,'Powerups används bara i Timeline-mode.','warn');
+      return;
+    }
+    if(type === 'steal') return useStealPowerUp();
+    if(type === 'pressure') return usePressurePowerUp();
+    if(type === 'secondChance') return useSecondChancePowerUp();
+    if(type === 'hint') return useHintPowerUp();
+    if(type === 'shield') return useShieldPowerUp();
+    if(type === 'secure') return useSecurePowerUp();
+    if(type === 'forceLock') return useForceLockPowerUp();
+  }
+  function numberedChoice(items,labeler){
+    return items.map((item,index)=>(index+1)+'. '+labeler(item,index)).join('\n');
+  }
+  async function useStealPowerUp(){
+    const spend = spendPowerupUpdates('steal');
+    if(!spend) return;
+    if(!isMeActive() || currentCard()){
+      status(els.gameStatus,'Sno kort kan användas på din tur när inget kort är draget.','warn');
+      return;
+    }
+    const targets = activePlayersFrom(roomData.players || {}).filter(p => p.id !== player.id && timelineOf(p).some(c=>c.status==='pending'));
+    if(!targets.length){ status(els.gameStatus,'Ingen annan spelare har ett gult kort att sno.','warn'); return; }
+    const targetNumber = Number(prompt('Vem vill du sno från?\n'+numberedChoice(targets,p=>(p.name||'Spelare')+' ('+pendingCount(p)+' gula kort)')));
+    const target = targets[targetNumber - 1];
+    if(!target) return;
+    const targetTimeline = timelineOf(target);
+    const pendingCards = targetTimeline.map((card,index)=>({card,index})).filter(item=>item.card.status==='pending');
+    const cardNumber = pendingCards.length === 1 ? 1 : Number(prompt('Vilket kort vill du sno?\n'+numberedChoice(pendingCards,item=>(item.card.title||'Okänd låt')+' - '+(item.card.artist||'Okänd artist')+' ('+(item.card.year||'?')+')')));
+    const selected = pendingCards[cardNumber - 1];
+    if(!selected) return;
+    const nextTargetTimeline = targetTimeline.filter((_,index)=>index !== selected.index);
+    const stolenCard = {...selected.card,drawId:'steal_'+Date.now()+'_'+cleanKey(cardId(selected.card))};
+    delete stolenCard.status;
+    await roomRef().update({
+      ...spend,
+      ['players/'+target.id+'/timeline']:nextTargetTimeline,
+      'game/currentCard':stolenCard,
+      'game/proposedIndex':null,
+      'game/powerupResumeTurnPlayerId':roomData.game?.turnPlayerId || player.id,
+      'game/message':(player.name||'Spelare')+' snodde ett kort från '+(target.name||'Spelare')+'. Gissa rätt för att behålla det.',
+      ['players/'+player.id+'/activeProposal']:null
+    });
+  }
+  async function usePressurePowerUp(){
+    const spend = spendPowerupUpdates('pressure');
+    if(!spend) return;
+    const game = roomData.game || {};
+    const target = roomData.players?.[game.turnPlayerId];
+    if(!target){ status(els.gameStatus,'Ingen aktiv spelare att stressa.','warn'); return; }
+    const updates = {...spend,'game/message':(target.name||'Spelaren')+' har 10 sekunder på sig.'};
+    if(game.currentCard) updates['game/answerDeadline'] = Date.now() + 10000;
+    else updates['game/powerupNextTimer'] = {playerId:target.id,seconds:10,usedBy:player.id};
+    await roomRef().update(updates);
+  }
+  async function useSecondChancePowerUp(){
+    const spend = spendPowerupUpdates('secondChance');
+    if(!spend) return;
+    const card = currentCard();
+    if(!isMeActive() || !card){ status(els.gameStatus,'Dubbelchans används på din tur när du har ett draget kort.','warn'); return; }
+    await roomRef().update({...spend,'game/secondChance':{playerId:player.id,cardId:cardId(card),used:false},'game/message':(player.name||'Spelare')+' har aktiverat Dubbelchans.'});
+  }
+  async function useHintPowerUp(){
+    const spend = spendPowerupUpdates('hint');
+    if(!spend) return;
+    const card = currentCard();
+    if(!isMeActive() || !card){ status(els.gameStatus,'Årtalsledtråd används på din tur när du har ett draget kort.','warn'); return; }
+    await roomRef().update({...spend,'game/powerupHint':{playerId:player.id,cardId:cardId(card),text:maskedYear(card)},'game/message':(player.name||'Spelare')+' tog en årtalsledtråd.'});
+  }
+  async function useShieldPowerUp(){
+    const spend = spendPowerupUpdates('shield');
+    if(!spend) return;
+    if(!isMeActive()){ status(els.gameStatus,'Skydda rundan används på din egen tur.','warn'); return; }
+    await roomRef().update({...spend,'game/roundShield':{playerId:player.id},'game/message':(player.name||'Spelare')+' skyddar sina gula kort den här rundan.'});
+  }
+  async function useSecurePowerUp(){
+    const spend = spendPowerupUpdates('secure');
+    if(!spend) return;
+    if(!isMeActive()){ status(els.gameStatus,'Säkra gult kort används på din egen tur.','warn'); return; }
+    const me = roomData.players?.[player.id] || {};
+    const timeline = timelineOf(me);
+    const pending = timeline.map((card,index)=>({card,index})).filter(item=>item.card.status==='pending');
+    if(!pending.length){ status(els.gameStatus,'Du har inget gult kort att säkra.','warn'); return; }
+    const cardNumber = pending.length === 1 ? 1 : Number(prompt('Vilket gult kort vill du säkra?\n'+numberedChoice(pending,item=>(item.card.title||'Okänd låt')+' - '+(item.card.artist||'Okänd artist')+' ('+(item.card.year||'?')+')')));
+    const selected = pending[cardNumber - 1];
+    if(!selected) return;
+    const nextTimeline = timeline.map((card,index)=>index === selected.index ? {...card,status:'locked'} : card);
+    const score = nextTimeline.filter(card=>card.status==='locked').length;
+    const updates = {...spend,['players/'+player.id+'/timeline']:nextTimeline,['players/'+player.id+'/score']:score,'game/message':(player.name||'Spelare')+' säkrade ett gult kort.'};
+    if(score >= selectedTimelineWinScore()){
+      updates['game/status']='finished'; updates['game/winnerId']=player.id; updates['game/message']=(me.name||player.name)+' vann med '+score+' låsta kort.';
+      updates['meta/status']='finished'; updates['meta/updatedAt']=serverTimestamp(); updates['meta/updatedBy']=player.id; updates['meta/updatedByUid']=currentAuthUid();
+    }
+    await roomRef().update(updates);
+  }
+  async function useForceLockPowerUp(){
+    const spend = spendPowerupUpdates('forceLock');
+    if(!spend) return;
+    if(!isMeActive()){ status(els.gameStatus,'Tvinga låsning används på din egen tur.','warn'); return; }
+    const game = roomData.game || {};
+    const targets = activePlayersFrom(roomData.players || {}).filter(p => p.id !== player.id && timelineOf(p).some(c=>c.status==='pending'));
+    if(!targets.length){ status(els.gameStatus,'Ingen annan spelare har gula kort att låsa.','warn'); return; }
+    const targetNumber = Number(prompt('Vem vill du tvinga att låsa?\n'+numberedChoice(targets,p=>(p.name||'Spelare')+' ('+pendingCount(p)+' gula kort)')));
+    const target = targets[targetNumber - 1];
+    if(!target) return;
+    if(game.turnPlayerId === target.id && game.currentCard){ status(els.gameStatus,'Du kan inte tvinga låsning medan spelaren har ett draget kort.','warn'); return; }
+    const nextTimeline = timelineOf(target).map(card=>card.status === 'pending' ? {...card,status:'locked'} : card);
+    const score = nextTimeline.filter(card=>card.status==='locked').length;
+    const updates = {...spend,['players/'+target.id+'/timeline']:nextTimeline,['players/'+target.id+'/score']:score,'game/message':(target.name||'Spelare')+' tvingades låsa sina gula kort.'};
+    if(game.turnPlayerId === target.id && !game.currentCard){ updates['game/turnPlayerId']=nextPlayerId(target.id); updates['game/turnNumber']=(game.turnNumber||1)+1; }
+    if(score >= selectedTimelineWinScore()){
+      updates['game/status']='finished'; updates['game/winnerId']=target.id; updates['game/message']=(target.name||'Spelare')+' vann med '+score+' låsta kort.';
+      updates['meta/status']='finished'; updates['meta/updatedAt']=serverTimestamp(); updates['meta/updatedBy']=player.id; updates['meta/updatedByUid']=currentAuthUid();
     }
     await roomRef().update(updates);
   }
@@ -1220,8 +1420,44 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     }
   }
 
+  function organizeLobbySettings(){
+    const gameSettings = els.playlistMenu?.querySelector('.gameSettings');
+    if(!gameSettings || gameSettings.dataset.organized === '1') return;
+    const modeSection = Array.from(gameSettings.querySelectorAll('.settingsSection')).find(section => section.querySelector('.modeSelector'));
+    const importSection = gameSettings.querySelector('.profilePlaylistSetting');
+    const mixSection = gameSettings.querySelector('.playlistPickerSetting');
+    if(!modeSection || !importSection || !mixSection) return;
+    modeSection.classList.add('gameModeSetting');
+    if(modeSection.querySelector('h4')) modeSection.querySelector('h4').textContent = 'Spelläge';
+    if(mixSection.querySelector('h4')) mixSection.querySelector('h4').textContent = 'Ladda in spellista';
+    let modeRules = modeSection.querySelector('.modeRulesPanel');
+    if(!modeRules){
+      modeRules = document.createElement('div');
+      modeRules.className = 'modeRulesPanel';
+      modeSection.appendChild(modeRules);
+    }
+    [
+      els.partyModeToggle?.closest('.partyToggleLine'),
+      document.querySelector('label[for="partyModeSelect"]'),
+      els.partyModeSelect,
+      document.querySelector('label[for="quizTimerSelect"]'),
+      els.quizTimerSelect,
+      document.querySelector('label[for="quizSongLimitSelect"]'),
+      els.quizSongLimitSelect,
+      document.querySelector('label[for="timelineWinScoreSelect"]'),
+      els.timelineWinScoreSelect,
+      els.showCoverToggle?.closest('.settingGroup')
+    ].filter(Boolean).forEach(node => modeRules.appendChild(node));
+    const savedLabel = document.querySelector('label[for="savedPlaylistSelect"]');
+    if(savedLabel && savedLabel.parentElement !== mixSection) mixSection.insertBefore(savedLabel, mixSection.firstChild?.nextSibling || null);
+    const profileActions = gameSettings.querySelector('.actions.profilePlaylistSetting');
+    if(profileActions && profileActions.parentElement !== importSection) importSection.appendChild(profileActions);
+    gameSettings.dataset.organized = '1';
+  }
+
   function bind(){
     splitSettingsMenus();
+    organizeLobbySettings();
     if(els.redirectUriText) els.redirectUriText.textContent=redirectUri();
     if(els.playerNameInput) els.playerNameInput.value=player.name;
     applyOwnTimelineCollapsed(false); localStorage.setItem(LS.ownCollapsed,'0'); if(els.ownTimelineToggle) els.ownTimelineToggle.onclick=toggleOwnTimeline;
@@ -1343,6 +1579,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v108';
     els.lockInBtn.onclick=lockIn;
     if(els.playSpotifyBtn) els.playSpotifyBtn.onclick=()=>playCurrentSpotify(true);
     document.addEventListener('click', e=>{
+      const powerupType = e.target?.closest?.('[data-powerup-use]')?.dataset?.powerupUse;
+      if(powerupType){ usePowerUp(powerupType).catch(err=>status(els.gameStatus,'Kunde inte använda powerup: '+(err?.message || err),'bad')); return; }
       const removeMixKey = e.target?.closest?.('[data-remove-mix-playlist]')?.dataset?.removeMixPlaylist;
       if(removeMixKey){ removePlaylistFromMix(removeMixKey); return; }
       const quizHostAction = e.target?.closest?.('[data-quiz-host-action]')?.dataset?.quizHostAction;

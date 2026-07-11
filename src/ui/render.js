@@ -28,6 +28,15 @@ export function createRenderer(ctx){
     setProposedIndex,
     spotifyProfileCache
   } = ctx;
+  const POWERUPS = {
+    steal:{label:'Sno kort', hint:'Ta ett gult kort från en annan spelare', icon:'<>', tone:'cyan'},
+    pressure:{label:'10 sekunder', hint:'Sätt press på aktiv spelare', icon:'10', tone:'pink'},
+    secondChance:{label:'Dubbelchans', hint:'Få ett nytt försök på samma kort', icon:'2x', tone:'violet'},
+    hint:{label:'Årtalsledtråd', hint:'Visa årtiondet, till exempel 199X', icon:'19X', tone:'blue'},
+    shield:{label:'Skydda rundan', hint:'Behåll gula kort även om du missar', icon:'◇', tone:'green'},
+    secure:{label:'Säkra gult kort', hint:'Lås ett gult kort direkt', icon:'✓', tone:'gold'},
+    forceLock:{label:'Tvinga låsning', hint:'Tvinga en spelare att låsa gula kort', icon:'!', tone:'red'}
+  };
 
   function render(){
     setText(els.redirectUriText, redirectUri());
@@ -35,7 +44,7 @@ export function createRenderer(ctx){
     refreshPlaylistsFromRoom();
     applyGameModeClasses();
     resetViewedTimelineWhenGameEnds();
-    renderTurn(); renderPlayers();
+    renderTurn(); renderPlayers(); renderPowerups();
     if(getRoomData()?.game?.status === 'finished') renderFinishedResults();
     else if(isQuizGame()) renderPartyGame();
     else { renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); }
@@ -114,6 +123,36 @@ export function createRenderer(ctx){
       playerRgb,
       onSelectPlayer:(id)=>{ uiState.viewedTimelinePlayerId=id; renderPlayers(); renderOwnTimeline(); }
     });
+  }
+  function ensurePowerupArea(){
+    let area = document.getElementById('powerupArea');
+    if(area) return area;
+    area = document.createElement('aside');
+    area.className = 'powerupArea';
+    area.id = 'powerupArea';
+    area.innerHTML = '<div class="powerupPanel"><h3>Powerups</h3><div class="powerupList" id="powerupList"></div></div>';
+    document.body.appendChild(area);
+    return area;
+  }
+  function renderPowerups(){
+    const area = ensurePowerupArea();
+    const list = area.querySelector('#powerupList');
+    const game = getRoomData()?.game || {};
+    const isTimelinePlaying = game.status === 'playing' && !isQuizGame();
+    area.classList.toggle('hidden', !isTimelinePlaying);
+    if(!isTimelinePlaying){ list.innerHTML=''; return; }
+    const inventory = getRoomData()?.players?.[getPlayer().id]?.powerups || {};
+    const entries = Object.entries(POWERUPS);
+    const total = entries.reduce((sum,[type])=>sum+Number(inventory[type] || 0),0);
+    if(!total){
+      list.innerHTML = '<p class="tiny">Inga powerups än.</p>';
+      return;
+    }
+    list.innerHTML = entries.map(([type,meta]) => {
+      const count = Number(inventory[type] || 0);
+      if(count <= 0) return '';
+      return '<button class="powerupButton powerupTone-'+meta.tone+'" type="button" data-powerup-use="'+esc(type)+'"><em class="powerupIcon">'+esc(meta.icon)+'</em><span><b>'+esc(meta.label)+'</b><small>'+esc(meta.hint)+'</small></span><strong>'+count+'</strong></button>';
+    }).join('');
   }
 
   function bindCardPointerDrag(cardEl, card){
@@ -311,10 +350,13 @@ export function createRenderer(ctx){
     }
     const wrong = isWrongRevealActive();
     const canDrag=isMeActive() && !wrong;
-    const div=document.createElement('div'); div.className='drawCard '+cardVisibilityClass()+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
+    const powerupClass = card.powerup ? ' hasPowerup powerup-'+card.powerup : '';
+    const div=document.createElement('div'); div.className='drawCard '+cardVisibilityClass()+(wrong?' wrongReveal':'')+powerupClass; div.draggable=false; div.dataset.cardId=cardId(card);
     const yearText = wrong ? ('Fel placering - '+esc(card.year)) : 'ärtal dolt';
     const timeText = quizTimeText(getRoomData()?.game || {});
-    div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>'+(timeText?'<div class="quizTimerPill">'+esc(timeText)+'</div>':'')+'</div><div><span class="yearHidden">'+yearText+'</span></div>';
+    const hint = getRoomData()?.game?.powerupHint || null;
+    const hintText = hint?.playerId === getPlayer().id && String(hint.cardId || '') === String(cardId(card)) ? hint.text : '';
+    div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>'+(timeText?'<div class="quizTimerPill">'+esc(timeText)+'</div>':'')+(hintText?'<div class="powerupHintPill">Årtal: '+esc(hintText)+'</div>':'')+'</div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
     els.drawCardWrap.innerHTML=''; els.drawCardWrap.appendChild(div);
   }
@@ -332,6 +374,7 @@ export function createRenderer(ctx){
       els.activePlayerBanner.style.setProperty('--active-player-rgb', activeRgb);
       els.activePlayerBanner.style.setProperty('--active-player-text-rgb', '255,255,255');
     }
+    els.activeTimeline.classList.toggle('timelineLong', timeline.length >= 7);
     els.activeTimeline.innerHTML='';
     const showFirstCardSlot = timeline.length === 0 && idx === null;
     for(let i=0;i<=timeline.length;i++){
@@ -357,7 +400,8 @@ export function createRenderer(ctx){
   }
   function makeTimelineCard(card){
     const statusClass = card.status || 'locked';
-    const div=document.createElement('div'); div.className='tlCard '+statusClass+(statusClass === 'locked' ? '' : ' '+cardVisibilityClass());
+    const powerupClass = card.powerup ? ' hasPowerup powerup-'+card.powerup : '';
+    const div=document.createElement('div'); div.className='tlCard '+statusClass+(statusClass === 'locked' ? '' : ' '+cardVisibilityClass())+powerupClass;
     const tag=card.status==='pending'?'Runda':card.status==='proposed'?'Nu':card.status==='wrong'?'Fel':'Låst';
     const year=card.status==='proposed'?'?':card.year;
     div.innerHTML='<span class="tlTag">'+tag+'</span><div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/300?blur=2')+'" alt=""></div><div class="tlCardTitle trackTitle">'+esc(card.title)+'</div><div class="tlArtist trackArtist">'+esc(card.artist)+'</div></div><div class="tlYear yearHidden">'+esc(year)+'</div>';
@@ -378,6 +422,7 @@ export function createRenderer(ctx){
     const title=(isMine?'Din tidslinje':((viewed.name||'Spelare')+'s tidslinje'));
     const winScore = Number(getRoomData()?.game?.winScore || getRoomData()?.settings?.timelineWinScore || WIN_SCORE);
     setText(els.ownTimelineTitle,title+' · '+lockedCount(viewed)+'/'+winScore);
+    els.ownTimeline.classList.toggle('timelineLong', tl.length >= 7);
     els.ownTimeline.innerHTML='';
     if(!tl.length){ els.ownTimeline.innerHTML='<p class="tiny">'+(isMine?'Din':'Spelarens')+' tidslinje är tom. Första kortet kan läggas var som helst.</p>'; return; }
     tl.forEach(c=>els.ownTimeline.appendChild(makeTimelineCard(c)));

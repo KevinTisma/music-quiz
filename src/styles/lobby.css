@@ -357,6 +357,30 @@ body.waitingMode .playlistMenu .settingsSection{
 body.waitingMode .playlistMenu .modeSelector{
   grid-template-columns:1fr;
 }
+body.waitingMode .playlistMenu .gameModeSetting{
+  grid-column:1;
+}
+body.waitingMode .playlistMenu .profilePlaylistSetting{
+  grid-column:2;
+}
+body.waitingMode .playlistMenu .playlistPickerSetting{
+  grid-column:3;
+}
+body.waitingMode .playlistMenu .modeRulesPanel{
+  display:grid;
+  gap:9px;
+  margin-top:12px;
+  padding-top:12px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+body.waitingMode .playlistMenu .profilePlaylistSetting>.actions{
+  display:grid;
+  gap:8px;
+  margin-top:12px;
+}
+body.waitingMode .playlistMenu .playlistPickerSetting .selectedPlaylistList{
+  min-height:120px;
+}
 
 @media(max-width:840px){
   .startScreen{padding:14px}
@@ -370,6 +394,9 @@ body.waitingMode .playlistMenu .modeSelector{
   body.waitingMode .playlistMenu{width:min(460px,calc(100vw - 24px))!important}
   body.waitingMode .playlistMenu .gameSettings{grid-template-columns:1fr!important}
   body.waitingMode .playlistMenu .modeSelector{grid-template-columns:1fr}
+  body.waitingMode .playlistMenu .gameModeSetting,
+  body.waitingMode .playlistMenu .profilePlaylistSetting,
+  body.waitingMode .playlistMenu .playlistPickerSetting{grid-column:auto}
   .activeRoomLine{align-items:stretch;flex-direction:column}
   .leaveLobbyBtn{width:100%}
 }

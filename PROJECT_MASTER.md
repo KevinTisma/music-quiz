@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v108`
+- `timeline-game-v112`
 
 PWA-version byggd från:
 
@@ -137,6 +137,8 @@ Party-polish / hårdtest påbörjat 2026-07-02:
 - v83: startskärmen polerades vidare: vänstra hero-rutan är solid grön med vit text, `Music Timeline`-eyebrow är borttagen, stegnumren är enfärgade, inputs har högre kontrast och hela footer-rutan fungerar som klickbar `Fortsätt till spel`-knapp.
 - v84: startskärmen justerades efter visuell review: hero-rutan är gul med svart text, den inre vita hero-linjen är borttagen, nummerbrickorna är transparenta med vit border/siffra och `Fortsätt till spel` är större och centrerad över hela footer-knappen.
 - v85: startskärmens bakgrund gjordes lugnare och mer lik appens huvudbakgrund, med fadeade/ur-fokus-former placerade mot kanterna och en renare mitt bakom entrépanelen.
+- v111: första powerup-systemet för Timeline-mode är integrerat. Vissa kort får powerup-glow och ger en powerup vid rätt gissning, 3 rätt inom 10 sekunder ger `10 sekunder`-powerup, och högerpanelen visar spelarens powerups. Första-cut innehåller `Sno kort`, `10 sekunder` och `Flytta låst`; `Sno kort` är i denna version avsedd att användas på egen tur när inget kort är draget.
+- v112: Timeline-powerups polerade. `Flytta låst` är borttagen och nya powerups är tillagda med egen ikon, titel, beskrivning och färg: `Dubbelchans`, `Årtalsledtråd`, `Skydda rundan`, `Säkra gult kort` och `Tvinga låsning`. `Sno kort` och `10 sekunder` finns kvar. Årtalsledtråd visar till exempel `199X`, Skydda rundan räddar gula kort vid miss/timer, och högerpanelen visar de nya powerup-typerna. Firebase-reglerna är smalt uppdaterade så aktiv spelare kan göra Timeline-powerup-handlingar under sin tur.
 
 Party `Vems låt` verifierat 2026-07-03:
 
