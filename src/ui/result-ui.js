@@ -1,4 +1,4 @@
-import { WIN_SCORE } from '../config.js';
+﻿import { WIN_SCORE } from '../config.js';
 import { cardId, esc, lockedCount, pendingCount, timelineOf } from '../utils/helpers.js';
 
 export function renderFinishedResultsScene({ drawCardWrap, players, roomData, coverForCard, playerRgb, isHost=false }){

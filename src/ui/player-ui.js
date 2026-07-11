@@ -1,4 +1,4 @@
-import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js';
+﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js';
 import { esc, lockedCount } from '../utils/helpers.js';
 
 export function renderPlayerStrip({ playerStrip, players, roomData, viewedTimelinePlayerId, fallbackPlayerId, playerRgb, onSelectPlayer }){
