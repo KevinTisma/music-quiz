@@ -1,10 +1,10 @@
-﻿import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v110';
+import { VIEWED_TIMELINE_KEY, WIN_SCORE } from '../config.js?v=active-room-start-v108';
 import { cardId, esc, lockedCount, pendingCount, setText, sortPlayers, timelineOf } from '../utils/helpers.js';
 import { timelineWithProposal } from '../modes/timeline-mode.js';
-import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v110';
-import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v110';
-import { refreshSavedPlaylistSelect } from './playlist-ui.js?v=active-room-start-v110';
-import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v110';
+import { readToken, validToken } from '../spotify/spotify-api.js?v=active-room-start-v108';
+import { renderPlayerStrip } from './player-ui.js?v=active-room-start-v108';
+import { refreshSavedPlaylistSelect } from './playlist-ui.js?v=active-room-start-v108';
+import { renderFinishedResultsScene } from './result-ui.js?v=active-room-start-v108';
 
 export function createRenderer(ctx){
   const {
@@ -312,7 +312,7 @@ export function createRenderer(ctx){
     const wrong = isWrongRevealActive();
     const canDrag=isMeActive() && !wrong;
     const div=document.createElement('div'); div.className='drawCard '+cardVisibilityClass()+(wrong?' wrongReveal':''); div.draggable=false; div.dataset.cardId=cardId(card);
-    const yearText = wrong ? ('Fel placering - '+esc(card.year)) : 'Årtal dolt';
+    const yearText = wrong ? ('Fel placering - '+esc(card.year)) : 'ärtal dolt';
     const timeText = quizTimeText(getRoomData()?.game || {});
     div.innerHTML='<div><div class="cover"><img src="'+esc(coverForCard(card)||'https://picsum.photos/400?blur=2')+'" alt=""></div><div class="trackTitle">'+esc(card.title)+'</div><div class="trackArtist">'+esc(card.artist)+'</div>'+(timeText?'<div class="quizTimerPill">'+esc(timeText)+'</div>':'')+'</div><div><span class="yearHidden">'+yearText+'</span></div>';
     if(canDrag){ bindCardPointerDrag(div, card); }
