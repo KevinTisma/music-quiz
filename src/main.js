@@ -1,4 +1,4 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v112';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v115';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
 import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v108';
 import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v108';
@@ -6,7 +6,7 @@ import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { ensureFirebaseAuth, getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v112';
+import { createRenderer } from './ui/render.js?v=active-room-start-v115';
 
 (() => {
   'use strict';

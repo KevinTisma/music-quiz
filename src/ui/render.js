@@ -47,7 +47,7 @@ export function createRenderer(ctx){
     renderTurn(); renderPlayers(); renderPowerups();
     if(getRoomData()?.game?.status === 'finished') renderFinishedResults();
     else if(isQuizGame()) renderPartyGame();
-    else { renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); }
+    else if(!uiState.dragCardId){ renderCurrentCard(); renderActiveTimeline(); renderOwnTimeline(); }
     renderProfile(); renderBoards(); renderLobbySettings(); updateButtons(); handleAutoplay(); scheduleWrongRevealAdvance();
   }
   function isPartyGame(){
@@ -94,12 +94,12 @@ export function createRenderer(ctx){
     if(uiState.wrongRevealTimeout){ clearTimeout(uiState.wrongRevealTimeout); uiState.wrongRevealTimeout = null; }
     if(wr?.until){
       const ms = Number(wr.until) - Date.now();
-      if(ms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>render(), ms + 80); return; }
+      if(ms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>{ if(uiState.dragCardId) scheduleWrongRevealAdvance(); else render(); }, ms + 80); return; }
     }
     const deadline = Number(getRoomData()?.game?.answerDeadline || 0);
     if(deadline){
       const dms = deadline - Date.now();
-      if(dms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>render(), Math.min(1000, dms) + 40); }
+      if(dms > 0){ uiState.wrongRevealTimeout = setTimeout(()=>{ if(uiState.dragCardId) scheduleWrongRevealAdvance(); else render(); }, Math.min(1000, dms) + 40); }
     }
   }
 
@@ -134,6 +134,20 @@ export function createRenderer(ctx){
     document.body.appendChild(area);
     return area;
   }
+  function showPowerupAward(type, meta, count=1){
+    if(!meta) return;
+    let toast = document.getElementById('powerupAwardToast');
+    if(!toast){
+      toast = document.createElement('div');
+      toast.id = 'powerupAwardToast';
+      document.body.appendChild(toast);
+    }
+    toast.className = 'powerupAwardToast powerupTone-'+meta.tone;
+    toast.innerHTML = '<em>'+esc(meta.icon)+'</em><span><small>Ny powerup</small><b>'+esc(meta.label)+(count > 1 ? ' x'+count : '')+'</b></span>';
+    clearTimeout(uiState.powerupToastTimer);
+    uiState.powerupToastTimer = setTimeout(()=>toast.classList.add('leaving'), 2200);
+    setTimeout(()=>{ if(toast.classList.contains('leaving')) toast.remove(); }, 2850);
+  }
   function renderPowerups(){
     const area = ensurePowerupArea();
     const list = area.querySelector('#powerupList');
@@ -143,6 +157,15 @@ export function createRenderer(ctx){
     if(!isTimelinePlaying){ list.innerHTML=''; return; }
     const inventory = getRoomData()?.players?.[getPlayer().id]?.powerups || {};
     const entries = Object.entries(POWERUPS);
+    const previous = uiState.powerupCounts || {};
+    const initialized = uiState.powerupCountsInitialized === true;
+    entries.forEach(([type,meta]) => {
+      const count = Number(inventory[type] || 0);
+      const oldCount = Number(previous[type] || 0);
+      if(initialized && count > oldCount) showPowerupAward(type, meta, count - oldCount);
+    });
+    uiState.powerupCounts = Object.fromEntries(entries.map(([type]) => [type, Number(inventory[type] || 0)]));
+    uiState.powerupCountsInitialized = true;
     const total = entries.reduce((sum,[type])=>sum+Number(inventory[type] || 0),0);
     if(!total){
       list.innerHTML = '<p class="tiny">Inga powerups än.</p>';
@@ -230,6 +253,7 @@ export function createRenderer(ctx){
       cardEl.style.removeProperty('--drag-rot');
       Object.assign(cardEl.style, original);
       if(placeholder){ placeholder.remove(); placeholder=null; }
+      setTimeout(()=>render(), 0);
     }
     cardEl.addEventListener('pointerup', end);
     cardEl.addEventListener('pointercancel', end);

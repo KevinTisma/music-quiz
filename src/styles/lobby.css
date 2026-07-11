@@ -362,6 +362,18 @@ body.waitingMode .playlistMenu .gameModeSetting{
 }
 body.waitingMode .playlistMenu .profilePlaylistSetting{
   grid-column:2;
+  grid-template-columns:1fr!important;
+  align-items:stretch!important;
+  justify-items:stretch!important;
+}
+body.waitingMode .playlistMenu .profilePlaylistSetting>h4,
+body.waitingMode .playlistMenu .profilePlaylistSetting>label,
+body.waitingMode .playlistMenu .profilePlaylistSetting>input,
+body.waitingMode .playlistMenu .profilePlaylistSetting>select,
+body.waitingMode .playlistMenu .profilePlaylistSetting>p,
+body.waitingMode .playlistMenu .profilePlaylistSetting>button,
+body.waitingMode .playlistMenu .profilePlaylistSetting>.actions{
+  grid-column:1!important;
 }
 body.waitingMode .playlistMenu .playlistPickerSetting{
   grid-column:3;

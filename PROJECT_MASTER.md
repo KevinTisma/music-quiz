@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v112`
+- `timeline-game-v115`
 
 PWA-version byggd från:
 
@@ -139,6 +139,9 @@ Party-polish / hårdtest påbörjat 2026-07-02:
 - v85: startskärmens bakgrund gjordes lugnare och mer lik appens huvudbakgrund, med fadeade/ur-fokus-former placerade mot kanterna och en renare mitt bakom entrépanelen.
 - v111: första powerup-systemet för Timeline-mode är integrerat. Vissa kort får powerup-glow och ger en powerup vid rätt gissning, 3 rätt inom 10 sekunder ger `10 sekunder`-powerup, och högerpanelen visar spelarens powerups. Första-cut innehåller `Sno kort`, `10 sekunder` och `Flytta låst`; `Sno kort` är i denna version avsedd att användas på egen tur när inget kort är draget.
 - v112: Timeline-powerups polerade. `Flytta låst` är borttagen och nya powerups är tillagda med egen ikon, titel, beskrivning och färg: `Dubbelchans`, `Årtalsledtråd`, `Skydda rundan`, `Säkra gult kort` och `Tvinga låsning`. `Sno kort` och `10 sekunder` finns kvar. Årtalsledtråd visar till exempel `199X`, Skydda rundan räddar gula kort vid miss/timer, och högerpanelen visar de nya powerup-typerna. Firebase-reglerna är smalt uppdaterade så aktiv spelare kan göra Timeline-powerup-handlingar under sin tur.
+- v113: fixat lobbyinställningarnas Spotify-importkort så fältrubrikerna ligger ovanför respektive fält igen. Fixat även Timeline-drag med timer: timer-renderingen bygger inte längre om kort/tidslinje medan spelaren håller i kortet, så kortet hoppar inte tillbaka varje sekund.
+- v114: powerups har fått tydligare feedback och mer grafisk stil. När spelaren får en powerup visas en animerad `Ny powerup`-toast, och powerup-korten i högerpanelen är omgjorda med bold typografi, starkare färgfält, count-badge och dramatiska former som matchar appens formspråk bättre.
+- v115: spelkort som innehåller powerup har fått glassy/transparent insida så kortets glow syns tydligare. Powerup-signalen ligger nu främst i en starkare animerad glow-ring runt kortet i stället för i färgstark kortbakgrund.
 
 Party `Vems låt` verifierat 2026-07-03:
 
