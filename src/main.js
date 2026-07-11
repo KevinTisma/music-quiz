@@ -19,7 +19,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
   const urlRoom = new URLSearchParams(window.location.search).get('room');
   const savedRoom = localStorage.getItem(LS.lobbyRoom);
   const initialRoom = String(urlRoom || savedRoom || '');
-  let activeRoomId = normalizeRoomId(initialRoom.toUpperCase() === 'ACTIVE'  '' : initialRoom);
+  let activeRoomId = normalizeRoomId(initialRoom.toUpperCase() === 'ACTIVE' ? '' : initialRoom);
   let player = { id:getPlayerId(), name:localStorage.getItem(LS.playerName) || 'Spelare', avatarUrl:'' };
   try { const cachedSpotifyProfile = JSON.parse(localStorage.getItem(LS.spotifyProfile) || 'null'); if(cachedSpotifyProfile?.displayName){ player.name = cachedSpotifyProfile.displayName; } if(cachedSpotifyProfile?.avatarUrl){ player.avatarUrl = cachedSpotifyProfile.avatarUrl; } } catch {}
   const uiState = {
@@ -67,7 +67,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
   }
   function selectedGameMode(){
     const mode = roomData?.settings?.gameMode || 'timeline';
-    return mode === 'party'  'quiz' : mode;
+    return mode === 'party' ? 'quiz' : mode;
   }
   function selectedQuizType(){
     return roomData?.settings?.quizType || roomData?.settings?.partyMode || els.partyModeSelect?.value || 'party-owner';
@@ -106,7 +106,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
     return mode.startsWith('party-') || mode.startsWith('quiz-');
   }
   function partyQuestionFor(mode){
-    return mode === 'party-year' || mode === 'quiz-year'  '\u00c5rtals Quiz' : 'Vems l\u00e5t';
+    return mode === 'party-year' || mode === 'quiz-year' ? '\u00c5rtals Quiz' : 'Vems l\u00e5t';
   }
   function isWrongRevealActive(){
     const wr = roomData?.game?.wrongReveal;
@@ -172,7 +172,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
   }
   function selectedPlaylistOwner(){
     const players = roomData?.players || {};
-    const selectedId = isHostPlayer()  (els.playlistOwnerSelect?.value || player.id) : player.id;
+    const selectedId = isHostPlayer() ? (els.playlistOwnerSelect?.value || player.id) : player.id;
     const owner = players[selectedId] || (selectedId === player.id  player : null) || {id:selectedId,name:'Spelare'};
     return {attributedPlayerId:owner.id || player.id, attributedPlayerName:owner.name || player.name || 'Spelare'};
   }
@@ -773,7 +773,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
 
   function getSongs(){ const s=roomData.songBank; return Array.isArray(s)?s:Object.values(s||{}); }
   function normalizedQuizType(mode){
-    return mode === 'quiz-year'  'party-year' : mode === 'quiz-owner'  'party-owner' : mode;
+    return mode === 'quiz-year' ? 'party-year' : mode === 'quiz-owner' ? 'party-owner' : mode;
   }
   async function ensureHostPlaylistInOwnerMix(){
     if(normalizedQuizType(selectedQuizType()) !== 'party-owner') return;
@@ -1315,14 +1315,14 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v109';
     if(els.saveNameBtn) els.saveNameBtn.onclick=async()=>{ player.name=(els.playerNameInput?.value||'Spelare').slice(0,32); localStorage.setItem(LS.playerName,player.name); await upsertPlayer(); };
     if(els.utilityEndGameBtn) els.utilityEndGameBtn.onclick=endGame;
     if(els.utilityCloseLobbyBtn) els.utilityCloseLobbyBtn.onclick=()=>closeLobby('manual');
-    if(els.autoPlaySpotifyToggle){ const savedAutoplay = localStorage.getItem(LS.autoplay); els.autoPlaySpotifyToggle.checked = savedAutoplay === null  true : savedAutoplay === '1'; if(savedAutoplay === null) localStorage.setItem(LS.autoplay,'1'); els.autoPlaySpotifyToggle.onchange=()=>localStorage.setItem(LS.autoplay, els.autoPlaySpotifyToggle.checked?'1':'0'); }
+    if(els.autoPlaySpotifyToggle){ const savedAutoplay = localStorage.getItem(LS.autoplay); els.autoPlaySpotifyToggle.checked = savedAutoplay === null ? true : savedAutoplay === '1'; if(savedAutoplay === null) localStorage.setItem(LS.autoplay,'1'); els.autoPlaySpotifyToggle.onchange=()=>localStorage.setItem(LS.autoplay, els.autoPlaySpotifyToggle.checked?'1':'0'); }
     document.querySelectorAll('.modeButton[data-game-mode]').forEach(button => {
       button.onclick=()=>updateRoomSettings({gameMode:button.dataset.gameMode});
     });
     if(els.partyModeToggle) els.partyModeToggle.onchange=()=>updateRoomSettings({partyModeEnabled:!!els.partyModeToggle.checked,gameMode:'quiz'});
     if(els.partyModeSelect) els.partyModeSelect.onchange=()=>updateRoomSettings({quizType:els.partyModeSelect.value,partyMode:els.partyModeSelect.value,gameMode:'quiz'});
     if(els.quizTimerSelect) els.quizTimerSelect.onchange=()=>updateRoomSettings({gameTimerSeconds:Number(els.quizTimerSelect.value || 0),quizTimerSeconds:Number(els.quizTimerSelect.value || 0)});
-    if(els.quizSongLimitSelect) els.quizSongLimitSelect.onchange=()=>updateRoomSettings({quizSongLimit:els.quizSongLimitSelect.value === 'all'  'all' : Number(els.quizSongLimitSelect.value || 0),gameMode:'quiz'});
+    if(els.quizSongLimitSelect) els.quizSongLimitSelect.onchange=()=>updateRoomSettings({quizSongLimit:els.quizSongLimitSelect.value === 'all' ? 'all' : Number(els.quizSongLimitSelect.value || 0),gameMode:'quiz'});
     if(els.timelineWinScoreSelect) els.timelineWinScoreSelect.onchange=()=>updateRoomSettings({timelineWinScore:Number(els.timelineWinScoreSelect.value || WIN_SCORE),gameMode:'timeline'});
     els.importPlaylistBtn.onclick=importPlaylist;
     els.createDemoBtn.onclick=createDemo;
