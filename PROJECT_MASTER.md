@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v107`
+- `timeline-game-v108`
 
 PWA-version byggd från:
 
@@ -108,7 +108,7 @@ Senast byggt 2026-07-02:
 - importerade/demo-spellistor sparas nu med `ownerId` för att matcha rules-strukturen
 - rumsuppdateringar märks med `meta/updatedBy` så reglerna kan skilja host- och spelaråtgärder
 - host-only-flöden kontrolleras även i funktionerna, inte bara via nedtonade/disabled knappar
-- `playlistMix` skrivs med Firebase-transaktion så samtidiga spelare inte skriver över varandras bidrag
+- `playlistMix` skrivs per entry (`rooms/{roomId}/playlistMix/{entryId}`) så security rules kan tillåta egna bidrag utan att spelare får skriva över hela mixen
 - `Resetta rum` rensar speldata och återgår till lobby i stället för att ta bort hela rumsnoden
 
 Party-polish / hårdtest påbörjat 2026-07-02:

@@ -1,12 +1,12 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v107';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v108';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v107';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v107';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v108';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v108';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { ensureFirebaseAuth, getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v107';
+import { createRenderer } from './ui/render.js?v=active-room-start-v108';
 
 (() => {
   'use strict';
@@ -667,7 +667,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v107';
       }));
     });
   }
-  async function syncRoomMix(entries){
+  async function syncRoomMix(entries, options={}){
+    const writePlaylistMix = options.writePlaylistMix === true;
     const mixedSongs = songsFromPlaylistMix(entries);
     roomData = {
       ...roomData,
@@ -676,12 +677,14 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v107';
       selectedPlaylistId:mixedSongs.length ? 'mixed' : null,
       selectedPlaylist:mixedSongs.length ? {id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length} : null
     };
-    await roomRef().update(roomActorUpdates({
-      playlistMix:entries,
+    const baseUpdates = {
       songBank:mixedSongs.length ? mixedSongs : null,
       selectedPlaylistId:mixedSongs.length ? 'mixed' : null,
       selectedPlaylist:mixedSongs.length ? {id:'mixed',ownerId:'room',name:'Blandad spellista',source:'mixed',songCount:mixedSongs.length} : null
-    }));
+    };
+    const updates = isHostPlayer() ? roomActorUpdates(baseUpdates) : baseUpdates;
+    if(writePlaylistMix) updates.playlistMix = entries;
+    await roomRef().update(updates);
   }
   async function savePlaylistToRoomMix(id, playlist, songs){
     const ownerId = currentUserId();
@@ -707,8 +710,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v107';
       songs:ownedSongs,
       addedAt:serverTimestamp()
     };
-    const result = await roomRef('playlistMix').transaction(current => ({...(current || {}), [key]:entry}));
-    const entries = result?.snapshot?.val() || playlistMixEntries({key,value:entry});
+    await roomRef('playlistMix/'+key).set(entry);
+    const entries = playlistMixEntries({key,value:entry});
     await syncRoomMix(entries);
     return {entries,mixedSongs:songsFromPlaylistMix(entries)};
   }
@@ -722,6 +725,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v107';
     if(!canRemove){ status(els.playlistStatus,'Du kan bara ta bort dina egna spellistor från mixen.','bad'); return; }
     const entries = {...(roomData.playlistMix || {})};
     delete entries[clean];
+    await roomRef('playlistMix/'+clean).remove();
     await syncRoomMix(entries);
     showPlaylistUpdateNotice('Den blandade spellistan är uppdaterad.', 'ok');
     status(els.playlistStatus,'Spellistan togs bort från mixen.','ok');

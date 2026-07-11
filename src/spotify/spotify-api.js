@@ -1,4 +1,4 @@
-import { DEFAULT_CLIENT_ID, LS } from '../config.js?v=active-room-start-v107';
+import { DEFAULT_CLIENT_ID, LS } from '../config.js?v=active-room-start-v108';
 import { now } from '../utils/helpers.js';
 
 export function readToken(){ try{return JSON.parse(localStorage.getItem(LS.token)||'null')}catch{return null} }
