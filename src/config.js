@@ -1,11 +1,13 @@
-export const VERSION = 'timeline-game-v103';
+export const VERSION = 'timeline-game-v105';
 export const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
 export const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
 export const FIREBASE_CONFIG = {
-  apiKey: '',
-  authDomain: '',
+  apiKey: 'AIzaSyBaflhTRGerXgwMprOtgGauXxEMKhZ5odQ',
+  authDomain: 'music-quiz-bd465.firebaseapp.com',
   projectId: 'music-quiz-bd465',
-  appId: '',
+  storageBucket: 'music-quiz-bd465.firebasestorage.app',
+  messagingSenderId: '232136054308',
+  appId: '1:232136054308:web:622fa7ba22c714db782ab1',
   databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app'
 };
 export const ROOM_ID = 'active';
