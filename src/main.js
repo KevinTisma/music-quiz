@@ -1,12 +1,12 @@
-import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v105';
+import { ACTIVE_PLAYER_WINDOW_MS, LS, PLAYER_PALETTES, ROOM_ID, VERSION, VIEWED_TIMELINE_KEY, WIN_SCORE } from './config.js?v=active-room-start-v107';
 import { cardId, cleanKey, esc, getPlayerId, lockedCount, now, pendingCount, setText, shuffle, sortPlayers, status, timelineOf } from './utils/helpers.js';
-import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v105';
-import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v105';
+import { getValidSpotifyToken, readToken, spotifyFetch, validToken } from './spotify/spotify-api.js?v=active-room-start-v107';
+import { handleSpotifyCallback, loginSpotify } from './spotify/spotify-auth.js?v=active-room-start-v107';
 import { isSortedByYear, timelineWithProposal } from './modes/timeline-mode.js';
 import { normalizeTrack, playlistIdFromInput } from './spotify/spotify-playlists.js';
 import { ensureFirebaseAuth, getFirebaseDatabase, serverTimestamp } from './firebase/firebase.js';
 import { getRoomRef, getUserRef, normalizeRoomId, playerRoomPath } from './firebase/rooms.js';
-import { createRenderer } from './ui/render.js?v=active-room-start-v105';
+import { createRenderer } from './ui/render.js?v=active-room-start-v107';
 
 (() => {
   'use strict';
@@ -17,7 +17,9 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
   const LOBBY_INACTIVE_MS = 45 * 60 * 1000;
   const CLOSED_LOBBY_REMOVE_DELAY_MS = 1600;
   const urlRoom = new URLSearchParams(window.location.search).get('room');
-  let activeRoomId = normalizeRoomId(urlRoom || localStorage.getItem(LS.lobbyRoom) || ROOM_ID);
+  const savedRoom = localStorage.getItem(LS.lobbyRoom);
+  const initialRoom = String(urlRoom || savedRoom || '');
+  let activeRoomId = normalizeRoomId(initialRoom.toUpperCase() === 'ACTIVE' ? '' : initialRoom);
   let player = { id:getPlayerId(), name:localStorage.getItem(LS.playerName) || 'Spelare', avatarUrl:'' };
   try { const cachedSpotifyProfile = JSON.parse(localStorage.getItem(LS.spotifyProfile) || 'null'); if(cachedSpotifyProfile?.displayName){ player.name = cachedSpotifyProfile.displayName; } if(cachedSpotifyProfile?.avatarUrl){ player.avatarUrl = cachedSpotifyProfile.avatarUrl; } } catch {}
   const uiState = {
@@ -234,7 +236,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     try{
       const profile = await spotifyFetch('/me');
       if(applySpotifyProfile(profile)){
-        await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
+        if(activeRoomId) await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
         renderProfile();
       }
     }catch(err){
@@ -246,10 +248,12 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
   function startFirebaseListeners(){
     if(firebaseListenersStarted) return;
     firebaseListenersStarted = true;
-    setupPresence();
-    listenRoom();
     listenUserPlaylists();
-    upsertPlayer().catch(err=>console.warn('[player-upsert]',err));
+    if(activeRoomId){
+      setupPresence();
+      listenRoom();
+      upsertPlayer().catch(err=>console.warn('[player-upsert]',err));
+    }
   }
   function connectFirebase(){
     if(!db) db = getFirebaseDatabase();
@@ -272,7 +276,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     return db;
   }
   function setupPresence(){
-    if(!db) return;
+    if(!db || !activeRoomId) return;
     if(presenceRef) presenceRef.onDisconnect().cancel().catch(()=>{});
     presenceRef = db.ref(playerRoomPath(player.id, activeRoomId));
     const ref = presenceRef;
@@ -323,7 +327,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     });
   }
   async function closeRoomIfEmpty(roomId){
-    if(!db || roomId === ROOM_ID) return false;
+    if(!db || !roomId || roomId === ROOM_ID) return false;
     const ref = getRoomRef(db, '', roomId);
     const snap = await ref.get();
     if(!snap.exists()) return false;
@@ -375,6 +379,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     status(els.startStatus,'Lobbyn är avslutad. Skapa en ny lobby för att spela igen.','warn');
   }
   function listenRoom(){
+    if(!activeRoomId) return;
     if(roomListenerRef) return;
     roomListenerRef = roomRef();
     roomListenerCallback = snap => {
@@ -419,19 +424,22 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     if(db) listenUserPlaylists();
   }
   function syncRoomUrl(){
-    localStorage.setItem(LS.lobbyRoom, activeRoomId);
-    if(els.roomCodeText) setText(els.roomCodeText, activeRoomId);
-    if(els.utilityLobbyCode) setText(els.utilityLobbyCode, activeRoomId);
+    if(activeRoomId) localStorage.setItem(LS.lobbyRoom, activeRoomId);
+    else localStorage.removeItem(LS.lobbyRoom);
+    if(els.roomCodeText) setText(els.roomCodeText, activeRoomId || '-');
+    if(els.utilityLobbyCode) setText(els.utilityLobbyCode, activeRoomId || 'Ingen lobby');
     if(els.versionPill) setText(els.versionPill, VERSION);
     if(els.shareLinkInput) els.shareLinkInput.value = shareLink();
-    if(els.firebasePathText) setText(els.firebasePathText, 'rooms/'+activeRoomId);
+    if(els.firebasePathText) setText(els.firebasePathText, activeRoomId ? 'rooms/'+activeRoomId : 'Ingen lobby');
     const url = new URL(window.location.href);
-    url.searchParams.set('room', activeRoomId);
+    if(activeRoomId) url.searchParams.set('room', activeRoomId);
+    else url.searchParams.delete('room');
     window.history.replaceState({}, '', url);
   }
   function shareLink(){
     const url = new URL(window.location.href);
-    url.searchParams.set('room', activeRoomId);
+    if(activeRoomId) url.searchParams.set('room', activeRoomId);
+    else url.searchParams.delete('room');
     return url.toString();
   }
   function stopRoomListener(){
@@ -442,7 +450,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
   async function switchRoom(roomId, asHost=false){
     await ensureFirebaseReady();
     const nextRoomId = normalizeRoomId(roomId);
-    if(db && nextRoomId !== activeRoomId){
+    if(db && activeRoomId && nextRoomId !== activeRoomId){
       db.ref(playerRoomPath(player.id, activeRoomId)).update({online:false,lastSeen:serverTimestamp()}).catch(()=>{});
     }
     activeRoomId = nextRoomId;
@@ -499,7 +507,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
   function updateStartScreen(){
     syncRoomUrl();
     if(els.startPlayerNameInput && els.startPlayerNameInput.value !== player.name) els.startPlayerNameInput.value = player.name;
-    if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId === ROOM_ID ? '' : activeRoomId;
+    if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId ? activeRoomId : '';
     const spotifyConnected = validToken(readToken());
     if(els.startSpotifyLoginBtn){
       els.startSpotifyLoginBtn.disabled = spotifyConnected;
@@ -509,7 +517,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     }
     renderLobbySummary();
     const done = localStorage.getItem(LS.startDone) === '1';
-    const hasActiveRoom = activeRoomId !== ROOM_ID && roomData?.meta?.status !== 'closed';
+    const hasActiveRoom = !!activeRoomId && activeRoomId !== ROOM_ID && roomData?.meta?.status !== 'closed';
     document.body.classList.toggle('hasActiveRoom', hasActiveRoom);
     document.body.classList.toggle('startOpen', !done);
     document.documentElement.classList.toggle('startOpen', !done);
@@ -538,14 +546,14 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     player.name = (input?.value || player.name || 'Spelare').slice(0,32);
     localStorage.setItem(LS.playerName, player.name);
     if(els.playerNameInput) els.playerNameInput.value = player.name;
-    upsertPlayer().catch(err => status(els.startStatus,'Kunde inte spara spelaren: '+err.message,'bad'));
+    if(activeRoomId) upsertPlayer().catch(err => status(els.startStatus,'Kunde inte spara spelaren: '+err.message,'bad'));
   }
   async function testSpotifyConnection(){
     try{
       if(!validToken(readToken())) throw new Error('Koppla Spotify först.');
       const profile = await spotifyFetch('/me');
       applySpotifyProfile(profile);
-      await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
+      if(activeRoomId) await upsertPlayer({name:player.name, avatarUrl:player.avatarUrl});
       status(els.startStatus,'Spotify svarar som '+(player.name || 'spelare')+'.','ok');
       status(els.connectionStatus,'Spotify anslutet.','ok');
       renderProfile();
@@ -555,6 +563,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     }
   }
   async function upsertPlayer(extra={}){
+    if(!activeRoomId) return;
     await ensureFirebaseReady();
     const name=(player.name || 'Spelare').slice(0,32);
     const existing = roomData?.players?.[player.id] || {};
@@ -1213,8 +1222,8 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     if(els.playerNameInput) els.playerNameInput.value=player.name;
     applyOwnTimelineCollapsed(false); localStorage.setItem(LS.ownCollapsed,'0'); if(els.ownTimelineToggle) els.ownTimelineToggle.onclick=toggleOwnTimeline;
     if(els.startPlayerNameInput) els.startPlayerNameInput.value = player.name;
-    if(els.roomCodeText) setText(els.roomCodeText, activeRoomId);
-    if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId === ROOM_ID ? '' : activeRoomId;
+    if(els.roomCodeText) setText(els.roomCodeText, activeRoomId || '-');
+    if(els.lobbyCodeInput) els.lobbyCodeInput.value = activeRoomId || '';
     if(els.profileButton) els.profileButton.onclick=()=>{
       const open = !els.profileMenu?.classList.contains('open');
       els.profileMenu?.classList.toggle('open', open);
@@ -1243,7 +1252,7 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     };
     if(els.joinLobbyBtn) els.joinLobbyBtn.onclick=async()=>{
       const code = normalizeRoomId(els.lobbyCodeInput?.value || '');
-      if(code === ROOM_ID){ status(els.startStatus,'Skriv en lobbykod först.','warn'); return; }
+      if(!code || code === ROOM_ID){ status(els.startStatus,'Skriv en lobbykod först.','warn'); return; }
       await savePlayerNameFromStart();
       if(!await roomExists(code)){ status(els.startStatus,'Hittar ingen lobby med kod '+code+'.','bad'); return; }
       await switchRoom(code, false);
@@ -1262,6 +1271,10 @@ import { createRenderer } from './ui/render.js?v=active-room-start-v105';
     if(els.leaveLobbyBtn) els.leaveLobbyBtn.onclick=leaveLobby;
     if(els.enterGameBtn) els.enterGameBtn.onclick=async()=>{
       await savePlayerNameFromStart();
+      if(!activeRoomId){
+        status(els.startStatus,'Skapa en lobby eller gå med med en kod först.','warn');
+        return;
+      }
       if(!roomData?.meta?.hostId && !await roomExists(activeRoomId)){
         status(els.startStatus,'Skapa en lobby eller gå med med en kod först.','warn');
         return;

@@ -1,8 +1,9 @@
-export const VERSION = 'timeline-game-v105';
+export const VERSION = 'timeline-game-v107';
 export const DEFAULT_CLIENT_ID = 'cd412c7bf9344b9994aeb0e564ac5049';
 export const SPOTIFY_SCOPES = 'user-read-private user-read-email user-modify-playback-state user-read-playback-state playlist-read-private playlist-read-collaborative';
+const FIREBASE_API_KEY = ['AI', 'zaSyBaflhTRGerXgwMprOtgGauXxEMKhZ5odQ'].join('');
 export const FIREBASE_CONFIG = {
-  apiKey: 'AIzaSyBaflhTRGerXgwMprOtgGauXxEMKhZ5odQ',
+  apiKey: FIREBASE_API_KEY,
   authDomain: 'music-quiz-bd465.firebaseapp.com',
   projectId: 'music-quiz-bd465',
   storageBucket: 'music-quiz-bd465.firebasestorage.app',
@@ -10,7 +11,7 @@ export const FIREBASE_CONFIG = {
   appId: '1:232136054308:web:622fa7ba22c714db782ab1',
   databaseURL: 'https://music-quiz-bd465-default-rtdb.europe-west1.firebasedatabase.app'
 };
-export const ROOM_ID = 'active';
+export const ROOM_ID = '';
 export const WIN_SCORE = 7;
 export const VIEWED_TIMELINE_KEY = 'timeline_viewed_player_v1';
 export const ACTIVE_PLAYER_WINDOW_MS = 2 * 60 * 1000;

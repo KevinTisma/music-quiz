@@ -6,6 +6,7 @@ export function normalizeRoomId(roomId){
 
 export function getRoomRef(db, path='', roomId=ROOM_ID){
   const safeRoomId = normalizeRoomId(roomId);
+  if(!safeRoomId) throw new Error('Ingen aktiv lobby.');
   return db.ref('rooms/'+safeRoomId+(path?'/'+path:''));
 }
 
@@ -15,5 +16,7 @@ export function getUserRef(db, userId, path=''){
 }
 
 export function playerRoomPath(playerId, roomId=ROOM_ID){
-  return 'rooms/'+normalizeRoomId(roomId)+'/players/'+playerId;
+  const safeRoomId = normalizeRoomId(roomId);
+  if(!safeRoomId) throw new Error('Ingen aktiv lobby.');
+  return 'rooms/'+safeRoomId+'/players/'+playerId;
 }

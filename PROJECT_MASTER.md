@@ -29,7 +29,7 @@ Andra chattar kan vara mer fokuserade, till exempel:
 
 Senaste appversion:
 
-- `timeline-game-v105`
+- `timeline-game-v107`
 
 PWA-version byggd från:
 
